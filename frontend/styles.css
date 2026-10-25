@@ -718,9 +718,10 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .ptt-mute.mictest.armed{background:var(--tx); border-color:var(--tx); color:#fff; box-shadow:0 0 16px -3px var(--tx-glow)}
 
 .chip.seq-tx{font-family:var(--font-mono); max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.chip.seq-tx.live{background:var(--ctrl-bg); border-color:var(--tx); color:var(--tx)}  /* outlined, not
-   filled: a solid red slab for every armed sequencer read like a running alarm */
-:root[data-theme="light"] .chip.seq-tx.live{color:#c62f26; border-color:#c62f26}
+.chip.seq-tx.live{background:var(--ctrl-bg); border-color:var(--tx); color:#fff}  /* outlined, not
+   filled: a solid red slab for every armed sequencer read like a running alarm;
+   the red frame says "armed", the message itself stays plain white text */
+:root[data-theme="light"] .chip.seq-tx.live{color:var(--text); border-color:#c62f26}  /* white would vanish */
 .msgs tr.tx-row td.msg{color:var(--row-tx, var(--tx))}
 .msgs tbody#sess-body tr.sel{outline:1px solid var(--cyan); outline-offset:-1px}
 .sess-ok{color:var(--ok)} .sess-bad{color:var(--tx)} .sess-run{color:var(--amber)}

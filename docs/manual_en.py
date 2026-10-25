@@ -32,6 +32,9 @@ EN = [
         "pre-emphasis, mic echo test, RX recorder with WAV download.",
         "FT8/FT4 decoding with jt9 on three CPU cores, WSJT-X style sequencer with "
         "auto-answer, waterfall, DXCC and worked-before flags.",
+        "HF band conditions under the waterfall from real VOACAP for your locator: "
+        "80-40, 30-20, 17-15, 12-10 and 6m in green / yellow / red, with a sun/moon "
+        "switch for day and night.",
         "CW skimmer: every CW signal in the passband decoded at once; send through "
         "the radio's keyer with macros.",
         "HackRF waterfall relayed from TM-V71 Remote, following the amateur band of VFO A.",
@@ -75,7 +78,7 @@ EN = [
           "DATA-L — the VOICE PROFILE sets that up for the current band."),
 
     ("h1", "4  Installation"),
-    ("code", "sudo apt install wsjtx            # jt9, ft8code, ft4code\n"
+    ("code", "sudo apt install wsjtx voacapl    # jt9, ft8code, ft4code; VOACAP\n"
              "git clone https://github.com/CQ-DJ0SH/ft950-remote /opt/ft950-remote\n"
              "cd /opt/ft950-remote/backend\n"
              "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt\n"
@@ -224,6 +227,35 @@ EN = [
         "a steady tone. Halt TRX, right in the title bar, is active only during "
         "an FT8/FT4 transmission or a sequence (dimmed otherwise) and stops at once.",
     ]),
+    ("h2", "Band conditions (VOACAP)"),
+    ("p", "At the bottom right of the panel a sun or a moon and five chips — "
+          "80-40, 30-20, 17-15, 12-10, 6m — show how the bands are open from your "
+          "locator, in green, yellow or red, as iDigi shows them. The values are "
+          "computed on the Pi with VOACAP (voacapl): VOACAP predicts a path, not a "
+          "place, so the question goes to a ring of 36 paths around you (12 "
+          "directions × 1500 / 4000 / 9000 km) at 100 W FT8 with an isotropic "
+          "antenna. Per band the reliability is the mean over the ring, and a pair "
+          "is as good as its better band: green from 0.6, yellow from 0.3, red "
+          "below. Hovering a chip shows both bands in per cent and the trend of the "
+          "next three hours."),
+    ("ul", [
+        "Sun or moon follows the real time of day at your locator. A click shows "
+        "the other half of the day — the mean over today's daylight or darkness "
+        "hours there — with a framed switch and dashed chips; a second click goes "
+        "back to now.",
+        "Updates: one run covers all 24 UTC hours of the month's median ionosphere "
+        "(about 0.5 s, at low priority so jt9 never waits). It is computed once per "
+        "UTC day and again when the locator or the sunspot number changes. The "
+        "sunspot number is NOAA SWPC's latest monthly value, fetched once a day; "
+        "the last good one is kept for an offline Pi. The page asks every 5 "
+        "minutes, so the next hour, sunrise and sunset show within 5 minutes.",
+        "Limits: VOACAP is a monthly median of the F2 layer. It does not see flares "
+        "or geomagnetic storms, and on 6 m it shows only the rare F2 openings of a "
+        "solar maximum — not sporadic-E, which opens 6 m in a European summer. A "
+        "red 6m chip does not rule out Es.",
+        "Without voacapl, or without a locator in Settings ▸ General, the strip is "
+        "not shown.",
+    ]),
 
     ("h1", "10  CW skimmer"),
     ("img", "manual/cw.png", 174),
@@ -289,6 +321,8 @@ EN = [
         "FT8 too quiet: FT8 TX drive (Settings ▸ Audio) and menu 050.",
         "No microphone: the page must be opened over HTTPS with the trusted CA.",
         "After a backend restart: reload the page and CONNECT again.",
+        "No band strip under the waterfall: apt install voacapl, and set a locator "
+        "in Settings ▸ General.",
     ]),
 
     ("h1", "16  Technical reference"),
@@ -303,12 +337,16 @@ EN = [
         "early and partner passes; sequencer.py: the QSO state machine.",
         "voice.py: WebRTC hub, PTT lease, pre-roll, AGC, compressor, pre-emphasis.",
         "cw.py: the CW skimmer; hackrf_proxy.py; shelly.py; recorder.py.",
+        "propagation.py: VOACAP band conditions — the ring of 36 paths, one run per "
+        "UTC day, the day/night halves; GET /api/propagation.",
     ]),
     ("h2", "Files on the Pi"),
     ("code", "backend/runtime.json      station data and credentials (0600, not in git)\n"
              "backend/ex_defaults.json  saved FT-950 audio-menu defaults\n"
              "backend/certs/            server certificate (from the private CA)\n"
              "/run/ft950                decoder slices (tmpfs)\n"
-             "/var/lib/ft950            jt9 working data"),
+             "/var/lib/ft950            jt9 working data\n"
+             "backend/itshfbc/          VOACAP working tree (makeitshfbc copy)\n"
+             "backend/propagation.json  last sunspot number from NOAA"),
     ("p", "Source, issues and updates: github.com/CQ-DJ0SH/ft950-remote — GPL v3."),
 ]

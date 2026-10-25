@@ -42,6 +42,10 @@ decoding, plus voice operation over WebRTC.
   - waterfall with TX/RX markers, DIGI RX level on the Pi
   - a WSJT-X style QSO sequencer (CQ, answer, reports, RR73/73) with
     auto-answer; FT8/FT4 waveform generation for transmit
+  - **HF band conditions** under the waterfall, as iDigi shows them:
+    80-40 · 30-20 · 17-15 · 12-10 · 6m in green / yellow / red, computed by
+    real **VOACAP** for your own locator; the sun/moon shows day or night at
+    the station and switches the view to the other half of the day
 - **CW skimmer**: every CW signal in the passband decoded at once (own STFT
   front end, adaptive timing), listed like the FT8 table; select one, zero
   beat, send through the radio's own keyer (`KM`/`KY`) with macros
@@ -84,7 +88,8 @@ Radio menu settings:
 ## Install
 
 ```bash
-sudo apt install wsjtx            # WSJT-X: jt9 (FT8/FT4 decoder), ft8code/ft4code (TX tones)
+sudo apt install wsjtx voacapl    # WSJT-X: jt9 (FT8/FT4 decoder), ft8code/ft4code (TX tones)
+                                  # voacapl: VOACAP for the band conditions under the waterfall
 cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8444   # development
 ```
@@ -97,6 +102,36 @@ microphone only over HTTPS.
 The station settings, logbook credentials and memory names are entered in the
 web UI. They are saved to `backend/runtime.json` (mode 0600, gitignored) and
 never sent back to the browser.
+
+## Band conditions (VOACAP)
+
+The strip at the bottom right of the DIGI panel is computed on the Pi with
+VOACAP (`voacapl`, Debian package), the same engine and deck format as
+[voacap-matrix](https://github.com/CQ-DJ0SH/voacap-matrix). VOACAP predicts a
+path, not a place, so "how open is 20 m here" is asked of a ring of 36 paths
+around your locator (12 directions × 1500 / 4000 / 9000 km) at 100 W FT8 with
+an isotropic antenna. Per band the reliability is the mean over the ring; a
+pair is as good as its better band: green from 0.6, yellow from 0.3, red
+below.
+
+- **When it updates:** one run covers all 24 UTC hours of the month's median
+  ionosphere (about 0.5 s, at low priority so `jt9` never waits). It is
+  computed once per UTC day and again when the locator or the sunspot number
+  changes. The sunspot number is NOAA SWPC's latest monthly value, fetched
+  once a day; the last good one is kept for an offline Pi. The page asks
+  every 5 minutes, so the strip moves to the next hour, and the sun/moon to
+  sunrise or sunset, within 5 minutes.
+- **Sun / moon:** follows the real time of day at your locator. A click shows
+  the other half of the day — the mean over today's daylight or darkness
+  hours there — framed and with dashed chips, so it is never taken for the
+  present; a second click goes back to now.
+- **Limits:** VOACAP is a monthly median of the F2 layer. It does not see
+  flares or geomagnetic storms, and on **6 m** it shows only the rare F2
+  openings of a solar maximum, not the sporadic-E that opens 6 m in a
+  European summer — a red 6m chip does not rule out Es.
+- Without `voacapl`, or without a locator in Settings ▸ General, the strip is
+  simply not shown. Its working tree `backend/itshfbc/` and the cached
+  sunspot number `backend/propagation.json` are gitignored.
 
 ## Documents
 

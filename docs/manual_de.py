@@ -33,6 +33,9 @@ DE = [
         "FT8/FT4-Dekodierung mit jt9 auf drei CPU-Kernen, Ablaufsteuerung wie in "
         "WSJT-X mit automatischem Antworten, Wasserfall, DXCC- und "
         "Worked-before-Markierung.",
+        "KW-Ausbreitung unter dem Wasserfall, mit echtem VOACAP für den eigenen "
+        "Locator berechnet: 80-40, 30-20, 17-15, 12-10 und 6m in Grün / Gelb / Rot, "
+        "mit Sonne/Mond-Schalter für Tag und Nacht.",
         "CW-Skimmer: Alle CW-Signale im Durchlassbereich werden gleichzeitig "
         "dekodiert; gesendet wird über den eingebauten Keyer des Funkgeräts, mit Makros.",
         "HackRF-Wasserfall, weitergereicht von TM-V71 Remote, der dem Amateurfunkband "
@@ -83,7 +86,7 @@ DE = [
           "DATA-U / DATA-L — das VOICE PROFILE richtet das für das aktuelle Band ein."),
 
     ("h1", "4  Installation"),
-    ("code", "sudo apt install wsjtx            # jt9, ft8code, ft4code\n"
+    ("code", "sudo apt install wsjtx voacapl    # jt9, ft8code, ft4code; VOACAP\n"
              "git clone https://github.com/CQ-DJ0SH/ft950-remote /opt/ft950-remote\n"
              "cd /opt/ft950-remote/backend\n"
              "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt\n"
@@ -246,6 +249,37 @@ DE = [
         "FT8 TX DRIVE in Settings ▸ Audio); TUNE sendet einen Dauerton. Halt TRX rechts in der Titelzeile "
         "ist nur bei einer FT8/FT4-Sendung oder während einer Sequenz aktiv (sonst abgedunkelt) und bricht sofort ab.",
     ]),
+    ("h2", "Bandbedingungen (VOACAP)"),
+    ("p", "Unten rechts im Feld zeigen eine Sonne oder ein Mond und fünf Felder — "
+          "80-40, 30-20, 17-15, 12-10, 6m — in Grün, Gelb oder Rot, wie offen die "
+          "Bänder vom eigenen Locator aus sind, so wie iDigi sie zeigt. Berechnet "
+          "wird das auf dem Pi mit VOACAP (voacapl). VOACAP rechnet einen Pfad, "
+          "keinen Ort; deshalb geht die Frage an einen Ring aus 36 Pfaden rund um "
+          "die Station (12 Richtungen × 1500 / 4000 / 9000 km) bei 100 W FT8 mit "
+          "isotroper Antenne. Je Band zählt der Mittelwert der Zuverlässigkeit "
+          "über den Ring, und ein Bandpaar ist so gut wie sein besseres Band: Grün "
+          "ab 0,6, Gelb ab 0,3, darunter Rot. Mit der Maus über einem Feld stehen "
+          "beide Bänder in Prozent und der Verlauf der nächsten drei Stunden."),
+    ("ul", [
+        "Sonne oder Mond folgen der echten Tageszeit am eigenen Locator. Ein Klick "
+        "zeigt die andere Tageshälfte — den Mittelwert über die heutigen hellen "
+        "bzw. dunklen Stunden dort — mit umrandetem Schalter und gestrichelten "
+        "Feldern; ein zweiter Klick führt zurück zu jetzt.",
+        "Aktualisierung: Ein Lauf deckt alle 24 UTC-Stunden der mittleren "
+        "Ionosphäre des Monats ab (etwa 0,5 s, mit niedriger Priorität, damit jt9 "
+        "nie warten muss). Gerechnet wird einmal pro UTC-Tag und erneut, wenn sich "
+        "Locator oder Sonnenfleckenzahl ändern. Die Sonnenfleckenzahl ist der "
+        "letzte Monatswert von NOAA SWPC, einmal täglich abgeholt; der letzte "
+        "gültige Wert bleibt für einen Pi ohne Internet gespeichert. Die Seite "
+        "fragt alle 5 Minuten, die nächste Stunde sowie Sonnenauf- und -untergang "
+        "erscheinen also spätestens nach 5 Minuten.",
+        "Grenzen: VOACAP ist ein Monatsmittel der F2-Schicht. Flares und "
+        "geomagnetische Stürme sieht es nicht, und auf 6 m zeigt es nur die "
+        "seltenen F2-Öffnungen eines Sonnenmaximums — nicht Sporadic-E, das 6 m im "
+        "europäischen Sommer öffnet. Ein rotes 6m-Feld schließt Es nicht aus.",
+        "Ohne voacapl oder ohne Locator unter Settings ▸ General erscheint die "
+        "Leiste nicht.",
+    ]),
 
     ("h1", "10  CW-Skimmer"),
     ("img", "manual/cw.png", 174),
@@ -316,6 +350,8 @@ DE = [
         "Kein Mikrofon: Die Seite muss über HTTPS mit vertrauenswürdiger CA geöffnet "
         "werden.",
         "Nach einem Neustart des Backends: Seite neu laden und erneut CONNECT.",
+        "Keine Bandleiste unter dem Wasserfall: apt install voacapl, und unter "
+        "Settings ▸ General einen Locator eintragen.",
     ]),
 
     ("h1", "16  Technische Referenz"),
@@ -333,12 +369,16 @@ DE = [
         "voice.py: WebRTC-Hub, PTT-Freigabe, Vorlauf (Pre-Roll), AGC, Kompressor, "
         "Höhenanhebung.",
         "cw.py: der CW-Skimmer; hackrf_proxy.py; shelly.py; recorder.py.",
+        "propagation.py: VOACAP-Bandbedingungen — der Ring aus 36 Pfaden, ein Lauf "
+        "pro UTC-Tag, die Tag- und Nachthälfte; GET /api/propagation.",
     ]),
     ("h2", "Dateien auf dem Pi"),
     ("code", "backend/runtime.json      Stationsdaten und Zugangsdaten (0600, nicht in git)\n"
              "backend/ex_defaults.json  gespeicherte Grundwerte der FT-950-Audiomenüs\n"
              "backend/certs/            Serverzertifikat (von der privaten CA)\n"
              "/run/ft950                Zeitscheiben für den Decoder (tmpfs)\n"
-             "/var/lib/ft950            Arbeitsdaten von jt9"),
+             "/var/lib/ft950            Arbeitsdaten von jt9\n"
+             "backend/itshfbc/          VOACAP-Arbeitsverzeichnis (Kopie von makeitshfbc)\n"
+             "backend/propagation.json  letzte Sonnenfleckenzahl von NOAA"),
     ("p", "Quellcode, Issues und Updates: github.com/CQ-DJ0SH/ft950-remote — GPL v3."),
 ]

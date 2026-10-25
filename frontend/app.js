@@ -177,16 +177,18 @@ const BAND_EDGES = {
 // against a signal generator.
 const S_POINTS = [[12, "S1"], [40, "3"], [65, "5"], [95, "7"], [130, "9"], [172, "+20"], [220, "+40"], [255, "+60"]];
 
+// always with the S: "S5", "S9", "S9+20"
+const sLbl = (l) => (/^\d$/.test(l) ? "S" + l : l.startsWith("+") ? "S9" + l : l);
 function sUnits(raw) {
   if (raw <= S_POINTS[0][0]) return "S0";
   for (let i = 1; i < S_POINTS.length; i++) {
     const [r1, l1] = S_POINTS[i];
     if (raw <= r1) {
       const [r0] = S_POINTS[i - 1];
-      return raw - r0 < r1 - raw ? S_POINTS[i - 1][1].replace(/^(\d)$/, "S$1") : l1.replace(/^(\d)$/, "S$1");
+      return sLbl(raw - r0 < r1 - raw ? S_POINTS[i - 1][1] : l1);
     }
   }
-  return "+60";
+  return "S9+60";
 }
 // ---------------------------------------------------------------- analog meter (as the FT-950's)
 // The needle shows exactly the meter position the radio reports over CAT
@@ -241,7 +243,7 @@ const amPt = (f, r) => {
   };
   const lbl = (f, r, text, cls = "am-lbl") => {
     const [x, y] = amPt(f, r);
-    el("text", { x, y, class: cls, transform: `rotate(${amAng(f) * 0.6} ${x} ${y})` }, text);
+    el("text", { x, y, class: cls }, text);      // upright, not turned with the arc
   };
   const side = (f, r, text, cls = "am-side") => {   // scale name left of the arc start
     const [x, y] = amPt(f - 0.02, r);
@@ -286,7 +288,10 @@ const amPt = (f, r) => {
   arc(0.16, 0.52, 158, "am-arc blue");
   arc(0.52, 0.92, 158, "am-arc");
   lbl(0.96, 156, "V", "am-lbl big");
-  el("text", { x: 318, y: 193, class: "am-lbl small" }, "VDD");
+  {                                  // "VDD" right after the V, upright (as on the FT-950)
+    const [vx, vy] = amPt(0.96, 156);
+    el("text", { x: vx + 19, y: vy + 3, class: "am-lbl small" }, "VDD");
+  }
   side(0.16, 158, "ALC", "am-side blue");
 })();
 const amNeedle = $("am-needle");
@@ -309,13 +314,25 @@ function needleStep(t) {
 function meterSet(raw, label) {
   needle.target = raw / 255;
   if (!needle.raf) needle.raf = requestAnimationFrame(needleStep);
-  $("am-mode").textContent = label;
+  // readout under the frequency, left of VFO-B: digits in the 7-segment font, letters and
+  // "+" small in the UI font (DSEG7 has no real S or +)
+  // S readout: "S9" fixed, then "+" and one 2-digit 7-segment field for 20/40/60 -
+  // its unlit segments show dimmed ("88" behind), so S and the digit never move
+  const sm = /^S(\d)(?:\+(\d+))?$/.exec(label);
+  if (!sm && /^PO/.test(label)) return;          // transmit: the box stays as it is, its content hidden by CSS
+  $("sm-read").innerHTML = sm
+    ? `<span class="s-core"><small class="u">S</small>${sm[1]}<span class="s-over${sm[2] ? " on" : ""}"><small class="u">+</small><span class="s-dd"><span class="gh">88</span><span class="v">${sm[2] || ""}</span></span></span></span>`
+    : esc(label).replace(/[^0-9.\-]+/g, (t) => `<small class="u">${t.trim()}</small>`);
 }
 
 // number in the 7-segment font, unit in the UI font (DSEG7 has no real W, A or %)
+// clarifier scale in the LCD: a tick every 100 Hz over ±1 kHz (5 … 95 % of the box),
+// long ones every 500 Hz, the longest at 0
+$("tune-mark").insertAdjacentHTML("beforebegin", Array.from({ length: 21 }, (_, i) =>
+  `<b class="ts-t${i === 10 ? " zero" : i % 5 === 0 ? " major" : ""}" style="left:${5 + i * 4.5}%"></b>`).join(""));
 function lcdVal(id, num, unit, prefix = "") {
   $(id).innerHTML = (prefix ? `<small class="u">${prefix}</small>` : "") + esc(String(num)) +
-    (unit ? `<small class="u">${unit}</small>` : "");
+    (unit ? `<small class="u uu">${unit}</small>` : "");
 }
 
 // PO / SWR / ALC as segmented bars; segments past the warn mark light red
@@ -328,10 +345,31 @@ for (const id of Object.keys(TX_WARN)) {
   $(id).innerHTML = Array.from({ length: TXSEG }, (_, i) =>
     `<i${(i + 0.5) / TXSEG >= TX_WARN[id] ? ' class="hot"' : ""}></i>`).join("");
 }
-function txBar(id, raw) {
+// peakRaw: the held peak segment (shown while transmitting, when above the live bar)
+function txBar(id, raw, peakRaw = null) {
   const lit = Math.round(raw / 255 * TXSEG);
-  [...$(id).children].forEach((seg, i) => seg.classList.toggle("on", i < lit));
+  const p = peakRaw == null ? -1 : Math.round(peakRaw / 255 * TXSEG) - 1;
+  [...$(id).children].forEach((seg, i) => {
+    seg.classList.toggle("on", i < lit);
+    seg.classList.toggle("pk", i === p && p >= lit - 1);
+  });
 }
+// Peak hold: the highest reading of each meter during one transmission. After TX the
+// bars and values show these peaks (PEAK LED lit) until the next TX resets them.
+// SWR only counts with some power out (keying edges read nonsense at zero PO).
+const PK_SWR_MIN_PO = 13;                     // raw ≈ 5 % of the PO scale
+const pk = { tx: false, held: false, po: 0, swr: 0, alc: 0, id: 0, af: null };
+function txVals(po, swr, alc, id) {
+  const w = poWatts(po), r = swrOf(swr);
+  // fixed digit counts with leading zeros, so the unit behind never jumps
+  lcdVal("v-id", idAmps(id).toFixed(1).padStart(4, "0"), "A");
+  lcdVal("v-po", String(Math.round(w)).padStart(3, "0"), "W");
+  lcdVal("v-alc", String(Math.round(alc / 255 * 100)).padStart(3, "0"), "%");
+  // "≥" always takes its place (hidden below 5:1) for the same reason
+  $("v-swr").innerHTML = `<small class="u"${r >= 4.95 ? "" : ' style="visibility:hidden"'}>≥</small>${Math.min(r, 5).toFixed(1)}<small class="u uu">:1</small>`;   // ratio as the unit, like W / % / A / dB
+}
+const afTxt = (db) => "-" + String(Math.min(99, Math.round(Math.max(0, -db)))).padStart(2, "0");   // −02 dB
+const afRaw = (db) => Math.max(0, Math.min(255, (db + 60) / 60 * 255));
 
 // DSP bar graphs (CONTOUR · NOTCH · WIDTH · SHIFT) as on the LCD: 21 segments
 const DSEG = 21, DMID = 10;
@@ -377,12 +415,12 @@ function fmtHzGroups(hz) {
   const s = String(Math.max(0, hz)).padStart(8, "0");
   return [s.slice(0, 2), s.slice(2, 5), s.slice(5, 8)];
 }
-// 10 MHz … 10 Hz, as the FT-950 shows it ("14.195.00"); a leading zero stays
+// 10 MHz … 1 Hz ("14.195.000", as VFO-B); a leading zero stays
 // an unlit digit ("!" is DSEG's all-segments-off glyph).
 function renderFreq(hz) {
   const s = String(Math.max(0, hz)).padStart(8, "0");
   let html = "";
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 8; i++) {
     if (i === 2 || i === 5) html += '<span class="sep">.</span>';
     const lead = i === 0 && hz < 10e6;
     html += `<span class="dg${lead ? " lead" : ""}" data-w="${10 ** (7 - i)}">${lead ? "!" : s[i]}</span>`;
@@ -408,7 +446,7 @@ function tuneLive(hz) {
   const place = (f) => {
     knob.style.left = `${50 + f * 50}%`;
     const s = stepOf(f);
-    lbl.textContent = held && s ? `${f < 0 ? "◀ −" : "+"}${fmtStep(s)}${f < 0 ? "" : " ▶"}` : "◀ TUNE ▶";
+    lbl.textContent = held && s ? (f < 0 ? `◀ DOWN ${fmtStep(s)}` : `UP ${fmtStep(s)} ▶`) : "TUNE";
     sh.classList.toggle("down", held && f < 0 && !!s);
     sh.classList.toggle("up", held && f > 0 && !!s);
   };
@@ -600,20 +638,52 @@ const setWidthUI = (() => {
   };
 })();
 const setShift = slider("ifshift", (v) => (v > 0 ? "+" : "") + v + " Hz", (v) => api("/api/ifshift", { hz: v }));
+// CLAR slider: the offset is set absolutely (the backend clears, moves once and
+// reads it back) and RX CLAR goes on with it - turning the knob means wanting
+// to hear the offset. The label shows what the radio holds, also beyond the
+// slider's +-2.5 kHz.
+const fmtClar = (v) => (v > 0 ? "+" : "") + v + " Hz";
+const clarLit = (on) => {                 // both CLAR switches at once, ahead of the next poll
+  touched.set("hq-clar", Date.now());
+  $("hq-clar").classList.toggle("on", on);
+  $("clar-rx").classList.toggle("on", on);
+};
+const setClarOff = slider("clar-off", fmtClar, (v) => { clarLit(true); return api("/api/clar/offset", { hz: v, rx_on: true }); });
 const setRf = slider("rfgain", String, (v) => api("/api/level", { cmd: "RG0", value: v }));
 const setSqlRaw = slider("squelch", String, (v) => api("/api/level", { cmd: "SQ0", value: v }));
 const sqlFill = () => { const el = $("squelch"); el.style.setProperty("--sqlpct", (el.value / 255 * 100) + "%"); };
 $("squelch").addEventListener("input", sqlFill);
 const setSql = (v) => { setSqlRaw(v); sqlFill(); };
-const setPwrVfo = slider("power", (v) => v + " W", (v) => api("/api/power", { watts: v }));
 const setPwrBig = slider("pwr-big", (v) => String(v), (v) => api("/api/power", { watts: v }));   // dominant control by RX · FILTER · LEVEL
-const setPwr = (v) => { setPwrVfo(v); setPwrBig(v); fillPct($("pwr-big")); };
+const setPwr = (v) => { setPwrBig(v); fillPct($("pwr-big")); };   // TX POWER is the one power control now
 $("pwr-big").addEventListener("input", (e) => fillPct(e.target));
 
+// DSP switches (checkboxes): the poll must not flip a switch back in the
+// moment before the radio has taken it, hence the touched stamp
 for (const b of document.querySelectorAll("[data-toggle]")) {
-  b.onclick = () => api("/api/toggle", { cmd: b.dataset.toggle, on: !b.classList.contains("on") });
+  b.onchange = () => {
+    touched.set(b.id, Date.now());
+    api("/api/toggle", { cmd: b.dataset.toggle, on: b.checked }).catch(() => touched.delete(b.id));
+  };
 }
+const setDsp = (id, on) => { if (Date.now() - (touched.get(id) || 0) > 1500) $(id).checked = on; };
 $("narrow").onclick = () => api("/api/narrow", { on: !$("narrow").classList.contains("on") });
+// LOCK in the title bar: shows the radio's dial lock and switches it (LK0/LK1,
+// verified by reading LK back). Lit at once; the poll takes over after 1.5 s.
+(function dialLock() {
+  const el = $("lamp-lock");
+  const flip = () => {
+    const on = !el.classList.contains("on");
+    touched.set("lamp-lock", Date.now());
+    el.classList.toggle("on", on);
+    el.setAttribute("aria-pressed", String(on));
+    api("/api/toggle", { cmd: "LK", on })
+      .then(() => toast(on ? "Dial locked" : "Dial unlocked"))
+      .catch(() => touched.delete("lamp-lock"));
+  };
+  el.onclick = flip;
+  el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } };
+})();
 
 async function runProfile(name, path) {
   const { report } = await api(path, {});
@@ -644,7 +714,6 @@ async function loadMeta() {
   seg($("preamp"), Object.entries(meta.preamp), (v) => api("/api/preamp", { level: +v }));
   seg($("att"), Object.entries(meta.att).map(([k, v]) => [k, v === "OFF" ? "0dB" : v]), (v) => api("/api/att", { level: +v }));
   seg($("agc"), meta.agc.map((a) => [a, a]), (a) => api("/api/agc", { name: a }));
-  seg($("roofing"), meta.roofing.map((r) => [r, r]), (r) => api("/api/roofing", { name: r }));
 }
 
 // Switching the radio on is not the moment it can answer: the Shelly gives the
@@ -685,7 +754,9 @@ function renderRadio(s) {
   $("clar-lbl").textContent = v.tx_clar && !v.rx_clar ? "TX" : v.tx_clar ? "R/T" : "RX";
   const [ci, cf] = (Math.abs(v.clar_hz) / 1000).toFixed(3).split(".");   // clear decimal point (DSEG's is tiny)
   $("clar-val").innerHTML = `${v.clar_hz > 0 ? "+" : v.clar_hz < 0 ? "-" : ""}${ci}<i class="cdot"></i>${cf}`;
-  $("tune-mark").style.left = (50 + Math.max(-1000, Math.min(1000, v.clar_hz)) / 20) + "%";
+  $("tune-mark").style.left = (50 + Math.max(-1000, Math.min(1000, v.clar_hz)) * 0.045) + "%";   // ±1 kHz on 5 … 95 %
+  setClarOff(v.clar_hz);
+  if (Date.now() - (touched.get("hq-clar") || 0) > 2000) $("clar-rx").classList.toggle("on", !!v.rx_clar);
   segSet($("modes"), v.mode);
   segSet($("bands"), bandOf(v.freq_hz));
 
@@ -695,29 +766,36 @@ function renderRadio(s) {
   $("l-ptt").classList.toggle("on", !!s.tx);
   $("l-ptt").classList.toggle("bad", !!s.tx);
   const m = s.tx ? s.meters : null;
-  if (m) meterSet(m.po, "PO");
+  if (m) meterSet(m.po, `PO ${Math.round(poWatts(m.po))} W`);
   else meterSet(s.smeter, sUnits(s.smeter));
+  $("sm-read").classList.toggle("tx", !!s.tx);    // readout hidden while transmitting
   $("ameter").setAttribute("title", m ? `PO raw ${m.po} · SWR raw ${m.swr} · ALC raw ${m.alc} · ID raw ${m.id ?? "—"}` : `S meter ${sUnits(s.smeter)} (raw ${s.smeter})`);
   $("tx-meters").classList.toggle("on", !!m);
   $("tx-read").classList.toggle("on", !!m);
+  if (s.tx && !pk.tx) Object.assign(pk, { held: false, po: 0, swr: 0, alc: 0, id: 0, af: null });   // new TX: reset
+  if (!s.tx && pk.tx) pk.held = true;
+  pk.tx = !!s.tx;
   if (m) {
-    const w = poWatts(m.po), swr = swrOf(m.swr);
-    txBar("m-po", m.po);
-    txBar("m-alc", m.alc);
-    txBar("m-swr", m.swr);
-    txBar("m-id", m.id ?? 0);
-    lcdVal("v-id", idAmps(m.id ?? 0).toFixed(1), "A");
-    lcdVal("v-po", w < 10 ? w.toFixed(1) : Math.round(w), "W");
-    lcdVal("v-alc", Math.round(m.alc / 255 * 100), "%");
-    if (swr >= 4.95) lcdVal("v-swr", "5.0", "", "≥"); else lcdVal("v-swr", swr.toFixed(1), "");
-  } else {
-    for (const id of ["m-po", "m-alc", "m-swr", "m-id", "m-af"]) txBar(id, 0);
-    // values of the last transmission stay readable on receive (bars drop to zero)
+    const id = m.id ?? 0;
+    pk.po = Math.max(pk.po, m.po); pk.alc = Math.max(pk.alc, m.alc); pk.id = Math.max(pk.id, id);
+    if (m.po >= PK_SWR_MIN_PO) pk.swr = Math.max(pk.swr, m.swr);
+    txBar("m-po", m.po, pk.po);
+    txBar("m-alc", m.alc, pk.alc);
+    txBar("m-swr", m.swr, pk.swr);
+    txBar("m-id", id, pk.id);
+    txVals(m.po, m.swr, m.alc, id);
+  } else if (!s.tx && pk.held) {               // receive: the peaks of the last TX
+    txBar("m-po", pk.po, pk.po); txBar("m-alc", pk.alc, pk.alc); txBar("m-swr", pk.swr, pk.swr); txBar("m-id", pk.id, pk.id);   // up to the peak (dimmed by CSS)
+    txVals(pk.po, pk.swr, pk.alc, pk.id);
+  } else if (!s.tx) {
+    for (const id of ["m-po", "m-alc", "m-swr", "m-id"]) txBar(id, 0);
   }
+  $("tx-meters").classList.toggle("peak", !s.tx && pk.held);   // red value boxes + PEAK
+  if (!s.tx) showTxAf({});                     // AF too, also when no level stream is open
 
   if (s.other) {                                   // slow tier present
     const [m, k, h] = fmtHzGroups(s.other.freq_hz);
-    $("freq-b").textContent = `${+m}.${k}.${h}`;
+    $("freq-b").innerHTML = `${+m}<span class="sep">.</span>${k}<span class="sep">.</span>${h}`;
     $("mode-b").textContent = s.other.mode;
     $("rxtx").textContent = `RX ${s.rx_vfo} · TX ${s.tx_vfo}`;
     $("split").classList.toggle("on", s.rx_vfo !== s.tx_vfo);
@@ -734,11 +812,13 @@ function renderRadio(s) {
     segSet($("preamp"), Object.keys(meta?.preamp || {}).find((k2) => meta.preamp[k2] === s.preamp));
     segSet($("att"), Object.keys(meta?.att || {}).find((k2) => meta.att[k2] === s.att));
     segSet($("agc"), (s.agc || "").replace(/^AUTO-.*/, "AUTO"));
-    segSet($("roofing"), (s.roofing || "").replace(/^AUTO-.*/, "AUTO"));
-    $("t-dnf").classList.toggle("on", !!s.dnf);
-    $("t-nr").classList.toggle("on", !!s.nr);
-    $("t-nb").classList.toggle("on", !!s.nb && s.nb !== "0");
-    $("lamp-lock").classList.toggle("on", !!s.lock);
+    setDsp("t-dnf", !!s.dnf);
+    setDsp("t-nr", !!s.nr);
+    setDsp("t-nb", !!s.nb && s.nb !== "0");
+    if (Date.now() - (touched.get("lamp-lock") || 0) > 1500) {
+      $("lamp-lock").classList.toggle("on", !!s.lock);
+      $("lamp-lock").setAttribute("aria-pressed", String(!!s.lock));
+    }
     // LCD: signal path, indicators, DSP bars
     litCells("pv-ant", [s.ant]);
     showAntTuner(s.ant, s.tuner);
@@ -924,6 +1004,8 @@ function applyDigiStatus(s) {
 // ---------------------------------------------------------------- auto-sequencer
 let selectedDecode = null, seqState = null, selSession = null, lastTxShown = null;
 const prompted = new Set();
+const sessErrSeen = new Set();                // "started|error" already toasted
+let sessErrInit = false;
 const markedWorked = new Set();               // sessions whose rows were turned "worked"
 async function answer(d) {
   if (!d?.from) return;
@@ -990,16 +1072,32 @@ function renderSeq(s) {
   // Sessions
   const fmtDur = (x) => `${String(Math.floor(x / 60)).padStart(2, "0")}:${String(x % 60).padStart(2, "0")}`;
   // oldest first, newest at the bottom (as the other lists); data-i stays the index in s.sessions
+  // "error: <reason>" shows as just "error"; the reason comes as a toast (once when it
+  // appears, and again on a click on the row) and as the cell's tooltip
+  const errOf = (x) => (x.logged !== true && x.logged !== "running" && x.state.startsWith("error") ? x.state : null);
+  for (const x of s.sessions) {
+    const e = errOf(x), key = `${x.started}|${e}`;
+    if (e && !sessErrSeen.has(key)) {
+      if (sessErrInit) toast(`${x.call}: ${e}`, true);   // not for old errors on page load
+      sessErrSeen.add(key);
+    }
+  }
+  sessErrInit = true;
   $("sess-body").innerHTML = s.sessions.map((x, i) => [x, i]).reverse().map(([x, i]) => {
-    const st = x.logged === true ? "logged" : x.logged === "running" ? "logging …" : x.state;
+    const err = errOf(x);
+    const st = x.logged === true ? "logged" : x.logged === "running" ? "logging …" : err ? "error" : x.state;
     const cls = x.logged === true ? "sess-ok" : (STATE_CLS[x.state] || (x.state.startsWith("error") || x.state === "no reply" ? "sess-bad" : ""));
     return `<tr data-i="${i}"${selSession === x.started ? ' class="sel"' : ""}><td class="msg">${esc(x.call)}</td>` +
       `<td>${new Date(x.started * 1000).toISOString().slice(11, 19)}</td><td>${fmtDur(x.duration_s)}</td>` +
       `<td class="n">${x.df ?? ""}</td><td>${esc(x.band || "")}</td><td class="n">${x.tries}</td>` +
-      `<td class="${cls}">${esc(st)}</td><td class="dx">${esc(x.dxcc || "")}</td></tr>`;
+      `<td class="${cls}"${err ? ` title="${esc(err)}"` : ""}>${esc(st)}</td><td class="dx">${esc(x.dxcc || "")}</td></tr>`;
   }).join("");
   followSess();
-  for (const tr of $("sess-body").children) tr.onclick = () => { selSession = s.sessions[+tr.dataset.i].started; renderSeq(seqState); };
+  for (const tr of $("sess-body").children) tr.onclick = () => {
+    const x = s.sessions[+tr.dataset.i], e = errOf(x);
+    selSession = x.started; renderSeq(seqState);
+    if (e) toast(`${x.call}: ${e}`, true);
+  };
   const marked = s.sessions.find((x) => x.started === selSession) || null;
   $("sess-qrz").disabled = $("sess-map").disabled = !marked;
   $("sess-qrz").onclick = () => marked && openQrz(marked.call);
@@ -2300,6 +2398,17 @@ $("hq-clar").onclick = () => {
   api("/api/clar", { on }).catch(() => { touched.delete("hq-clar"); });
 };
 $("hq-clr").onclick = () => api("/api/clar/clear", {}).then(() => toast("Clarifier offset 0")).catch(() => {});
+// the CLAR group: ON mirrors the title bar's CLAR (same touched key, so the two
+// never fight), CLR and a double-click on the slider return to 0
+$("clar-rx").onclick = () => { $("hq-clar").click(); clarLit($("hq-clar").classList.contains("on")); };
+const clarZero = () => {
+  touched.set("clar-off", Date.now());
+  $("clar-off").value = 0;
+  $("clar-off-val").textContent = fmtClar(0);
+  api("/api/clar/clear", {}).catch(() => {});
+};
+$("clar-zero").onclick = clarZero;
+$("clar-off").addEventListener("dblclick", clarZero);
 $("hq-flt").onclick = () => headQuick("hq-flt", ["THRU", "VRF"], radio.vrf ? "VRF" : "THRU",
   (v) => api("/api/vrf", { on: v === "VRF" }));
 $("hq-ipo").onclick = () => {
@@ -2836,12 +2945,17 @@ const vuPct = (db) => Math.max(0, Math.min(100, (db + 60) / 60 * 100));
 const vuPk = { rx: 0, tx: 0, rxAt: 0, txAt: 0 };
 // AF bar in the LCD: transmit audio while the radio sends (−60 … 0 dBFS)
 function showTxAf(m) {
-  if (!radio.tx) { txBar("m-af", 0); return; }
+  if (!radio.tx) {                             // receive: the peak of the last TX (PEAK LED)
+    if (pk.held && pk.af != null) { txBar("m-af", afRaw(pk.af), afRaw(pk.af)); lcdVal("v-af", afTxt(pk.af), "dB"); }
+    else txBar("m-af", 0);
+    return;
+  }
   const db = m.ptt === "voice" ? m.tx
     : txState?.level ? 20 * Math.log10(0.98 * txState.level / 100) : null;   // FT8/TUNE tone drive
-  if (db == null || db < -90) { txBar("m-af", 0); return; }
-  txBar("m-af", Math.max(0, Math.min(255, (db + 60) / 60 * 255)));
-  lcdVal("v-af", Math.round(db), "dB");
+  if (db == null || db < -90) { txBar("m-af", 0, pk.af == null ? null : afRaw(pk.af)); return; }
+  if (pk.tx) pk.af = Math.max(pk.af ?? -120, db);
+  txBar("m-af", afRaw(db), pk.af == null ? null : afRaw(pk.af));
+  lcdVal("v-af", afTxt(db), "dB");
 }
 function onLevels(m) {
   if (m.agc_gain != null && $("tx-auto").checked) showTxAuto(true, m.agc_gain);

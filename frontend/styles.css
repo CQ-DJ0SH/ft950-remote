@@ -108,7 +108,8 @@ code{font-family:var(--font-mono);font-size:.92em}
   content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px;
   border-radius:3px; background:var(--accent); box-shadow:0 0 12px var(--accent-glow);
 }
-.vfo{--accent:var(--amber); --accent-glow:var(--amber-glow)}
+.vfo{--accent:#8fd6ff; --accent-glow:#3fb4ff}   /* the LCD blue */
+:root[data-theme="light"] .vfo{--accent:#3a9be0; --accent-glow:#3a9be0}
 .digi{--accent:#6fd89a; --accent-glow:#6fd89a}
 .digi::before{box-shadow:0 0 9px -2px var(--accent-glow)}
 
@@ -142,7 +143,7 @@ code{font-family:var(--font-mono);font-size:.92em}
 .panel.collapsed .panel-toggle{transform:rotate(180deg)}
 .panel.collapsed{padding-bottom:12px}
 .panel.collapsed > :not(.panel-head):not(.screw){display:none}
-.logp{--accent:#5aa9e6; --accent-glow:#5aa9e6}
+.logp{--accent:var(--amber); --accent-glow:var(--amber-glow)}   /* the VFO panel's former amber */
 .logp::before{box-shadow:0 0 9px -2px var(--accent-glow)}
 .panel.collapsed .panel-head{margin-bottom:0}
 .panel-stat{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); letter-spacing:.05em}
@@ -272,14 +273,27 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 }
 .chain-toggle .chev{transition:transform .2s}
 .chain-toggle[aria-expanded="false"] .chev{transform:rotate(-90deg)}
-.chain{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:6px}
-.chain[hidden]{display:none}
+.rx-chain{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)) auto; gap:14px; margin-top:6px}
+/* .rx-chain, not .chain: the LCD's signal path is a .chain too, and its later
+   flex rule used to win here - the groups were a left-packed flex row with
+   no gaps and uneven heights instead of this grid */
+/* DSP: a narrow fifth column, three switches one under the other (the MIC
+   TEST switch). Kept tight so the stack is no taller than CLAR or LEVEL
+   (three rows each): 6 + 3 x 22 + 2 x 4 = 80 px, theirs 7+26+7+20+1+12+7 = 80 -
+   a taller DSP would stretch the whole row, and every group with it. */
+.dsp-col{display:flex; flex-direction:column; gap:4px; margin-top:6px}
+.rx-chain[hidden]{display:none}
 .group{margin:0; padding:12px 14px 10px; border:1px solid var(--edge); border-radius:10px; background:var(--ctrl-bg); min-width:0}
 .group legend{padding:0 6px; font:700 11px var(--font-disp); letter-spacing:.18em; color:var(--accent)}
 .g-row{display:grid; grid-template-columns:52px minmax(0,1fr) auto; align-items:center; gap:10px; margin:7px 0}
 .g-row .seg{justify-self:start}
 .g-row.slider input{width:100%; min-width:0}
 .g-row.slider b{font:500 12px var(--font-mono); color:var(--text); min-width:64px; text-align:right}
+/* end values under a group slider (CLAR, RF): the same three columns as the
+   slider row, so the two numbers sit exactly under the ends of the track */
+.g-row.g-scale{margin-top:-6px}
+.g-scale b{min-width:64px}
+.gs-ends{display:flex; justify-content:space-between; font:500 10px var(--font-mono); color:var(--text-dim)}
 
 /* ---------------- DIGI ---------------- */
 .digi-body{border:1px solid var(--edge); border-radius:10px; overflow:hidden; background:var(--panel)}
@@ -414,9 +428,13 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .btn-ghost{background:var(--ctrl-bg); color:var(--text-dim)}
 @media (hover:hover){.btn-ghost:hover{border-color:var(--edge-hi); color:var(--text)}}
 .btn-primary{background:var(--cyan); color:#06222a; border-color:var(--cyan); font-weight:600}
+/* a lamp that is also a switch (LOCK): looks like the others, answers the pointer */
+.lamp-click{cursor:pointer}
+@media (hover:hover){.lamp-click:hover{border-color:var(--accent,var(--amber))}}
+.lamp-click:focus-visible{outline:none; box-shadow:0 0 0 2px var(--cyan)}
 /* the destructive answer: same shape as the primary one, in the TX red that
    means "this reaches the radio" everywhere else in the console */
-.btn-danger{background:var(--tx); color:#2a0604; border-color:var(--tx); font-weight:600}
+.btn-danger{background:var(--tx); color:#fff; border-color:var(--tx); font-weight:600}
 @media (hover:hover){.btn-danger:hover{box-shadow:0 0 16px -2px var(--tx-glow,#ff5b4a)}}
 /* confirm dialog: narrower than Settings, and it opens centred rather than at
    the top - it is two lines and a choice, not a page */
@@ -484,13 +502,14 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .toast.err{border-color:var(--tx)}
 
 /* ---------------- responsive ---------------- */
-@media (max-width:1180px){ .chain{grid-template-columns:1fr 1fr} }
+/* the five groups stay one row (as they always looked) and stack only on a
+   narrow screen, below */
 @media (max-width:980px){
   .digi-grid{grid-template-columns:1fr}
   .rx-pane{border-right:0; border-bottom:1px solid var(--edge)}
   .tbl{height:320px}
   .lvl{margin-left:0}
-  .chain{grid-template-columns:1fr}
+  .rx-chain{grid-template-columns:1fr}
   .stat .stat-label{display:none}
 }
 @media (max-width:640px){
@@ -760,7 +779,7 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .freq-spin{padding:6px 10px}
 .dig{font-size:20px; width:24px} .dbar{width:24px; height:8px} .fdot{font-size:20px}
 .sel-row{margin-bottom:6px}
-.chain{gap:12px}
+.rx-chain{gap:12px}
 .group{padding:9px 12px 7px}
 .g-row{margin:5px 0}
 .seg .sg{padding:4px 9px}
@@ -856,7 +875,7 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
   font-size:clamp(40px,5.4vw,76px); line-height:1.05; letter-spacing:.02em; color:var(--lb);
   text-shadow:0 0 10px var(--lb-glow), 0 0 26px #1e8fe066; white-space:nowrap}
 .lcd .freq .dg.lead{opacity:.08}
-.lcd .freq .sep{margin:0}
+.lcd .freq .sep, .lcd .freq-b .sep{margin:0 .1em}   /* a little air around the dots (VFO A and B) */
 @media (hover:hover){.lcd .freq .dg:hover{background:#8fd6ff1f}}
 .lf-bottom{display:flex; align-items:center; gap:12px; justify-content:flex-end}
 .tune-scale{position:relative; flex:1 1 160px; max-width:240px; height:30px; border:1.5px solid var(--lb); border-radius:6px;
@@ -871,6 +890,10 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .clar-val .cdot{display:inline-block; width:5px; height:5px; margin:0 3px 0 2px; border-radius:1px; background:currentColor;
   box-shadow:0 0 6px #7fd36a99}
 .lcd .vfo-b{display:flex; align-items:baseline; gap:10px; justify-content:flex-end; margin:0; padding:0; border:0}
+/* a divider over VFO-B: the second VFO is a line of its own, not part of the
+   clarifier row above it - drawn in the LCD's own segment colour, faint */
+.lcd .vfo-b{border-top:1px solid color-mix(in srgb, var(--lb) 40%, transparent); padding-top:16px}
+/* (VFO-B sits at the foot of the column, so more padding lifts the line, not the frequency) */
 .lcd .vfo-b .lbl{font:700 10px var(--font-ui); color:var(--lb); opacity:.7}
 .lcd .freq-b{font-family:"DSEG7-Classic",var(--font-mono); font-style:italic; font-size:20px; color:var(--lb); opacity:.75;
   text-shadow:0 0 6px var(--lb-glow)}
@@ -1188,9 +1211,6 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .lbar{border-left:1.5px solid var(--lb); border-right:1.5px solid var(--lb); padding:0 4px; height:11px; box-sizing:border-box}
 .lcd-txm b .u{font:600 10px var(--font-ui); font-style:normal; margin-left:3px; opacity:.85}
 .lcd-txm b .u:first-child{margin:0 2px 0 0}
-/* VFO panel: PWR in transmit red */
-#power{accent-color:#e0453a}
-:root[data-theme="light"] #power{accent-color:#c62f26}
 /* RX · FILTER · LEVEL toggle: clear of the bottom-left screw, readable chevron */
 .chain-toggle{margin-left:16px; margin-bottom:6px; width:calc(100% - 16px)}
 .chain-toggle .chev{font-size:15px; line-height:1; color:var(--accent); display:inline-block}
@@ -1198,7 +1218,8 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
   font-size:12px; border:1px solid var(--sw-edge); border-radius:6px; background:var(--ctrl-bg)}
 @media (hover:hover){.chain-toggle:hover .chev{border-color:var(--accent)}}
 /* LCD: divider between the analog meter column and the rest */
-.lcd-path .lcd-txm{align-self:flex-start}          /* bars start at the column edge: 18 px right of the divider */
+.lcd-path .lcd-txm{align-self:flex-start; margin-left:14px}   /* the PO/SWR/ALC block a little in
+   from the column edge, clear of the divider (88 % + 14 px still fits the column) */
 /* ===== two LCD windows, as on the FT-950: analog meter | signal path + frequency ===== */
 .lcd{display:grid; grid-template-columns:minmax(300px,1.2fr) minmax(0,2.2fr); gap:14px;
   background:none; border:0; box-shadow:none; padding:0; border-radius:0}
@@ -1233,7 +1254,7 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
   background:linear-gradient(90deg, color-mix(in srgb,var(--accent) 26%,var(--ctrl-bg)), var(--ctrl-bg) 44%, var(--ctrl-bg) 56%,
     color-mix(in srgb,var(--accent) 26%,var(--ctrl-bg)))}
 .shuttle .sh-zones{position:absolute; inset:0; pointer-events:none;
-  background:linear-gradient(90deg, transparent calc(50% - 1px), var(--sw-edge) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+  background:linear-gradient(90deg, transparent calc(50% - 1px), var(--ctrl-bg) calc(50% - 1px) 50%, transparent 50%),   /* no tick in the middle */
     repeating-linear-gradient(90deg, transparent 0 calc(12.5% - 1px), color-mix(in srgb,var(--text-dim) 35%,transparent) calc(12.5% - 1px) 12.5%)}
 .shuttle .sh-knob{position:absolute; top:3px; bottom:3px; left:50%; width:16px; margin-left:-8px; border-radius:4px;
   background:var(--accent); box-shadow:0 0 8px -1px var(--accent); transition:left .18s ease-out; pointer-events:none}
@@ -1347,7 +1368,7 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .pwr-big{flex:1 1 auto; display:flex; align-items:center; gap:16px; min-width:0; max-width:760px; margin-left:auto;
   padding:8px 16px 8px 14px; border:1px solid #5a2a2d; border-radius:12px;
   background:radial-gradient(120% 140% at 85% 50%, #2a0f10, #120809 70%);
-  box-shadow:inset 0 1px 0 #ffffff10, inset 0 0 18px #0009, 0 0 18px -8px var(--tx-glow)}
+  box-shadow:inset 0 1px 0 #ffffff10, inset 0 0 18px #0009}
 .pwr-big .pb-lbl{font:800 11px/1.05 var(--font-disp); letter-spacing:.22em; color:#e0453a; text-align:right}
 .pwr-big .pb-track{position:relative; flex:1 1 auto; min-width:160px; padding-bottom:16px}
 .pwr-big .pb-track::before{content:""; position:absolute; left:0; right:0; top:22px; height:7px; pointer-events:none;
@@ -1363,7 +1384,7 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .pwr-big .pb-val{display:flex; align-items:baseline; gap:4px; min-width:3.6em; justify-content:flex-end}
 .pwr-big .pb-val span{font:italic 400 34px/1 "DSEG7-Classic",var(--font-mono); color:#ff6a5a; text-shadow:0 0 12px #ff3b2f, 0 0 26px #ff3b2f66}
 .pwr-big .pb-val small{font:800 14px var(--font-disp); color:#e0453a; letter-spacing:.1em}
-:root[data-theme="light"] .pwr-big{background:linear-gradient(180deg,#fff3f1,#fbe3e1); border-color:#e3a7a2; box-shadow:inset 0 1px 0 #fff, 0 0 12px -6px #c62f26}
+:root[data-theme="light"] .pwr-big{background:linear-gradient(180deg,#fff3f1,#fbe3e1); border-color:#e3a7a2; box-shadow:inset 0 1px 0 #fff}
 :root[data-theme="light"] .pwr-big .pb-val span{color:#c62f26; text-shadow:none}
 :root[data-theme="light"] #pwr-big{background:linear-gradient(90deg, #e9a59e, #c62f26 var(--gpct,0%), #f3d6d3 var(--gpct,0%))}
 @media (max-width:900px){ .chain-row{flex-wrap:wrap} .pwr-big{max-width:none; flex-basis:100%} }
@@ -1412,6 +1433,8 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .switch:checked{background:var(--tx); border-color:var(--tx)}          /* MIC TEST: red like transmit */
 .switch:checked::after{left:20px; background:#fff}
 #tx-auto:checked{background:#8b7ad6; border-color:#8b7ad6}            /* AGC: audio-panel violet */
+.dsp-sw:checked{background:var(--accent); border-color:var(--accent)}   /* DSP: receive processing, the
+   VFO panel's accent (LCD blue) - red is kept for transmit */
 .switch:focus-visible{outline:none; box-shadow:0 0 0 2px var(--cyan)}
 :root[data-theme="light"] .switch{--track-empty:#c8d2d9}
 .mictest-toggle{margin-right:6px}
@@ -1439,3 +1462,131 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 /* a finished QSO: all rows of that station, also those to/from me */
 .msgs tr.qso-done{background:var(--row-cq-worked); color:var(--row-cq-worked-ink)}
 .msgs tr.qso-done td.dx{color:inherit}
+/* PO/SWR/ALC/ID/AF peak hold: after TX one red box (as PWR) around the five values,
+   "● PEAK" beside it, the bars filled up to the peak, slightly dimmed, the peak segment bright */
+.lcd-txm{grid-template-columns:38px 1fr 74px 56px}
+.lcd-txm b{text-align:right; padding:0 6px}
+.lcd-txm{position:relative}
+/* absolutely positioned over the value column (74 px), left of PEAK (56 px + 10 px gap);
+   in flow it would take cells and push the five values into new rows */
+.lcd-txm .pk-box{position:absolute; top:-4px; bottom:-4px; right:66px; width:74px; border:1.5px solid transparent;
+  border-radius:4px; pointer-events:none; transition:border-color .15s}
+.lcd-txm.peak .pk-box{border-color:var(--lr)}
+.lcd-txm .pk-led{grid-column:4; grid-row:1 / span 5; align-self:end; margin-bottom:-4px;   /* bottom edge level with the box (-4px) */
+  display:flex; align-items:center; gap:5px;
+  font:700 10px var(--font-ui); letter-spacing:.12em; color:var(--lr); opacity:.25; transition:opacity .15s; white-space:nowrap}
+.lcd-txm .pk-led i{width:8px; height:8px; border-radius:50%; background:var(--lr)}
+.lcd-txm.peak .pk-led{opacity:1}
+.lcd-txm.peak .pk-led i{box-shadow:0 0 6px var(--lr)}
+.lbar i.pk:not(.on){opacity:.75; background:var(--lb); box-shadow:none}
+.lbar i.hot.pk:not(.on){background:var(--lr)}
+.lcd-txm.peak .lbar i.on{opacity:.45; box-shadow:none}
+.lcd-txm.peak .lbar i.on.pk{opacity:1; box-shadow:0 0 5px var(--lb-glow)}
+.lcd-txm.peak .lbar i.hot.on.pk{box-shadow:0 0 5px var(--lr)}
+/* frequency shuttle: DOWN / UP at the ends, hidden while held (the centre shows the step) */
+.shuttle .sh-end{position:absolute; top:0; bottom:0; display:flex; align-items:center; pointer-events:none;
+  font:600 10px var(--font-ui); letter-spacing:.1em; color:var(--text-dim); transition:opacity .15s}
+.shuttle .sh-end.dn{left:8px}
+.shuttle .sh-end.up{right:8px}
+.shuttle.up .sh-end, .shuttle.down .sh-end{opacity:0}
+/* units in a fixed-width slot (W, %, A, dB, :1 differ), so the digits end exactly above each other */
+.lcd-txm b .uu{display:inline-block; width:15px; margin:0 0 0 3px; text-align:left}
+/* small line icon in a button, before its label (ATU TUNE: antenna) */
+.btn .btn-ico{width:14px; height:14px; margin:0 5px -2px 0; flex:none}
+/* shuttle label: a small pill over the knob, so "TUNE" stays readable on the accent knob
+   (the knob still shows above and below it) */
+.shuttle .sh-lbl{inset:auto; left:50%; top:50%; transform:translate(-50%,-50%); padding:0 6px; line-height:13px; border-radius:3px;
+  white-space:nowrap; color:var(--text); background:color-mix(in srgb,var(--ctrl-bg) 88%,transparent)}
+/* shuttle in the VFO's LCD blue instead of the accent colour */
+.shuttle{--sh:#8fd6ff; --sh-glow:#3fb4ff;
+  background:linear-gradient(90deg, color-mix(in srgb,var(--sh) 26%,var(--ctrl-bg)), var(--ctrl-bg) 44%, var(--ctrl-bg) 56%,
+    color-mix(in srgb,var(--sh) 26%,var(--ctrl-bg)))}
+.shuttle .sh-knob{background:var(--sh); box-shadow:0 0 8px -1px var(--sh-glow)}
+:root[data-theme="light"] .shuttle{--sh:#3a9be0; --sh-glow:#3a9be0}   /* the pale LCD blue would vanish on the light panel */
+/* TX power slider: scale numbers white (light theme: the normal text colour) */
+.pwr-big .pb-scale span{color:#fff}
+:root[data-theme="light"] .pwr-big .pb-scale span{color:var(--text)}
+/* TX power slider ticks white as well (light theme: the text colour) */
+.pwr-big .pb-track::before{background:repeating-linear-gradient(90deg, #ffffffaa 0 1px, transparent 1px 5.263%)}
+:root[data-theme="light"] .pwr-big .pb-track::before{background:repeating-linear-gradient(90deg, color-mix(in srgb,var(--text) 65%,transparent) 0 1px, transparent 1px 5.263%)}
+/* "W" after each scale number - hung outside, so the number itself stays centred on its tick */
+.pwr-big .pb-scale span::after{content:"W"; position:absolute; left:100%; margin-left:1px; font-size:.85em; opacity:.8}
+/* log panel: WAVELOG / QRZ / AUTO lit as an outline in the accent colour, not filled */
+.logp .panel-head .lamp.on:not(.warn):not(.bad){background:transparent; color:var(--accent); border-color:var(--accent)}
+/* PTT panel: its amber (band, memory keys, MUTE armed, hold sweep) becomes the VFO blue;
+   the VU bars keep their green / amber / red level zones */
+.ptt-zone{--amber:#8fd6ff; --amber-glow:#3fb4ff}
+:root[data-theme="light"] .ptt-zone{--amber:#3a9be0; --amber-glow:#3a9be0}
+.ptt-zone .ptt-vu-bar i{background:linear-gradient(0deg, var(--ok) 0 60%, #ffb23e 60% 85%, var(--tx) 85%); background-size:100% 130px; background-position:bottom}
+:root[data-theme="light"] .ptt-zone .ptt-vu-bar i{background:linear-gradient(0deg, var(--ok) 0 60%, #b86a00 60% 85%, var(--tx) 85%); background-size:100% 130px; background-position:bottom}
+/* light theme: the LCD windows darker (the slate was too pale) - closer to the dark-theme glass */
+:root[data-theme="light"] .lcd{--lbg:#16202a}
+:root[data-theme="light"] .lcd-meter, :root[data-theme="light"] .lcd-main{
+  background:radial-gradient(130% 160% at 60% 0%, #2a3a49, var(--lbg) 72%); border-color:#1a2530}
+/* clarifier scale ticks (built in app.js): fine every 100 Hz, long every 500 Hz, centre longest */
+.tune-scale{background:none}
+.tune-scale .ts-t{position:absolute; top:50%; width:1px; height:6px; margin-left:-.5px; transform:translateY(-50%);
+  background:var(--lb); opacity:.7; pointer-events:none}
+.tune-scale .ts-t.major{height:12px; opacity:.95}
+.tune-scale .ts-t.zero{height:18px; width:1.5px; margin-left:-.75px; opacity:1}
+.tune-scale::before{opacity:.55}
+/* VFO-B row: the S-meter readout on the left, VFO-B on the right - the divider
+   only over VFO-B (its own border-top), so it is shorter */
+.lcd .vfo-b-row{display:flex; align-items:flex-end; justify-content:space-between; gap:16px}
+.lcd .sm-read{font:italic 800 17px var(--font-ui); letter-spacing:.06em; color:var(--lb); white-space:nowrap;
+  text-shadow:0 0 6px var(--lb-glow); padding-bottom:1px}
+.lcd .vfo-b-row .vfo-b{flex:0 1 auto}
+/* S-meter readout: larger, centred in the free space left of VFO-B */
+.lcd .vfo-b-row{align-items:center}
+.lcd .sm-read{flex:1 1 auto; text-align:center; font-size:24px; padding:0}
+/* S-meter readout in the LCD font */
+.lcd .sm-read{font:italic 400 24px "DSEG7-Classic",var(--font-mono); letter-spacing:.02em}
+.lcd .sm-read .u{font:italic 800 14px var(--font-ui); margin:0 3px; letter-spacing:.06em}
+.lcd .sm-read{position:relative; top:-10px}   /* a little above the VFO-B line */
+/* S readout slots: the over-S9 part has a fixed width (room for "+60") */
+.lcd .sm-read .s-over{display:inline-block; min-width:2.5em; text-align:left}
+/* S readout: S + digit centred; the over-S9 part hangs to the right of it */
+.lcd .sm-read{font-size:32px}
+.lcd .sm-read .u{font-size:18px}
+.lcd .sm-read .s-core{position:relative; display:inline-block}
+.lcd .sm-read .s-over{position:absolute; left:100%; bottom:0; min-width:0; white-space:nowrap}
+.lcd .sm-read{text-align:left; padding-left:6px}   /* further left: from the left edge, not centred */
+/* S readout: the over-S9 part smaller; hidden on transmit */
+.lcd .sm-read .s-over{font-size:20px}
+.lcd .sm-read .s-over .u{font-size:13px; margin:0 2px}
+.lcd .sm-read.tx > *{visibility:hidden}   /* transmit: the box stays, its content goes */
+.lcd .sm-read .s-over .u{font-size:18px; position:relative; top:-4px}   /* the + larger and raised */
+.lcd .sm-read .s-over{color:var(--lr); text-shadow:0 0 6px #ef4b3c66}   /* over S9 in the LCD red */
+.lcd .sm-read .s-core > .u:first-child{color:var(--lg); text-shadow:0 0 6px #7fd36a66}   /* the S in the LCD green */
+/* S readout in a box (as the clarifier's): its own width, the over-S9 slot kept inside it,
+   so the frame never changes size */
+.lcd .sm-read{flex:0 0 auto; margin-right:auto; padding:1px 10px 3px; border:1.5px solid var(--lb); border-radius:6px; margin-left:6px}
+.lcd .sm-read .s-core{padding-right:54px}
+.lcd .sm-read .s-over{left:auto; right:0; width:50px}
+/* S box centred in the free space; the over-S9 part (and its slot) smaller */
+.lcd .sm-read{margin-left:auto; margin-right:auto}
+.lcd .sm-read .s-over{font-size:16px; width:40px}
+.lcd .sm-read .s-over .u{font-size:15px; top:-3px}
+.lcd .sm-read .s-core{padding-right:43px}
+/* over S9: "+ 20 40 60" always shown, unused values dimmed, the current one lit */
+.lcd .sm-read .s-over{font-size:13px; width:84px}
+.lcd .sm-read .s-core{padding-right:88px}
+.lcd .sm-read .s-over .u{font-size:14px; top:-2px; margin:0 1px 0 0; opacity:.2}
+.lcd .sm-read .s-over.on .u{opacity:1}
+.lcd .sm-read .s-over .o{margin-left:4px; opacity:.2; text-shadow:none}
+.lcd .sm-read .s-over .o.on{opacity:1; text-shadow:0 0 6px #ef4b3c66}
+.lcd .sm-read .s-over{text-shadow:none}
+/* over S9: one 2-digit 7-segment field, unlit segments dimmed ("88" ghost behind the value) */
+.lcd .sm-read .s-over{font-size:16px; width:44px}
+.lcd .sm-read .s-core{padding-right:47px}
+.lcd .sm-read .s-dd{position:relative; display:inline-block}
+.lcd .sm-read .s-dd .gh{opacity:.12; text-shadow:none}
+.lcd .sm-read .s-dd .v{position:absolute; right:0; top:0; text-shadow:0 0 6px #ef4b3c66}
+/* over-S9 field larger again */
+.lcd .sm-read .s-over{font-size:22px; width:58px}
+.lcd .sm-read .s-over .u{font-size:18px; top:-4px}
+.lcd .sm-read .s-core{padding-right:61px}
+.lcd .freq-b{opacity:1; text-shadow:0 0 10px var(--lb-glow), 0 0 26px #1e8fe066}   /* as bright as VFO A */
+.lcd .sm-read{padding-top:5px}   /* more room above the digits */
+.tx-read b{color:var(--lg); text-shadow:0 0 6px #7fd36a66}   /* the PWR value in the LCD green */
+#lamp-tx{font-size:15px; padding:5px 12px; letter-spacing:.1em}   /* the TX lamp larger */

@@ -64,7 +64,7 @@
   <section class="panel vfo" id="vfo">
     <div class="panel-head">
       <h2>VFO</h2>
-      <span class="lamp" id="lamp-lock" title="Dial Lock (LK)">LOCK</span>
+      <span class="lamp lamp-click" id="lamp-lock" role="button" tabindex="0" aria-pressed="false" title="Dial lock (LK) — click to lock or unlock the radio's tuning knob">LOCK</span>
       <span class="lamp warn" id="lamp-pll" title="PLL unlock (UL) — radio fault">PLL</span>
       <button class="btn toggle split-btn" id="split" title="Split: receive on VFO A, transmit on VFO B (FT3 / FT2)">SPLIT</button>
       <span class="head-sep"></span>
@@ -81,7 +81,7 @@
       <button class="btn split-btn hq" id="hq-rflt" title="Roofing filter: AUTO → 15k → 6k → 3k — click for the next">R.FLT</button>
       <button class="btn split-btn hq" id="hq-agc" title="AGC: OFF → FAST → MID → SLOW → AUTO — click for the next">AGC</button>
       <span class="head-sep"></span>
-      <button class="btn split-btn" id="tuner-start" title="Start a tuning cycle (AC002) — the radio transmits a carrier until matched">ATU TUNE</button>
+      <button class="btn split-btn" id="tuner-start" title="Start a tuning cycle (AC002) — the radio transmits a carrier until matched"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v13"></path><path d="M4 3l8 6 8-6"></path><path d="M8 22h8"></path></svg>ATU TUNE</button>
       <span class="spacer"></span>
       <button class="btn accent" id="voice-profile" title="Set the radio up for remote voice: DATA-L below 10 MHz / DATA-U above (the browser mic reaches the radio through the DATA jack), 2400 Hz, IF shift centred, roofing 3 kHz, AGC SLOW, notch/DNF/NB/contour off, squelch open — reads every value, writes only what differs, verifies by read-back">VOICE<span class="pf"> PROFILE</span></button>
       <button class="btn accent" id="ft8-profile" title="Set the radio up for FT8/FT4: reads every value, writes only what differs, verifies by read-back">FT8<span class="pf"> PROFILE</span></button>
@@ -103,7 +103,6 @@
           <g clip-path="url(#am-clip)">
             <line class="am-needle" id="am-needle" x1="170" y1="330" x2="170" y2="22"/>
           </g>
-          <text class="am-mode" id="am-mode" x="10" y="192">S</text>
         </svg>
         <div class="lcd-inds">
           <span class="ind red" id="ind-moni">MONI</span><span class="ind green" id="ind-nb">NB</span>
@@ -122,11 +121,12 @@
           <div class="cb" style="--n:4"><span class="cl">AGC</span><span class="cvs" id="pv-agc"><span class="cv" data-v="A" title="AUTO">A</span><span class="cv" data-v="F" title="FAST">F</span><span class="cv" data-v="M" title="MID">M</span><span class="cv" data-v="S" title="SLOW">S</span></span></div>
         </div>
         <div class="lcd-txm" id="tx-meters">
-          <span>PO</span><div class="lbar" id="m-po"></div><b id="v-po">0.0<small class="u">W</small></b>
-          <span>SWR</span><div class="lbar" id="m-swr"></div><b id="v-swr">1.0</b>
-          <span>ALC</span><div class="lbar" id="m-alc"></div><b id="v-alc">0<small class="u">%</small></b>
-          <span>ID</span><div class="lbar" id="m-id"></div><b id="v-id">0.0<small class="u">A</small></b>
-          <span title="Transmit audio: the microphone (after gain/AGC) on voice, the tone drive on FT8/FT4 and TUNE">AF</span><div class="lbar" id="m-af"></div><b id="v-af">−∞<small class="u">dB</small></b>
+          <span>PO</span><div class="lbar" id="m-po"></div><b id="v-po">000<small class="u uu">W</small></b>
+          <span>SWR</span><div class="lbar" id="m-swr"></div><b id="v-swr"><small class="u" style="visibility:hidden">≥</small>1.0<small class="u uu">:1</small></b>
+          <span>ALC</span><div class="lbar" id="m-alc"></div><b id="v-alc">000<small class="u uu">%</small></b>
+          <span>ID</span><div class="lbar" id="m-id"></div><b id="v-id">00.0<small class="u uu">A</small></b>
+          <span title="Transmit audio: the microphone (after gain/AGC) on voice, the tone drive on FT8/FT4 and TUNE">AF</span><div class="lbar" id="m-af"></div><b id="v-af">−∞<small class="u uu">dB</small></b>
+          <span class="pk-box" aria-hidden="true"></span><span class="pk-led" id="pk-led" title="PEAK: the bars and values show the highest readings of the last transmission, until the next TX starts"><i></i>PEAK</span>
         </div>
         <div class="dsp">
           <div class="dsp-tags"><span class="ind blue-o">DSP</span><span class="ind blue-o" id="ind-dnr">DNR</span><span class="ind blue-o" id="ind-dnf">DNF</span></div>
@@ -147,13 +147,16 @@
           <span class="tx-read" id="tx-read" title="Set TX power (PC) — lit while the radio transmits">PWR <b id="tx-pwr">—</b> W</span>
           <span class="lf-info"><span hidden><span id="rxtx">RX A · TX A</span> · <span id="memmode">VFO</span> · </span><span id="width-tag">—</span></span>
         </div>
-        <div class="freq-line"><span class="freq" id="freq" title="Mouse wheel or drag on a digit: tune">--.---.--</span><span class="freq-unit">MHz</span></div>
+        <div class="freq-line"><span class="freq" id="freq" title="Mouse wheel or drag on a digit: tune">--.---.---</span><span class="freq-unit">MHz</span></div>
         <div class="lf-bottom">
           <div class="tune-scale" title="Clarifier offset (±1 kHz)"><i id="tune-mark"></i></div>
           <span class="ind green" id="ind-clar">CLAR</span>
           <div class="clar-box"><span id="clar-lbl">RX</span><span class="clar-val" id="clar-val">0<i class="cdot"></i>000</span></div>
         </div>
-        <div class="vfo-b" title="VFO B (OI)"><span class="lbl">VFO-B</span><span class="freq-b" id="freq-b">—</span><span class="freq-unit small">MHz</span><span class="mode-b" id="mode-b"></span></div>
+        <div class="vfo-b-row">
+          <span class="sm-read" id="sm-read" title="S meter (receive) / power out (transmit), as the needle shows it">—</span>
+          <div class="vfo-b" title="VFO B (OI)"><span class="lbl">VFO-B</span><span class="freq-b" id="freq-b">—</span><span class="freq-unit small">MHz</span><span class="mode-b" id="mode-b"></span></div>
+        </div>
       </div>
       </div>
     </div>
@@ -179,7 +182,7 @@
       <div class="tuner-sel">
         <div class="sel-row"><span class="row-lbl">BAND</span><div class="seg" id="bands"></div>
           <div class="shuttle" id="shuttle" title="Frequency shuttle: hold left of the centre to tune down, right to tune up — the further out, the bigger the steps (10 Hz · 100 Hz · 1 kHz · 10 kHz)">
-            <span class="sh-zones" aria-hidden="true"></span><i class="sh-knob" id="sh-knob"></i><span class="sh-lbl" id="sh-lbl">◀ TUNE ▶</span>
+            <span class="sh-zones" aria-hidden="true"></span><i class="sh-knob" id="sh-knob"></i><span class="sh-end dn" aria-hidden="true">◀ DOWN</span><span class="sh-end up" aria-hidden="true">UP ▶</span><span class="sh-lbl" id="sh-lbl">TUNE</span>
           </div></div>
         <div class="sel-row"><span class="row-lbl">MODE</span><div class="seg" id="modes"></div>
           <button class="btn toggle" id="narrow" title="Narrow (NA) — selects the N column of the width table">NAR</button>
@@ -202,30 +205,46 @@
         <b class="pb-val"><span id="pwr-big-val">—</span><small>W</small></b>
       </div>
     </div>
-    <div class="chain" id="chain">
+    <div class="rx-chain" id="chain">
       <fieldset class="group">
         <legend>RX</legend>
         <div class="g-row"><span class="g-lbl">PRE</span><div class="seg" id="preamp"></div></div>
         <div class="g-row"><span class="g-lbl">AGC</span><div class="seg" id="agc"></div></div>
-        <div class="g-row"><span class="g-lbl">ROOF</span><div class="seg" id="roofing"></div></div>
       </fieldset>
       <fieldset class="group">
         <legend>FILTER</legend>
         <label class="g-row slider"><span class="g-lbl">WIDTH</span><input type="range" id="width" min="0" max="0" step="1"><b id="width-val">—</b></label>
         <label class="g-row slider"><span class="g-lbl">SHIFT</span><input type="range" id="ifshift" min="-1000" max="1000" step="10"><b id="ifshift-val">—</b></label>
-        <div class="g-row"><span class="g-lbl">DSP</span>
-          <div class="seg">
-            <button class="sg" data-toggle="BC0" id="t-dnf" title="Auto Notch (DNF)">DNF</button>
-            <button class="sg" data-toggle="NR0" id="t-nr" title="Noise Reduction">NR</button>
-            <button class="sg" data-toggle="NB0" id="t-nb" title="Noise Blanker">NB</button>
-          </div>
-        </div>
       </fieldset>
       <fieldset class="group">
         <legend>LEVEL</legend>
         <div class="g-row"><span class="g-lbl">ATT</span><div class="seg" id="att"></div></div>
         <label class="g-row slider"><span class="g-lbl">RF</span><input type="range" id="rfgain" min="0" max="255"><b id="rfgain-val">—</b></label>
-        <label class="g-row slider"><span class="g-lbl">PWR</span><input type="range" id="power" min="5" max="100"><b id="power-val">—</b></label>
+        <div class="g-row g-scale" aria-hidden="true"><span></span><span class="gs-ends"><span>0</span><span>255</span></span><b></b></div>
+      </fieldset>
+      <!-- the clarifier as a slider: RX off the dial without touching VFO A,
+           like the radio's CLAR knob after pressing CLAR -->
+      <fieldset class="group">
+        <legend>CLAR</legend>
+        <div class="g-row"><span class="g-lbl"></span>
+          <div class="seg">
+            <button class="sg" id="clar-rx" title="RX clarifier on/off (RT) — the offset is heard only while this is on">ON</button>
+            <button class="sg" id="clar-zero" title="Clarifier offset to 0 (RC)">CLR</button>
+          </div>
+        </div>
+        <label class="g-row slider" title="RX clarifier offset, ±2.5 kHz in 10 Hz steps (arrow keys for single steps). Moving it switches RX CLAR on; double-click: back to 0."><span class="g-lbl">RX</span><input type="range" id="clar-off" min="-2500" max="2500" step="10" value="0"><b id="clar-off-val">—</b></label>
+        <!-- the ends of the slider in the LCD's kHz notation (0.120 = 120 Hz) -->
+        <div class="g-row g-scale" aria-hidden="true"><span></span><span class="gs-ends"><span>−2.500</span><span>+2.500</span></span><b></b></div>
+      </fieldset>
+      <!-- the radio's DSP functions in a group of their own: three independent
+           on/off switches, one under the other, the same switch as MIC TEST -->
+      <fieldset class="group dsp-group">
+        <legend>DSP</legend>
+        <div class="dsp-col">
+          <label class="switch-label" title="Auto Notch (DNF)"><input type="checkbox" class="switch dsp-sw" data-toggle="BC0" id="t-dnf"><span>DNF</span></label>
+          <label class="switch-label" title="Noise Reduction"><input type="checkbox" class="switch dsp-sw" data-toggle="NR0" id="t-nr"><span>NR</span></label>
+          <label class="switch-label" title="Noise Blanker"><input type="checkbox" class="switch dsp-sw" data-toggle="NB0" id="t-nb"><span>NB</span></label>
+        </div>
       </fieldset>
     </div>
   </section>

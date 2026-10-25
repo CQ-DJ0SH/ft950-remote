@@ -342,6 +342,29 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .foot select{background:var(--field-bg); border:1px solid var(--edge-hi); border-radius:4px; padding:1px 4px}
 .foot input[type=range]{width:90px}
 .foot b{color:var(--text)}
+/* HF band conditions (VOACAP), at the right end of the waterfall foot like in
+   iDigi. The three fills are signal colours, not theme colours: the same in
+   light and dark, always with dark ink, so "green" reads the same on both. */
+.prop{display:inline-flex; align-items:center; gap:6px; cursor:default}
+.prop[hidden]{display:none}
+/* the sun/moon is the switch: it shows which half of the day the chips show */
+.prop-dn{display:flex; width:24px; height:24px; padding:2px; border:1px solid transparent;
+  border-radius:6px; background:none; cursor:pointer; -webkit-tap-highlight-color:transparent}
+@media (hover:hover){.prop-dn:hover{border-color:var(--edge-hi)}}
+.prop-dn svg{width:100%; height:100%; display:none}
+/* the other half of the day on show: the switch is framed, the chips are
+   outlined, so a forecast is never mistaken for the conditions right now */
+.prop.preview .prop-dn{border-color:var(--amber)}
+.prop.preview .prop-g{border-style:dashed; border-color:#000000a6}
+.prop-dn.day .prop-sun{display:block; color:var(--amber)}
+.prop-dn.night .prop-moon{display:block; color:#d9dee3}
+:root[data-theme="light"] .prop-dn.night .prop-moon{color:#6b7782}
+.prop-g{font:700 11.5px var(--font-ui); letter-spacing:.03em; line-height:1; padding:4px 8px;
+  border-radius:5px; color:#14181c; background:#5a6670; border:1px solid #00000059;
+  box-shadow:inset 0 1px 0 #ffffff45}
+.prop-g.good{background:#5bd06a}
+.prop-g.fair{background:#f7d644}
+.prop-g.poor{background:#ee5a55}
 
 /* ---------------- settings modal (TM-V71 Remote) ---------------- */
 .modal{position:fixed; inset:0; z-index:40; display:none; align-items:flex-start; justify-content:center; padding:20px;

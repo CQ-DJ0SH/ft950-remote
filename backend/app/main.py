@@ -21,6 +21,7 @@ from .sequencer import Sequencer
 from .recorder import Recorder
 from .cw import CWSkimmer, cw_duration_s
 from .shelly import ShellyError, ShellySwitch
+from .propagation import Propagation
 from .hackrf_proxy import DEFAULT_URL as HACKRF_DEFAULT, HackRFError, HackRFProxy
 from .digi import analyse
 from . import opus_mono
@@ -1189,6 +1190,17 @@ async def cw_stop() -> dict:
 @app.websocket("/ws/cw")
 async def ws_cw(ws: WebSocket) -> None:
     await _stream(ws, cw_manager)
+
+
+# -- HF band conditions (VOACAP for the own locator; the strip under DIGI) -------
+prop = Propagation()
+
+
+@app.get("/api/propagation")
+async def propagation_status() -> dict:
+    """Four band pairs, green / yellow / red, for the current UTC hour - see
+    propagation.py for how a place becomes a set of VOACAP paths."""
+    return await asyncio.to_thread(prop.status, settings.my_grid)
 
 
 # -- radio power (Shelly relay on the 13.8 V line) ------------------------------

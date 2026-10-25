@@ -434,6 +434,20 @@
         <label>Contrast <input type="range" id="wf-contrast" min="0" max="100" value="55"><b class="wf-val" id="wf-contrast-val">55</b></label>
         <label>Brightness <input type="range" id="wf-bright" min="0" max="100" value="45"><b class="wf-val" id="wf-bright-val">45</b></label>
         <span class="txoff" title="TX offset (click in the waterfall)">TX <b id="f-tx">—</b> Hz</span>
+        <!-- HF band conditions for this locator, as iDigi shows them: sun or
+             moon for the station's own day/night, four band pairs in green /
+             yellow / red. Computed by VOACAP on the Pi (/api/propagation). -->
+        <span class="prop" id="prop" hidden>
+          <button class="prop-dn" id="prop-dn" type="button" aria-pressed="false">
+            <svg class="prop-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2" fill="currentColor"></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"></path></svg>
+            <svg class="prop-moon" viewBox="0 0 24 24"><path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1z" fill="currentColor"></path></svg>
+          </button>
+          <span class="prop-g" data-i="0">80-40</span>
+          <span class="prop-g" data-i="1">30-20</span>
+          <span class="prop-g" data-i="2">17-15</span>
+          <span class="prop-g" data-i="3">12-10</span>
+          <span class="prop-g" data-i="4">6m</span>
+        </span>
       </div>
     </div>
   </section>

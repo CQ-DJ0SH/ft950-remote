@@ -1466,6 +1466,62 @@ function ask(text, { title = "Please confirm", yes = "OK", danger = false } = {}
   });
 }
 
+// HF band conditions under the waterfall (VOACAP for the own locator). The
+// backend computes the whole day once and answers from a cache, so a short
+// poll is cheap - and it catches the change of the UTC hour.
+// The sun/moon switches the chips between "now" and the other half of the
+// day: at night one click shows how the bands do in daylight (the mean over
+// today's daylight hours here), a second click goes back to now. "Now" always
+// follows the real time of day; only the preview is chosen by hand.
+const PROP_LEVEL = { good: "good", fair: "fair", poor: "poor" };
+let propData = null, propView = "now";            // "now" | "day" | "night"
+const hh = (h) => String(h).padStart(2, "0");
+async function loadProp() {
+  try { propData = await api("/api/propagation"); } catch { return; }
+  renderProp();
+}
+function renderProp() {
+  const p = propData, box = $("prop");
+  if (!p?.available) { box.hidden = true; return; }
+  if (propView !== "now" && !p.halves?.[propView]) propView = "now";   // polar day/night
+  const half = propView === "now" ? null : p.halves[propView];
+  const showDay = half ? propView === "day" : p.day;
+  const other = p.day ? "night" : "day";
+  const dn = $("prop-dn");
+  dn.className = "prop-dn " + (showDay ? "day" : "night");
+  dn.setAttribute("aria-pressed", String(!!half));
+  dn.disabled = !half && !p.halves?.[other];
+  dn.title = half ? `Showing ${propView} (mean ${hh(half.from)}\u2013${hh(half.to)} UTC) \u2014 click: back to now`
+    : `Now: ${p.day ? "day" : "night"} here \u2014 click: show the ${other}`;
+  dn.setAttribute("aria-label", dn.title);
+  box.classList.toggle("preview", !!half);
+  const m = p.model;
+  box.title = `VOACAP for ${p.grid} \u00b7 SSN ${Math.round(p.ssn)}${p.ssn_month ? ` (${p.ssn_month})` : ""}` +
+    ` \u00b7 ${m.power_w} W ${m.mode}, ${m.antenna} antenna` +
+    ` \u00b7 mean over ${m.paths} paths, ${m.ring_km[0]}\u2013${m.ring_km[m.ring_km.length - 1]} km`;
+  (half ? half.groups : p.groups).forEach((g, i) => {
+    const el = box.querySelector(`.prop-g[data-i="${i}"]`);
+    if (!el) return;
+    const single = !g.name.includes("-");           // 6 m stands alone
+    el.textContent = single ? `${g.name}m` : g.name;
+    el.className = "prop-g " + (PROP_LEVEL[g.level] || "");
+    const bands = Object.entries(g.bands).map(([b, r]) => `${b} m ${Math.round(r * 100)} %`).join(" \u00b7 ");
+    // VOACAP knows the F2 layer only - on 6 m that is the rare solar-maximum
+    // opening, not the sporadic-E that brings the summer openings
+    const es = single ? "\nF2 only: sporadic-E is not in the model" : "";
+    el.title = (half
+      ? `${g.name} m by ${propView} (${hh(half.from)}\u2013${hh(half.to)} UTC): ${g.level} \u2014 ${bands}`
+      : `${g.name} m now (${hh(p.utc_hour)} UTC): ${g.level} \u2014 ${bands}\nnext: ` +
+        p.next.map((n) => `${hh(n.utc_hour)}h ${n.levels[i]}`).join(", ")) + es;
+  });
+  box.hidden = false;
+}
+$("prop-dn").onclick = () => {
+  if (!propData?.available) return;
+  propView = propView === "now" ? (propData.day ? "night" : "day") : "now";
+  renderProp();
+};
+
 // -- radio power (Shelly), title-bar switch and power-off plate as in TM-V71 Remote
 let powerState = null;
 function refreshPowerUi() {
@@ -3292,6 +3348,8 @@ function bindHackRF() {
   pollTx();
   ws("/ws/audio", onLevels);
   loadVoice();
+  loadProp();
+  setInterval(loadProp, 5 * 60 * 1000);
   setAudioUi("down");
   loadRecent();
   loadLogStatus();

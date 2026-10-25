@@ -39,3 +39,8 @@ backend/*.tmp
 
 # FT-950 audio menu defaults (station data)
 backend/ex_defaults.json
+
+# VOACAP working tree (makeitshfbc copy, written by voacapl) and the cached
+# sunspot number
+backend/itshfbc/
+backend/propagation.json

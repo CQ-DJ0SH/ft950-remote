@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/.venv/
+
+# Local config / secrets / runtime state
+backend/.env
+backend/certs/
+runtime.json
+
+# Manufacturer branding is trademarked — never commit
+branding/
+
+# Decoder working files (WAV slices, ALL.TXT)
+/run/
+*.wav
+
+# Yaesu's CAT manual is copyrighted ("no portion may be reproduced") — keep
+# the local copy, don't redistribute it. Source: see README.
+docs/FT-950_CAT_Manual_ENG.*
+
+# Station data saved from the web UI, host metric history
+backend/runtime.json
+backend/runtime.tmp
+backend/app/sys_history.csv
+
+# Neuropol (nameplate font, as in TM-V71 Remote) has unclear redistribution
+# terms: local copy only, the UI falls back to Saira Condensed without it
+frontend/fonts/Neuropol.woff
+
+# Manufacturer logo (trademark): fetched/uploaded at runtime, never committed
+backend/branding/
+
+# Logbook working data (recent QSOs, worked-before index)
+backend/logbook.json
+backend/worked.json
+backend/*.tmp
+
+# FT-950 audio menu defaults (station data)
+backend/ex_defaults.json

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="F mark">
+  <!-- rounded tile, same as TM-V71 Remote, so the mark reads on any tab colour -->
+  <rect x="2" y="2" width="60" height="60" rx="13" fill="#17201f"/>
+  <!-- cyan HF wave above the letter (the app's accent colour) -->
+  <path d="M15 13 Q20.5 6 26 13 T37 13 T48 13"
+        fill="none" stroke="#3fe0d0" stroke-width="4" stroke-linecap="round"/>
+  <!-- bold F -->
+  <path d="M42 29 H25 V54 M25 41 H38"
+        fill="none" stroke="#f2f5f7" stroke-width="7.5"
+        stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

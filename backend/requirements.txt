@@ -1,0 +1,13 @@
+# Control backend (versions as in TM-V71 Remote)
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+pyserial==3.5
+
+# FT8/FT4 audio chain (resampling, waterfall FFT)
+numpy>=2.1,<2.3
+
+# WebRTC audio to/from the browser (Opus)
+aiortc==1.14.0
+av==16.1.0

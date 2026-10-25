@@ -1,0 +1,1415 @@
+/* FT-950 Remote — look and fonts taken over from TM-V71 Remote (dark default). */
+
+/* Nameplate face, as in TM-V71 Remote. Not in the repo (unclear licence):
+   without the local file the title falls back to Saira Condensed. */
+@font-face{font-family:'Neuropol';font-style:normal;font-weight:400;font-display:swap;
+  src:url('fonts/Neuropol.woff') format('woff')}
+
+:root{
+  --ink:#07090b; --ink-2:#0b0f12; --panel:#11171c; --panel-2:#161e25;
+  --edge:#232e38; --edge-hi:#324250;
+  --text:#c9d6df; --text-dim:#93a6b4;
+  --ctrl-bg:#0d141a; --field-bg:#0a1015; --sw-edge:#9aa6ae;
+  --amber:#ffb23e; --amber-glow:#ff8a00;
+  --cyan:#3fe0d0; --cyan-glow:#00c9b7;
+  --tx:#ff3b30; --ok:#59d98b;
+  --row-cq:#145a28; --row-me:#3bd16f; --row-me-ink:#04120a;
+  --row-cq-worked:#6b1712; --row-cq-worked-ink:#ffe2df;
+  --seg-off:#9aa9b6;
+  --lcd-a:#0c1418; --lcd-b:#060a0d;
+  --topbar-a:#0c1115f7; --topbar-b:#0c1115ec;
+  --title-ink:#bcd6c6;
+  --font-disp:"Saira Condensed","Arial Narrow",sans-serif;
+  --font-ui:"Saira",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --ink:#c4ccd4; --ink-2:#dfe5ea; --panel:#eef2f6; --panel-2:#ffffff;
+  --edge:#c5cfd8; --edge-hi:#a4b4c1;
+  --text:#1b2731; --text-dim:#5a6976;
+  --ctrl-bg:#e9eef3; --field-bg:#ffffff; --sw-edge:#7d8a95;
+  --amber:#b86a00; --amber-glow:#e08a00; --cyan:#0c7b71; --cyan-glow:#0fa597; --ok:#1f9d57;
+  --row-cq:#bfe8c9; --row-me:#36b862; --row-me-ink:#ffffff;
+  --row-cq-worked:#f3c6c1; --row-cq-worked-ink:#4a0b06;
+  --seg-off:#5a6976;
+  --lcd-a:#20272c; --lcd-b:#12171b;
+  --topbar-a:#f4f7faf7; --topbar-b:#f4f7faec;
+  --title-ink:#0c7b71;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ink);color:var(--text);font:14px/1.35 var(--font-ui)}
+button,input,select{font:inherit;color:inherit}
+code{font-family:var(--font-mono);font-size:.92em}
+.spacer{flex:1}
+
+/* ---------------- title bar ---------------- */
+.topbar{
+  position:sticky; top:0; z-index:20; gap:12px;
+  display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+  padding:18px clamp(16px,4vw,40px); padding-top:calc(18px + env(safe-area-inset-top,0px));
+  border-bottom:1px solid var(--edge);
+  background:linear-gradient(180deg,var(--topbar-a),var(--topbar-b));
+  backdrop-filter:blur(8px);
+}
+.brand{display:flex; align-items:center; gap:14px; justify-self:start; min-width:0}
+/* manufacturer logo on a light badge plate so a dark wordmark reads (V71) */
+.brand-logo{
+  height:30px; width:auto; max-width:200px; display:block;
+  background:#b4b8bc; border-radius:7px; padding:5px 9px;
+  box-shadow:inset 0 0 0 1px #0004, 0 3px 10px -3px #000;
+  filter:brightness(.9) contrast(1.03);
+}
+.callsign{font-family:var(--font-disp); font-weight:700; letter-spacing:.2em; font-size:30px;
+  color:var(--title-ink); white-space:nowrap}
+.callsign:empty{display:none}
+/* the nameplate: two screws on its edges, Neuropol lettering */
+.title-center{
+  justify-self:center; display:flex; align-items:center; justify-content:center; min-width:0;
+  position:relative; padding:9px clamp(30px,3.4vw,46px);
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--edge); border-radius:12px;
+  box-shadow:inset 0 1px 0 #ffffff18, inset 0 -1px 1px #00000075, inset 0 0 0 1px #00000045,
+    0 2px 0 #0000002e, 0 18px 38px -24px #000;
+}
+.screw-l{left:9px; top:50%; transform:translateY(-50%)}
+.screw-r{right:9px; top:50%; transform:translateY(-50%)}
+.app-title{
+  margin:0; font-family:'Neuropol',var(--font-disp); font-weight:400;
+  font-size:clamp(15px,2.5vw,32px); letter-spacing:.14em; line-height:1;
+  color:var(--title-ink); white-space:nowrap;
+}
+.app-title .dot{color:var(--text-dim); margin:0 .22em}
+.status-cluster{justify-self:end; display:flex; align-items:center; gap:12px; min-width:0}
+.stat{display:flex; align-items:center; gap:9px; margin-right:6px}
+.stat-label{font-size:11px; letter-spacing:.24em; color:var(--text-dim)}
+.led{width:9px; height:9px; border-radius:50%; background:#3a4650; box-shadow:inset 0 0 4px #000; transition:.3s}
+.stat.online .led{background:var(--ok); box-shadow:0 0 10px var(--ok), inset 0 0 3px #fff8}
+.stat.fault .led{background:var(--tx); box-shadow:0 0 10px var(--tx)}
+.clock{font-family:var(--font-mono); font-size:13px; color:var(--text-dim); letter-spacing:.1em; margin-right:10px; white-space:nowrap}
+.gear{
+  font-size:18px; line-height:1; color:var(--text-dim); background:transparent;
+  border:1px solid var(--edge); border-radius:8px; width:34px; height:34px; cursor:pointer; transition:.25s;
+}
+@media (hover:hover){.gear:hover{color:var(--amber); border-color:var(--amber)}
+  #open-settings:hover{transform:rotate(45deg)}}
+
+/* ---------------- panels: beveled instrument plates with screws ---------------- */
+.console{display:flex; flex-direction:column; gap:18px; padding:18px clamp(12px,3vw,32px) 28px; max-width:1640px; margin:0 auto}
+.panel{
+  position:relative; padding:22px 30px 24px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--edge); border-radius:14px;
+  box-shadow:inset 0 1px 0 #ffffff18, inset 0 -1px 1px #00000075, inset 0 0 0 1px #00000045,
+    0 2px 0 #0000002e, 0 24px 50px -26px #000;
+}
+.panel::before{ /* colour rail */
+  content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px;
+  border-radius:3px; background:var(--accent); box-shadow:0 0 12px var(--accent-glow);
+}
+.vfo{--accent:var(--amber); --accent-glow:var(--amber-glow)}
+.digi{--accent:#6fd89a; --accent-glow:#6fd89a}
+.digi::before{box-shadow:0 0 9px -2px var(--accent-glow)}
+
+/* recessed Inbus screws — injected by JS into every .panel, plus the nameplate */
+.screw{
+  position:absolute; width:18px; height:18px; border-radius:50%; pointer-events:none; z-index:3;
+  background:radial-gradient(circle at 36% 31%, #9da2a6, #6e7276 36%, #44484b 64%, #26292b 84%, #15171a 100%);
+  box-shadow:inset 0 1px 1px #ffffff55, inset 0 -1.5px 2px #000000b0, 0 1px 2px #00000090, 0 0 0 1px #00000070;
+}
+.screw::before{
+  content:""; position:absolute; inset:20%;
+  background:linear-gradient(145deg,#050607,#24272a);
+  clip-path:polygon(50% 2%, 94% 27%, 94% 73%, 50% 98%, 6% 73%, 6% 27%);
+  box-shadow:inset 0 1px 1px #00000090;
+}
+.screw-tl{left:8px; top:8px} .screw-tr{right:8px; top:8px}
+.screw-bl{left:8px; bottom:8px} .screw-br{right:8px; bottom:8px}
+.screw-tr::before{transform:rotate(15deg)} .screw-bl::before{transform:rotate(-22deg)}
+.screw-br::before{transform:rotate(9deg)}
+:root[data-theme="light"] .screw{
+  background:radial-gradient(circle at 36% 31%, #ffffff, #d6dbdf 36%, #abb2b7 64%, #888f94 84%, #6d747a 100%);
+  box-shadow:inset 0 1px 1px #ffffffcc, inset 0 -1.5px 2px #0000003a, 0 1px 2px #0000002e, 0 0 0 1px #0000002b;
+}
+:root[data-theme="light"] .screw::before{background:linear-gradient(145deg,#71787e,#9aa1a6); box-shadow:inset 0 1px 1px #00000045}
+
+.panel-head{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px}
+/* collapsible panels (TM-V71 Remote): only the head stays when collapsed */
+.panel-toggle{width:28px; height:22px; flex:none; cursor:pointer; padding:0; font-size:11px; line-height:1;
+  color:var(--text-dim); background:var(--ctrl-bg); border:1px solid var(--sw-edge); border-radius:6px; transition:.15s}
+@media (hover:hover){.panel-toggle:hover{color:var(--accent); border-color:var(--accent)}}
+.panel.collapsed .panel-toggle{transform:rotate(180deg)}
+.panel.collapsed{padding-bottom:12px}
+.panel.collapsed > :not(.panel-head):not(.screw){display:none}
+.logp{--accent:#5aa9e6; --accent-glow:#5aa9e6}
+.logp::before{box-shadow:0 0 9px -2px var(--accent-glow)}
+.panel.collapsed .panel-head{margin-bottom:0}
+.panel-stat{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); letter-spacing:.05em}
+.panel-head h2{margin:0; font-family:var(--font-disp); font-weight:700; letter-spacing:.16em; font-size:16px; color:var(--accent)}
+
+/* ---------------- controls ---------------- */
+.btn{background:var(--ctrl-bg); border:1px solid var(--sw-edge); border-radius:7px;
+  padding:6px 13px; cursor:pointer; font:600 12px var(--font-ui); letter-spacing:.12em; color:var(--text); transition:.15s}
+@media (hover:hover){.btn:hover:not(:disabled){border-color:var(--accent,var(--amber)); color:var(--accent,var(--amber))}}
+.btn:disabled{opacity:.4; cursor:not-allowed}
+.btn.sm{padding:3px 9px; font-size:11px}
+.btn.toggle.on{background:var(--accent,var(--amber)); color:#06222a; border-color:var(--accent,var(--amber))}
+.btn.accent{border-color:var(--accent); color:var(--accent)}
+.btn.halt:not(:disabled){background:#7a1712; border-color:var(--tx); color:#fff}
+.seg{display:inline-flex; flex-wrap:wrap; border:1px solid var(--sw-edge); border-radius:7px; overflow:hidden}
+.seg .sg{background:var(--ctrl-bg); border:0; border-right:1px solid var(--edge); padding:5px 10px; cursor:pointer;
+  font:600 11px var(--font-ui); letter-spacing:.1em; color:var(--seg-off); white-space:nowrap; transition:.12s}
+.seg .sg:last-child{border-right:0}
+.seg .sg.on{background:var(--accent,var(--amber)); color:#06222a; box-shadow:0 0 12px -3px var(--accent-glow,var(--amber-glow))}
+@media (hover:hover){.seg .sg:hover:not(.on){color:var(--text)}}
+.lamp{font:600 10px var(--font-ui); letter-spacing:.14em; padding:2px 7px; border-radius:4px;
+  border:1px solid var(--edge); color:var(--text-dim); opacity:.45}
+.lamp.on{opacity:1; color:#06222a; background:var(--ok); border-color:var(--ok)}
+.lamp.warn.on,.lamp.bad.on{background:var(--tx); border-color:var(--tx); color:#fff}
+.row-lbl,.g-lbl{font:600 10px var(--font-ui); letter-spacing:.16em; color:var(--text-dim)}
+input[type=range]{accent-color:var(--accent,var(--amber))}
+
+/* ---------------- VFO: LCD ---------------- */
+.display{
+  position:relative; margin:4px 0 16px; padding:14px 18px 12px; border-radius:10px;
+  background:radial-gradient(120% 140% at 50% 0%, var(--lcd-a), var(--lcd-b));
+  border:1px solid #05080a; box-shadow:inset 0 2px 14px #000, inset 0 0 0 1px #ffffff05; overflow:hidden;
+}
+.top-badges{position:absolute; top:10px; right:14px; z-index:2; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end}
+.badge{font:600 10px var(--font-ui); letter-spacing:.14em; padding:3px 8px; border-radius:6px;
+  border:1px solid #2c3944; color:#93a6b4; background:#0a1015}
+.badge.busy,.badge.tx{opacity:.35}
+.bl-dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:#3a4650; margin-right:5px; vertical-align:middle}
+.badge.busy.on{opacity:1; color:var(--ok); border-color:var(--ok)}
+.badge.busy.on .bl-dot{background:var(--ok); box-shadow:0 0 8px var(--ok)}
+.badge.tx.on{opacity:1; background:var(--tx); color:#fff; border-color:var(--tx)}
+.freq-line{display:flex; align-items:baseline; gap:10px; margin-top:4px}
+/* frequency face as TM-V71 Remote shows it: IBM Plex Mono with amber glow */
+.freq{
+  font-family:var(--font-mono); font-weight:500; font-size:clamp(36px,6.4vw,62px);
+  line-height:1; letter-spacing:.02em; color:var(--amber);
+  text-shadow:0 0 8px var(--amber-glow), 0 0 22px var(--amber-glow);
+  user-select:none; white-space:nowrap;
+}
+.freq .dg{cursor:ns-resize; border-radius:3px}
+@media (hover:hover){.freq .dg:hover{background:color-mix(in srgb,var(--amber) 14%,transparent)}}
+.freq .lead{opacity:.12}
+.unit{font-family:var(--font-mono); font-size:13px; letter-spacing:.2em; color:#93a6b4}
+.freq-meta{display:flex; gap:10px; margin:6px 0 10px; font:600 13px var(--font-mono); color:#93a6b4}
+.freq-meta .mode-tag{color:var(--amber)}
+.freq-meta .sep{opacity:.4}
+/* S-meter: segmented bar like the TM-V71 LCD */
+.smeter{display:grid; gap:4px}
+.sm-scale{position:relative; height:12px; font:500 10px var(--font-mono); color:#93a6b4}
+.sm-scale span{position:absolute; transform:translateX(-50%); white-space:nowrap}
+.sm-bar{position:relative; height:10px; border-radius:2px; overflow:hidden; background:#0d1a20}
+.sm-bar i{position:absolute; inset:0 auto 0 0; width:0; transition:width .09s linear;
+  background:linear-gradient(90deg,var(--amber) 0 51%, #ff7a45 51% 100%)}
+.sm-bar::after{ /* segment gaps */
+  content:""; position:absolute; inset:0;
+  background:repeating-linear-gradient(90deg, transparent 0 calc(2.5% - 2px), var(--lcd-b) calc(2.5% - 2px) 2.5%);
+}
+.sm-bar.thin{height:6px}
+.tx-bars{display:grid; grid-template-columns:auto 1fr auto 1fr auto 1fr; align-items:center; gap:6px 10px; margin-top:4px;
+  font:600 10px var(--font-mono); color:#93a6b4; opacity:.35; transition:.2s}
+.tx-bars.on{opacity:1}
+.tx-bars .sm-bar i{background:#ff7a45}
+/* VFO B follows A at a fixed distance, vertically centred on the big digits */
+.freq-line .vfo-b{margin-left:clamp(20px,4vw,72px); display:flex; align-items:baseline; gap:12px;
+  padding-left:clamp(16px,2vw,30px); border-left:1px dashed #2a3843}
+.freq-line{flex-wrap:wrap; row-gap:8px}
+.vfo-b .lbl{font:600 11px var(--font-ui); letter-spacing:.16em; color:#93a6b4}
+/* same face and size as VFO A (only the colour tells them apart) */
+.freq-b{font:500 clamp(36px,6.4vw,62px)/1 var(--font-mono); letter-spacing:.02em; color:var(--cyan);
+  text-shadow:0 0 8px var(--cyan-glow), 0 0 18px var(--cyan-glow)}
+.mode-b{font:600 13px var(--font-mono); color:#93a6b4}
+
+/* ---------------- VFO: tuner row (TM-V71 frequency spinner) ---------------- */
+.tuner{display:flex; align-items:stretch; gap:12px; flex-wrap:wrap; margin-bottom:14px}
+.freq-spin{
+  display:flex; align-items:center; gap:3px; flex:0 0 auto;
+  background:var(--field-bg); border:1px solid var(--edge); border-radius:10px; padding:8px 12px; transition:.15s;
+}
+.freq-spin.pending{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 0 16px -5px var(--accent-glow)}
+.dcell{display:flex; flex-direction:column; align-items:center; gap:4px}
+.dbar{position:relative; width:26px; height:10px; border-radius:4px; cursor:pointer; background:transparent; border:0; padding:0}
+.dbar::before{content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:12px; height:2px; border-radius:1px; background:var(--text-dim)}
+@media (hover:hover){.dbar:hover{background:var(--accent)} .dbar:hover::before{background:var(--field-bg)}}
+.dbar:active{transform:scaleY(.6)}
+.dig{
+  width:26px; font-family:var(--font-mono); font-size:22px; font-weight:500;
+  color:var(--accent); text-shadow:0 0 8px var(--accent-glow);
+  background:transparent; text-align:center; padding:1px 0; line-height:1;
+  border:1px solid var(--edge-hi); border-radius:5px;
+}
+.dig:focus{outline:none; border-color:var(--text-dim); background:color-mix(in srgb,var(--edge-hi) 30%,transparent)}
+.fdot{font:500 22px var(--font-mono); color:var(--accent); align-self:center; padding:0 2px}
+.spin-unit{font-family:var(--font-mono); font-size:10px; letter-spacing:.2em; color:var(--text-dim); align-self:center; margin-left:4px}
+.spin-apply{
+  align-self:center; margin-left:7px; width:26px; height:26px; padding:0; display:inline-flex;
+  align-items:center; justify-content:center; font-size:14px; cursor:pointer;
+  color:var(--accent); background:var(--field-bg); border:1px solid var(--accent); border-radius:6px; transition:.12s;
+}
+@media (hover:hover){.spin-apply:hover{background:var(--accent); color:#06222a; box-shadow:0 0 12px -3px var(--accent-glow)}}
+.spin-apply:active{transform:scale(.9)}
+.step-btns{display:flex; flex-direction:column; justify-content:center; gap:9px}
+.step-btn{width:58px; height:22px; display:grid; place-items:center; font-size:13px; line-height:1; cursor:pointer;
+  color:#06222a; background:var(--accent); border:1px solid var(--accent); border-radius:7px; opacity:.85; transition:.15s}
+@media (hover:hover){.step-btn:hover{opacity:1}}
+.step-btn:active{transform:translateY(1px)}
+.ab-btns{display:flex; flex-direction:column; justify-content:center; gap:8px}
+.tuner-sel{display:flex; flex-direction:column; justify-content:center; gap:22px; flex:1 1 420px; min-width:0}
+.tuner-sel .sel-row{margin:0}
+
+.sel-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px}
+.sel-row .row-lbl{width:44px}
+.chain-toggle{
+  display:flex; align-items:center; gap:8px; width:100%; margin:6px 0 0; padding:8px 0 6px;
+  background:none; border:0; border-top:1px solid var(--edge); cursor:pointer;
+  font:600 10px var(--font-ui); letter-spacing:.2em; color:var(--text-dim);
+}
+.chain-toggle .chev{transition:transform .2s}
+.chain-toggle[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.chain{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:6px}
+.chain[hidden]{display:none}
+.group{margin:0; padding:12px 14px 10px; border:1px solid var(--edge); border-radius:10px; background:var(--ctrl-bg); min-width:0}
+.group legend{padding:0 6px; font:700 11px var(--font-disp); letter-spacing:.18em; color:var(--accent)}
+.g-row{display:grid; grid-template-columns:52px minmax(0,1fr) auto; align-items:center; gap:10px; margin:7px 0}
+.g-row .seg{justify-self:start}
+.g-row.slider input{width:100%; min-width:0}
+.g-row.slider b{font:500 12px var(--font-mono); color:var(--text); min-width:64px; text-align:right}
+
+/* ---------------- DIGI ---------------- */
+.digi-body{border:1px solid var(--edge); border-radius:10px; overflow:hidden; background:var(--panel)}
+.digi-grid{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); border-bottom:1px solid var(--edge)}
+.pane{display:flex; flex-direction:column; min-height:0}
+.rx-pane{border-right:1px solid var(--edge)}
+.side{display:flex; flex-direction:column}
+.side .pane+.pane{border-top:1px solid var(--edge)}
+.pane-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:7px 10px; background:var(--panel-2); border-bottom:1px solid var(--edge)}
+.pane-head h3{margin:0 auto 0 0; font:600 16px var(--font-disp); letter-spacing:.03em}
+.chk{font-size:12px; color:var(--text-dim); display:flex; gap:4px; align-items:center}
+.tbl{overflow:auto; height:430px; position:relative}
+.tbl.short{height:132px}
+.msgs{width:100%; border-collapse:collapse; font:13px/1.25 var(--font-mono)}
+.msgs th{position:sticky; top:0; background:var(--panel); text-align:left; font:600 12px var(--font-ui);
+  color:var(--text-dim); padding:4px 8px; border-bottom:1px solid var(--edge); z-index:1}
+.msgs td{padding:1px 8px; white-space:nowrap}
+.msgs td.n,.msgs th.n{text-align:right}
+.msgs td.msg{font-weight:500}
+.msgs td.dx{font-family:var(--font-ui); font-size:12px; color:var(--text-dim)}
+.msgs tr.cycle-start td{border-top:1px solid var(--edge-hi)}
+.msgs tr.cq{background:var(--row-cq); color:var(--row-cq-ink, inherit)}
+.msgs tr.cq td.dx{color:inherit}
+.msgs tr.end td.msg{color:var(--text-dim)}
+.msgs tr.me{background:var(--row-me); color:var(--row-me-ink)}
+.msgs tr.me td.dx{color:inherit}
+.msgs tr.ap td.msg::after{content:" ·AP"; color:var(--amber); font-size:11px}
+.msgs tbody tr{cursor:pointer}
+@media (hover:hover){.msgs tbody tr:hover{outline:1px solid var(--amber); outline-offset:-1px}}
+.msgs tr.sel{outline:1px solid var(--cyan); outline-offset:-1px}
+.empty{padding:14px 12px; color:var(--text-dim); font-size:13px}
+.tbl table:has(tbody:not(:empty))+.empty{display:none}
+.arrow-rx{color:var(--ok)} .arrow-tx{color:var(--tx)}
+.strip{display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:6px 10px; background:var(--panel-2); border-bottom:1px solid var(--edge)}
+.cycle{position:relative; width:150px; height:22px; border-radius:4px; background:var(--field-bg); border:1px solid var(--edge-hi); overflow:hidden}
+.cycle i{position:absolute; inset:0 auto 0 0; width:0; background:var(--ok); opacity:.85}
+.cycle span{position:relative; display:block; text-align:center; font:700 11px/20px var(--font-ui); letter-spacing:.16em}
+.chip{font:600 12px var(--font-mono); padding:2px 8px; border-radius:4px; background:var(--ctrl-bg); border:1px solid var(--edge-hi)}
+.chip.parity{font-family:var(--font-ui); letter-spacing:.12em; background:#1b6f86; border-color:#2aa6c4; color:#e8fbff}
+.chip.parity.odd{background:#3a7d2a; border-color:#62c04b}
+.lamps{display:flex; gap:3px}
+.lvl{display:flex; align-items:center; gap:6px; margin-left:auto}
+.lvl-bar{width:120px; height:10px; background:var(--field-bg); border:1px solid var(--edge); border-radius:2px; overflow:hidden; position:relative}
+.lvl-bar::before{content:""; position:absolute; left:33.3%; width:33.3%; top:0; bottom:0; background:color-mix(in srgb,var(--ok) 18%,transparent)}
+.lvl-bar i{position:relative; display:block; height:100%; width:0; background:var(--ok)}
+.lvl > b{font:500 12px var(--font-mono); min-width:76px}
+.wf-axis{position:relative; height:20px; background:var(--panel-2); font:500 11px var(--font-mono); color:var(--text-dim); border-bottom:1px dotted var(--edge-hi)}
+.wf-axis span{position:absolute; top:3px; transform:translateX(-50%)}
+.wf-axis span::after{content:""; position:absolute; left:50%; top:15px; height:5px; border-left:1px solid var(--text-dim)}
+.wf-wrap{position:relative; height:240px; background:#06043a; cursor:crosshair}
+.wf-wrap canvas{width:100%; height:100%; display:block; image-rendering:pixelated}
+.wf-box{position:absolute; top:0; bottom:0; pointer-events:none; display:none}
+.wf-box.tx{border:1px solid var(--tx); background:color-mix(in srgb,var(--tx) 10%,transparent)}
+.wf-box.tx::before{content:""; position:absolute; left:0; right:0; top:0; height:3px;
+  background:repeating-linear-gradient(90deg,var(--tx) 0 3px,transparent 3px 6px)}
+.wf-box.rx{border:1px dashed var(--ok)}
+.wf-tip{position:absolute; top:6px; padding:2px 6px; background:rgba(0,0,0,.75); color:#fff; font:500 12px var(--font-mono); border-radius:4px; pointer-events:none; transform:translateX(-50%)}
+.foot{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:6px 12px; font:500 12px var(--font-mono); color:var(--text-dim); background:var(--panel-2)}
+.foot label{display:flex; align-items:center; gap:6px; font-family:var(--font-ui)}
+.foot select{background:var(--field-bg); border:1px solid var(--edge-hi); border-radius:4px; padding:1px 4px}
+.foot input[type=range]{width:90px}
+.foot b{color:var(--text)}
+
+/* ---------------- settings modal (TM-V71 Remote) ---------------- */
+.modal{position:fixed; inset:0; z-index:40; display:none; align-items:flex-start; justify-content:center; padding:20px;
+  background:#04070acc; backdrop-filter:blur(4px)}
+.modal.open{display:flex}
+.modal-card{width:min(560px,94vw); max-height:90vh; overflow:auto;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--edge-hi); border-radius:14px; padding:22px;
+  box-shadow:0 30px 70px -20px #000, inset 0 1px 0 #ffffff0a}
+.settings-card{width:min(860px,96vw); margin-top:5vh}
+.settings-head{display:flex; align-items:center; gap:14px; margin-bottom:14px}
+.settings-head h3{margin:0; font-family:var(--font-disp); font-weight:700; letter-spacing:.14em; font-size:18px; color:var(--cyan)}
+.app-ver{font-family:var(--font-mono); font-size:11px; letter-spacing:.12em; color:var(--text-dim)}
+.set-x{margin-left:auto; width:30px; height:30px; border-radius:7px; cursor:pointer; background:transparent;
+  border:1px solid var(--edge); color:var(--text-dim); font-size:13px; transition:.15s}
+@media (hover:hover){.set-x:hover{border-color:var(--tx); color:var(--tx)}}
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--edge); margin-bottom:18px; flex-wrap:wrap}
+.tab{font-family:var(--font-ui); font-size:11px; letter-spacing:.16em; cursor:pointer; color:var(--text-dim);
+  background:transparent; border:none; padding:9px 16px; border-bottom:2px solid transparent; margin-bottom:-1px; transition:.15s}
+@media (hover:hover){.tab:hover{color:var(--text)}}
+.tab.active{color:var(--cyan); border-bottom-color:var(--cyan)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:13px}
+.form-grid .span-2{grid-column:1 / -1}
+.form-grid label{display:flex; flex-direction:column; gap:5px; font-family:var(--font-ui); font-size:10px; letter-spacing:.16em; color:var(--text-dim)}
+.form-grid input,.form-grid select{font-family:var(--font-mono); font-size:14px; color:var(--text);
+  background:var(--field-bg); border:1px solid var(--edge); border-radius:8px; padding:9px 11px}
+.form-grid input:focus,.form-grid select:focus{outline:none; border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyan)}
+.form-grid input:disabled{opacity:.5}
+.pane-hint{font-size:10px; letter-spacing:.1em; color:var(--text-dim); margin:12px 0 14px; line-height:1.7}
+.logo-field,.cert-field{margin-top:18px}
+.logo-label{display:block; margin-bottom:8px; font-family:var(--font-ui); font-size:10px; letter-spacing:.16em; color:var(--text-dim)}
+.logo-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.logo-preview{height:34px; min-width:64px; display:inline-flex; align-items:center; justify-content:center;
+  background:#b4b8bc; border-radius:7px; padding:4px 8px; box-shadow:inset 0 0 0 1px #0004}
+.logo-preview:empty{background:var(--field-bg); box-shadow:inset 0 0 0 1px var(--edge)}
+.logo-preview:empty::before{content:attr(data-empty); color:#8a9097; font-family:var(--font-mono); font-size:10px; letter-spacing:.08em}
+.logo-preview img{height:26px; width:auto; max-width:150px; display:block; filter:brightness(.9) contrast(1.03)}
+.mini-btn{font-family:var(--font-ui); font-size:10px; letter-spacing:.14em; cursor:pointer; color:var(--text); text-decoration:none;
+  background:var(--ctrl-bg); border:1px solid var(--edge); border-radius:7px; padding:8px 12px; transition:.15s}
+@media (hover:hover){.mini-btn:hover{border-color:var(--cyan); color:var(--cyan)} .mini-btn.danger:hover{border-color:var(--tx); color:var(--tx)}}
+.cert-meta{margin:6px 0 0; color:var(--text-dim); font-family:var(--font-mono); font-size:10px; line-height:1.55; overflow-wrap:anywhere}
+.modal-actions{display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-top:22px}
+.modal-actions .ma-note{margin-right:auto; font:500 11px var(--font-ui); letter-spacing:.06em; color:var(--text-dim)}
+.modal-actions button{font-family:var(--font-ui); font-size:12px; letter-spacing:.16em; cursor:pointer; padding:10px 20px;
+  border-radius:8px; border:1px solid var(--edge); transition:.15s}
+.btn-ghost{background:var(--ctrl-bg); color:var(--text-dim)}
+@media (hover:hover){.btn-ghost:hover{border-color:var(--edge-hi); color:var(--text)}}
+.btn-primary{background:var(--cyan); color:#06222a; border-color:var(--cyan); font-weight:600}
+/* the destructive answer: same shape as the primary one, in the TX red that
+   means "this reaches the radio" everywhere else in the console */
+.btn-danger{background:var(--tx); color:#2a0604; border-color:var(--tx); font-weight:600}
+@media (hover:hover){.btn-danger:hover{box-shadow:0 0 16px -2px var(--tx-glow,#ff5b4a)}}
+/* confirm dialog: narrower than Settings, and it opens centred rather than at
+   the top - it is two lines and a choice, not a page */
+.modal.open#ask{align-items:center}
+.ask-card{width:min(430px,94vw); padding:22px 24px 20px}
+.ask-title{margin:0 0 10px; font:600 15px var(--font-ui); letter-spacing:.1em; color:var(--text)}
+.ask-text{margin:0; font:400 12.5px/1.65 var(--font-ui); letter-spacing:.03em; color:var(--text-dim)}
+@media (hover:hover){.btn-primary:hover{box-shadow:0 0 16px -2px var(--cyan-glow)}}
+/* audio tab: FT-950 menu list */
+.menu-tools{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px}
+.menu-list{border:1px solid var(--edge); border-radius:10px; overflow:hidden; max-height:420px; overflow-y:auto}
+.menu-grp{padding:6px 12px; font:700 10px var(--font-ui); letter-spacing:.18em; color:var(--cyan);
+  background:var(--panel-2); border-bottom:1px solid var(--edge); position:sticky; top:0; z-index:1}
+.menu-row{display:grid; grid-template-columns:minmax(150px,1.2fr) minmax(120px,1.4fr) 92px 90px 26px; align-items:center;
+  gap:10px; padding:5px 12px; border-bottom:1px solid color-mix(in srgb,var(--edge) 55%,transparent)}
+.menu-row:last-child{border-bottom:0}
+.menu-row .ml{font:600 11px var(--font-ui); letter-spacing:.06em}
+.menu-row .ml small{display:block; font:500 10px var(--font-mono); color:var(--text-dim); letter-spacing:0}
+.menu-row input[type=range]{width:100%; accent-color:var(--cyan)}
+.menu-row select{font:500 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge);
+  border-radius:6px; padding:3px 6px; max-width:100%}
+.menu-row .mv{font:600 12px var(--font-mono); text-align:right}
+.menu-row .md{font:500 10px var(--font-mono); color:var(--text-dim); text-align:right}
+.menu-row.changed{background:color-mix(in srgb,var(--amber) 9%,transparent)}
+.menu-row.changed .mv{color:var(--amber)}
+.menu-row .mr{background:none; border:1px solid var(--edge); border-radius:5px; color:var(--amber); cursor:pointer;
+  width:24px; height:22px; padding:0; visibility:hidden}
+.menu-row.changed .mr{visibility:visible}
+.menu-row.busy{opacity:.55}
+@media (max-width:640px){ .menu-row{grid-template-columns:1fr 70px 26px} .menu-row .mc{grid-column:1 / -1; order:3} .menu-row .md{display:none} }
+
+/* audio tab */
+.aud-level{margin:18px 0 6px}
+.aud-meter{position:relative; height:16px; border-radius:4px; background:var(--field-bg); border:1px solid var(--edge); overflow:hidden}
+.aud-target{position:absolute; top:0; bottom:0; left:33.3%; width:33.3%; background:color-mix(in srgb,var(--ok) 22%,transparent);
+  border-left:1px solid var(--ok); border-right:1px solid var(--ok)}
+.aud-meter i{position:absolute; inset:3px auto 3px 0; width:0; background:var(--ok); border-radius:2px; transition:width .2s}
+.aud-meter.hot i{background:var(--tx)}
+.aud-scale{display:flex; justify-content:space-between; font:500 10px var(--font-mono); color:var(--text-dim); margin-top:3px}
+.aud-read{font:500 12px var(--font-mono); color:var(--text); margin:6px 0 0}
+.aud-ctl{margin-top:14px; --accent:var(--cyan); --accent-glow:var(--cyan-glow)}
+.aud-ctl .g-row{grid-template-columns:86px minmax(0,1fr) auto}
+/* info grid + graph (Pi hardware) */
+.info-grid{display:grid; grid-template-columns:1fr 1fr; gap:1px; margin:0; background:var(--edge); border:1px solid var(--edge); border-radius:10px; overflow:hidden}
+.info-grid dt{background:#0c1217; padding:10px 12px; display:flex; align-items:center; font-family:var(--font-ui); font-size:10px; letter-spacing:.12em; color:var(--text-dim)}
+.info-grid dd{margin:0; background:var(--field-bg); padding:10px 12px; font-family:var(--font-mono); font-size:13px; color:var(--text); word-break:break-word}
+:root[data-theme="light"] .info-grid dt{background:#e4eaef; color:#46545f}
+.sys-graph{position:relative; margin:16px 0 14px; padding:0}
+.sys-graph-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px}
+.sys-graph figcaption{font-family:var(--font-ui); font-size:10px; letter-spacing:.12em; color:var(--text-dim)}
+.sys-range{display:flex; gap:4px}
+.sys-range-btn{font-family:var(--font-ui); font-size:10px; letter-spacing:.08em; padding:3px 8px; color:var(--text-dim);
+  background:var(--ctrl-bg); border:1px solid var(--edge); border-radius:6px; cursor:pointer}
+.sys-range-btn:hover{color:var(--text); border-color:var(--edge-hi)}
+.sys-range-btn.is-on{color:var(--text); border-color:var(--edge-hi); background:var(--panel-2)}
+.sys-graph canvas{display:block; width:100%; height:320px; background:var(--panel-2); border:1px solid var(--edge); border-radius:10px}
+.sys-tip{position:absolute; pointer-events:none; z-index:4; transform:translate(-50%,0); padding:6px 8px; border-radius:8px;
+  border:1px solid var(--edge-hi); background:var(--panel); color:var(--text); font-family:var(--font-mono); font-size:11px;
+  line-height:1.5; white-space:nowrap; box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.sys-tip b{color:var(--text-dim); font-weight:400}
+
+.toast{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%);
+  background:var(--panel-2); border:1px solid var(--amber); border-radius:8px; padding:10px 14px;
+  max-width:min(92vw,560px); font:13px var(--font-mono); white-space:pre-wrap; z-index:60; box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.toast.err{border-color:var(--tx)}
+
+/* ---------------- responsive ---------------- */
+@media (max-width:1180px){ .chain{grid-template-columns:1fr 1fr} }
+@media (max-width:980px){
+  .digi-grid{grid-template-columns:1fr}
+  .rx-pane{border-right:0; border-bottom:1px solid var(--edge)}
+  .tbl{height:320px}
+  .lvl{margin-left:0}
+  .chain{grid-template-columns:1fr}
+  .stat .stat-label{display:none}
+}
+@media (max-width:640px){
+  .topbar{grid-template-columns:auto 1fr auto; padding:12px 12px}
+  .brand .callsign{display:none}
+  .brand-logo{height:24px; max-width:110px; padding:3px 6px}
+  .title-center{padding:7px 30px}
+  .app-title{font-size:14px; letter-spacing:.08em}
+  .status-cluster{gap:6px}
+  .stat,.clock{display:none}
+  .panel{padding:22px 16px 22px 18px}
+  .form-grid{grid-template-columns:1fr}
+  .info-grid{grid-template-columns:1fr}
+  .sys-graph canvas{height:260px}
+  .dig{width:22px; font-size:19px} .dbar{width:22px} .fdot{font-size:19px}
+  .freq-spin{padding:6px 8px}
+  .sel-row .row-lbl{width:auto}
+  .msgs td,.msgs th{padding-left:5px; padding-right:5px}
+}
+
+/* ---------------- DIGI: TX controls ---------------- */
+.btn.tune.on{background:var(--tx); border-color:var(--tx); color:#fff; box-shadow:0 0 14px -2px var(--tx)}
+.txlvl{display:flex; align-items:center; gap:5px; font:500 12px var(--font-mono); color:var(--text-dim)}
+.txlvl input{width:80px}
+.txlvl b{min-width:36px; color:var(--text)}
+/* worked-before marking (iDigi): CQ from a station already logged on this band
+   red, new green; a never-worked DXCC entity gets a NEU tag */
+.msgs tr.cq.worked{background:var(--row-cq-worked); color:var(--row-cq-worked-ink)}
+.msgs tr.worked-call td.msg{text-decoration:underline dotted; text-underline-offset:3px}
+.msgs .newdx{display:inline-block; margin-left:6px; padding:0 4px; border-radius:3px; font:700 9px var(--font-ui);
+  letter-spacing:.1em; background:var(--newdx, var(--amber)); color:var(--newdx-ink, #1a1000); vertical-align:1px}
+
+/* ---------------- LOG panel ---------------- */
+.log-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); gap:16px}
+.qso-form{border:1px solid var(--edge); border-radius:10px; background:var(--ctrl-bg); padding:14px}
+.qf-row{display:flex; align-items:flex-end; gap:10px; margin-bottom:10px}
+.qso-form label{display:flex; flex-direction:column; gap:4px; font:600 10px var(--font-ui); letter-spacing:.14em; color:var(--text-dim)}
+.qso-form input{font:500 14px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge);
+  border-radius:7px; padding:7px 9px; min-width:0}
+.qso-form input:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 1px var(--accent)}
+.qf-call{flex:1}
+.qf-call input{font-size:20px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent)}
+.q-worked{font:600 11px var(--font-ui); letter-spacing:.1em; padding:6px 8px; border-radius:6px; white-space:nowrap}
+.q-worked.new{background:color-mix(in srgb,var(--ok) 25%,transparent); color:var(--ok)}
+.q-worked.dupe{background:color-mix(in srgb,var(--tx) 25%,transparent); color:var(--tx)}
+.qf-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px 12px}
+.qf-grid .span-2{grid-column:1 / -1}
+.qf-foot{display:flex; align-items:center; gap:10px; margin-top:12px}
+.q-auto{flex:1; font:500 12px var(--font-mono); color:var(--text-dim)}
+.recent-pane{border:1px solid var(--edge); border-radius:10px; overflow:hidden; background:var(--panel)}
+.tbl.mid{height:300px}
+.msgs .ok{color:var(--ok)} .msgs .bad{color:var(--tx)}
+.msgs .del{cursor:pointer; color:var(--text-dim); background:none; border:0; padding:0 4px}
+@media (hover:hover){.msgs .del:hover{color:var(--tx)}}
+
+/* QRZ LOOKUP / LOG QSO in the log panel head (TM-V71 Remote) */
+.log-head-right{display:flex; gap:8px}
+.log-btn{font-family:var(--font-ui); font-size:11px; letter-spacing:.14em; cursor:pointer; border-radius:8px;
+  padding:8px 16px; border:1px solid var(--edge); transition:.15s; background:var(--ctrl-bg); color:var(--text-dim)}
+@media (hover:hover){.log-btn.ghost:hover{color:var(--accent); border-color:var(--accent)}
+  .log-btn.primary:hover{filter:brightness(1.12)}}
+.log-btn.primary{background:var(--accent); border-color:var(--accent); color:#04201d; font-weight:700}
+.log-btn:disabled{opacity:.45; cursor:not-allowed; filter:saturate(.4)}
+
+/* settings ▸ log */
+.logo-label.sec{margin-top:18px}
+.form-grid .check-label{flex-direction:row; align-items:center; gap:9px; letter-spacing:.08em}
+.tx-proc .check-label{display:flex; align-items:center; gap:9px; font-family:var(--font-ui); font-size:10px; letter-spacing:.08em; color:var(--text-dim); cursor:pointer}
+.form-grid .check-label input, .tx-proc .check-label input{width:16px; height:16px; accent-color:var(--cyan)}
+.update-status{flex:1 1 auto; min-width:0; font:500 11px var(--font-mono); color:var(--text-dim)}
+
+@media (max-width:980px){ .log-grid{grid-template-columns:1fr} .freq-line{flex-wrap:wrap}
+  .freq-line .vfo-b{margin-left:0; padding-left:0; border-left:0; width:100%} }
+.mic-svg{width:15px; height:15px}
+.logsec + .logsec{margin-top:22px; padding-top:16px; border-top:1px solid var(--edge)}
+.log-test-row{margin:12px 0 4px}
+.update-status.ok{color:var(--ok)} .update-status.bad{color:var(--tx)}
+.form-grid .check-label .mini-btn{margin-top:auto}
+.split-btn{padding:3px 12px; font-size:11px}
+
+/* squelch row under the LCD (TM-V71 Remote) */
+.sql-row{display:flex; align-items:center; gap:11px; margin:-4px 0 16px}
+.sql-label{font-family:var(--font-disp); font-weight:700; letter-spacing:.14em; font-size:11px; color:var(--text-dim); width:30px}
+.sql-slider{flex:1; -webkit-appearance:none; appearance:none; height:5px; border-radius:3px; cursor:pointer; outline:none;
+  background:linear-gradient(90deg, var(--accent) var(--sqlpct,0%), var(--track-empty,#0c151b) var(--sqlpct,0%))}
+:root[data-theme="light"] .sql-slider{--track-empty:#c8d2d9}
+.sql-slider::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:15px; height:15px; border-radius:50%;
+  background:var(--accent); box-shadow:0 0 8px -1px var(--accent-glow), inset 0 0 2px #fff8; cursor:pointer}
+.sql-slider::-moz-range-thumb{width:15px; height:15px; border:none; border-radius:50%; background:var(--accent);
+  box-shadow:0 0 8px -1px var(--accent-glow); cursor:pointer}
+.sql-val{font-family:var(--font-mono); font-size:12px; color:var(--accent); width:30px; text-align:right}
+
+/* ================= PTT + AUDIO (from TM-V71 Remote) ================= */
+:root{--tx-glow:#ff5b4a}
+.duo{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; align-items:stretch}
+.duo > .panel{min-width:0}
+.ptt-zone{--accent:#c1392f; --accent-glow:#c1392f}
+.audio{--accent:#8b7ad6; --accent-glow:#8b7ad6}
+.audio::before{box-shadow:0 0 9px -2px var(--accent-glow)}
+
+/* --- PTT panel --- */
+.ptt-body{display:flex; align-items:center; justify-content:space-between; gap:14px}
+.quick-col{display:grid; grid-template-columns:1fr; gap:5px; flex:0 0 auto}
+.qbtn{width:96px; padding:5px 6px; line-height:1.15; cursor:pointer; transition:.14s; text-align:center;
+  font-family:var(--font-mono); font-size:11px; font-weight:600; letter-spacing:.03em;
+  color:var(--text-dim); background:var(--ctrl-bg); border:1px solid #c1392f; border-radius:6px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.qbtn small{display:block; font-size:9px; font-weight:500; opacity:.75; letter-spacing:.06em}
+.qbtn.empty{color:#566472; opacity:.6; font-weight:500; cursor:default}
+.qbtn.active{color:var(--amber); text-shadow:0 0 9px var(--amber-glow); opacity:1}
+@media (hover:hover){.qbtn:not(.empty):hover{color:var(--text); border-color:var(--tx)}}
+.ptt-center{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; flex:1 1 auto; min-width:0}
+.ptt-meta{text-align:center; display:flex; flex-direction:column; gap:6px}
+.ptt-hint{font-size:10px; letter-spacing:.26em; color:var(--text-dim)}
+.ptt-band{font-family:var(--font-disp); font-weight:600; letter-spacing:.14em; color:var(--amber); text-shadow:0 0 12px var(--amber-glow)}
+.ptt-stage{display:flex; align-items:center; gap:16px}
+.ptt{position:relative; width:168px; height:168px; border-radius:50%; border:none; cursor:pointer; background:none;
+  touch-action:none; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none}
+.ptt-ring{position:absolute; inset:0; border-radius:50%; background:#28323b;
+  box-shadow:inset 0 0 0 2px #c1392f, inset 0 1px 0 #ffffff1f, inset 0 8px 22px #000a, 0 14px 30px -10px #000}
+.ptt-sweep{position:absolute; inset:0; border-radius:50%; pointer-events:none;
+  background:conic-gradient(var(--tx-glow) calc(var(--sweep,0) * 1deg), transparent 0);
+  -webkit-mask:repeating-conic-gradient(from 0deg, #000 0 4.5deg, transparent 4.5deg 9deg);
+  mask:repeating-conic-gradient(from 0deg, #000 0 4.5deg, transparent 4.5deg 9deg);
+  opacity:0; transition:opacity .15s}
+.ptt.tx .ptt-sweep{opacity:.9}
+.ptt-core{position:absolute; inset:18px; border-radius:50%; z-index:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:2px; color:#c3ccd6;
+  background:radial-gradient(110% 90% at 50% 16%, #ffffff30, transparent 42%),
+    conic-gradient(from 218deg at 50% 50%, #283541, #50616f, #1c2630, #3e4e5b, #222d36, #647889, #283541) 0 0/100% 100%,
+    radial-gradient(120% 120% at 50% 22%, #3a4854, #1c2730 58%, #121a20);
+  box-shadow:inset 0 2px 3px #ffffff55, inset 0 -9px 16px #000a, inset 0 0 0 1px #ffffff14, 0 0 0 1px #0008; transition:.12s}
+.ptt-core-lbl{display:flex; align-items:center; justify-content:center; line-height:0}
+.ptt-mic{width:44px; height:44px; display:block}
+.ptt-core-txt{font-family:var(--font-disp); font-weight:700; font-size:24px; letter-spacing:.18em; line-height:1; margin-top:3px}
+.ptt-timer{font-family:var(--font-mono); font-weight:700; font-size:15px; letter-spacing:.08em; line-height:1; opacity:0; height:0; transition:opacity .12s}
+.ptt.tx .ptt-timer{opacity:1; height:auto}
+.ptt:active .ptt-core, .ptt.tx .ptt-core{color:#fff; transform:scale(.97);
+  background:radial-gradient(120% 120% at 50% 25%, #ff6a5e, #d8281d 60%, #a01910);
+  box-shadow:inset 0 2px 10px #fff6, 0 0 26px var(--tx-glow)}
+.ptt.tx .ptt-ring{box-shadow:inset 0 0 0 2px var(--tx), 0 0 40px -4px var(--tx-glow)}
+.ptt:disabled, .ptt-lock:disabled{opacity:.38; cursor:not-allowed; filter:saturate(.35)}
+:root[data-theme="light"] .ptt-ring{background:#a4afba;
+  box-shadow:inset 0 0 0 2px #c1392f, inset 0 8px 18px #00000022, 0 12px 26px -12px #00000055}
+:root[data-theme="light"] .ptt-core{color:#9aa6b2;
+  background:radial-gradient(110% 90% at 50% 16%, #ffffffcc, transparent 46%),
+    conic-gradient(from 218deg at 50% 50%, #cbd5dd, #f5f9fc, #bdc8d1, #e9eff4, #c6d0d9, #f2f6f9, #cbd5dd) 0 0/100% 100%,
+    radial-gradient(120% 120% at 50% 25%, #ffffff, #e2e9ee 60%, #d2dbe2);
+  box-shadow:inset 0 2px 5px #ffffff, inset 0 -9px 16px #00000022, inset 0 0 0 1px #ffffffcc, 0 0 0 1px #c4ccd3}
+.ptt-vu{display:flex; flex-direction:column; align-items:center; gap:5px}
+.ptt-vu-bar{position:relative; width:10px; height:130px; border-radius:3px; background:#0d1a20; overflow:hidden;
+  box-shadow:inset 0 0 0 1px #00000060}
+.ptt-vu-bar i{position:absolute; left:0; right:0; bottom:0; height:0; transition:height .08s linear;
+  background:linear-gradient(0deg, var(--ok) 0 60%, var(--amber) 60% 85%, var(--tx) 85%)}
+.ptt-vu-bar i{background-size:100% 130px; background-position:bottom}
+.ptt-vu-pk{position:absolute; left:0; right:0; height:2px; bottom:0; background:#fff; opacity:.85}
+.ptt-vu-lbl{font:600 9px var(--font-ui); letter-spacing:.16em; color:var(--text-dim)}
+.ptt-lock-row{display:flex; align-items:center; justify-content:center; gap:12px}
+.ptt-lock{font-family:var(--font-disp); font-weight:700; letter-spacing:.3em; font-size:14px; color:var(--text-dim);
+  padding:6px 16px; border:1px solid #c1392f; border-radius:6px; background:var(--ctrl-bg); cursor:pointer; transition:.18s}
+.ptt-lock.locked{color:#fff; background:var(--tx); border-color:var(--tx); box-shadow:0 0 22px var(--tx-glow); animation:lockpulse 1.2s ease-in-out infinite}
+@keyframes lockpulse{0%,100%{box-shadow:0 0 14px var(--tx-glow)}50%{box-shadow:0 0 26px var(--tx-glow)}}
+.ptt-side{font-family:var(--font-disp); font-weight:700; letter-spacing:.14em; font-size:10px; min-width:70px; padding:4px 9px;
+  border-radius:5px; border:1px solid #c1392f; white-space:nowrap; color:var(--text-dim); background:var(--ctrl-bg); cursor:pointer; transition:.18s}
+@media (hover:hover){.ptt-side:hover{color:var(--tx); border-color:var(--tx)}}
+.ptt-side.on{color:#fff; background:var(--tx); border-color:var(--tx); box-shadow:0 0 14px -3px var(--tx-glow)}
+
+/* --- Audio panel --- */
+.ptt-mute{font-family:var(--font-disp); font-weight:700; letter-spacing:.12em; font-size:10px; width:60px; text-align:center;
+  padding:4px 0; border-radius:5px; white-space:nowrap; color:var(--text-dim); background:var(--ctrl-bg);
+  border:1px solid var(--edge-hi); cursor:pointer; transition:.18s}
+.ptt-mute.armed{color:#06222a; background:var(--amber); border-color:var(--amber); box-shadow:0 0 18px -2px var(--amber-glow)}
+#audio-toggle{font-family:var(--font-ui); font-size:10px; letter-spacing:.12em; cursor:pointer; color:var(--text);
+  background:var(--ctrl-bg); border:1px solid var(--accent); border-radius:6px; padding:5px 10px; min-width:110px; transition:.15s}
+#audio-toggle.connected{color:#120e22; background:var(--accent); border-color:var(--accent); font-weight:600; box-shadow:0 0 16px -5px var(--accent)}
+#audio-toggle.busy{opacity:.6}
+.audio-ctl{display:flex; flex-wrap:wrap; align-items:center; gap:16px 26px; margin:4px 0 12px}
+.acg{display:flex; align-items:center; gap:8px; font-family:var(--font-ui); font-size:10px; letter-spacing:.16em; color:var(--text-dim)}
+/* gain/buffer sliders as TM-V71 Remote: coloured fill up to the thumb, coloured
+   thumb and value — RX violet and MIC red like the graph, timing muted cyan */
+.acg input[type=range], #tx-buffer, #ptt-tail, #rx-buffer{
+  -webkit-appearance:none; appearance:none; height:5px; border-radius:3px; cursor:pointer; outline:none;
+  background:linear-gradient(90deg, var(--g-accent) var(--gpct,0%), var(--track-empty,#26333d) var(--gpct,0%))}
+:root[data-theme="light"] .acg input[type=range], :root[data-theme="light"] #tx-buffer,
+:root[data-theme="light"] #ptt-tail, :root[data-theme="light"] #rx-buffer{--track-empty:#c8d2d9}
+.acg input[type=range]{width:130px}
+.acg input[type=range]::-webkit-slider-thumb, #tx-buffer::-webkit-slider-thumb, #ptt-tail::-webkit-slider-thumb,
+#rx-buffer::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:14px; height:14px; border-radius:50%;
+  background:var(--g-accent); box-shadow:0 0 7px -1px var(--g-accent); cursor:pointer}
+.acg input[type=range]::-moz-range-thumb, #tx-buffer::-moz-range-thumb, #ptt-tail::-moz-range-thumb,
+#rx-buffer::-moz-range-thumb{width:14px; height:14px; border:none; border-radius:50%; background:var(--g-accent); cursor:pointer}
+#rx-gain{--g-accent:#8b7ad6}
+#tx-gain{--g-accent:#cf6159}
+#tx-buffer, #ptt-tail, #rx-buffer{--g-accent:#3fa6b3}
+.audio-ctl .gv{font-family:var(--font-mono); font-size:11px; width:40px; text-align:left}
+#rx-gain-val{color:#8b7ad6}
+#tx-gain-val{color:#cf6159}
+#tx-buffer-val, #ptt-tail-val, #rx-buffer-val{color:#3fa6b3}
+.audio-graph{position:relative; display:flex; flex-direction:column; min-height:180px; overflow:hidden;
+  border:1px solid #4a5a67; border-radius:10px; background:var(--field-bg); box-shadow:inset 0 1px 6px #00000033}
+:root[data-theme="light"] .audio-graph{border-color:var(--edge)}
+.audio-graph canvas{flex:1 1 auto; width:100%; height:150px; display:block}
+.graph-bytes{position:absolute; top:6px; right:8px; z-index:2; pointer-events:none; font:500 11px var(--font-mono);
+  white-space:nowrap; color:var(--text); background:rgba(6,10,13,0.62); padding:2px 7px; border-radius:6px}
+.graph-bytes:empty{display:none}
+.graph-bytes .gb-rx{color:#8b7ad6} .graph-bytes .gb-tx{color:#cf6159; margin-left:10px}
+:root[data-theme="light"] .graph-bytes{background:rgba(255,255,255,0.72)}
+.graph-axis{flex:none; display:flex; justify-content:space-between; padding:3px 8px 4px; border-top:1px solid var(--edge);
+  font:500 9px var(--font-mono); letter-spacing:.1em; color:rgba(127,140,150,0.7)}
+.graph-legend{flex:none; display:flex; justify-content:center; gap:20px; padding:5px 10px; border-top:1px solid var(--edge);
+  font:500 9px var(--font-mono); letter-spacing:.16em}
+.graph-legend .lg{display:flex; align-items:center; gap:6px; color:var(--text-dim)}
+.graph-legend .lg::before{content:""; width:10px; height:10px; border-radius:2px; display:inline-block}
+.graph-legend .lg.rx::before{background:#8b7ad6; box-shadow:0 0 6px #8b7ad688}
+.graph-legend .lg.mic::before{background:#cf6159; box-shadow:0 0 6px #cf615988}
+.graph-legend .lg.peak{font:inherit; letter-spacing:inherit; background:none; border:0; padding:0; cursor:pointer}
+.graph-legend .lg.peak::before{background:#ffcf6a; box-shadow:0 0 6px #ffcf6a88}
+:root[data-theme="light"] .graph-legend .lg.peak::before{background:#b86a00; box-shadow:none}
+.graph-legend .lg.peak.off{opacity:.4}
+
+.mt-rec, .mt-pb{font:700 10px var(--font-mono); letter-spacing:.12em; padding:2px 7px; border-radius:4px}
+.mt-rec{color:#fff; background:var(--tx); animation:lockpulse 1.2s ease-in-out infinite}
+.mt-pb{color:#06222a; background:var(--ok)}
+.ptt-mute.mictest{width:auto; padding:4px 10px}
+.ptt-mute.mictest.armed{background:var(--tx); border-color:var(--tx); color:#fff; box-shadow:0 0 16px -3px var(--tx-glow)}
+
+.chip.seq-tx{font-family:var(--font-mono); max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.chip.seq-tx.live{background:#7a1712; border-color:var(--tx); color:#fff}
+.msgs tr.tx-row td.msg{color:var(--row-tx, var(--tx))}
+.msgs tbody#sess-body tr.sel{outline:1px solid var(--cyan); outline-offset:-1px}
+.sess-ok{color:var(--ok)} .sess-bad{color:var(--tx)} .sess-run{color:var(--amber)}
+
+/* --- peak hold (signal level + codec level) --- */
+.sm-bar .pk, .lvl-bar .pk{position:absolute; top:0; bottom:0; width:2px; left:0; background:#fff; opacity:.9;
+  box-shadow:0 0 6px #fff8; z-index:2; transition:left .08s linear}
+:root[data-theme="light"] .sm-bar .pk{background:#fff}
+.lvl-bar .pk{background:var(--text)}
+
+@media (max-width:1180px){ .duo{grid-template-columns:1fr} }
+@media (max-width:640px){
+  .ptt-body{flex-wrap:wrap; justify-content:center}
+  .quick-col{grid-template-columns:repeat(4,1fr); order:2; width:100%}
+  .quick-right{order:3}
+  .qbtn{width:auto}
+  .ptt{width:150px; height:150px}
+}
+
+/* PTT · MEMORY title centred over the panel, as in TM-V71 Remote */
+.ptt-zone .panel-head{position:relative; justify-content:flex-end; min-height:24px}
+.ptt-zone .panel-head h2{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
+  text-align:center; pointer-events:none}
+.ptt-zone .panel-head .panel-stat{position:absolute; left:18px}
+
+/* ================= compact layout ================= */
+.console{gap:14px; padding-top:14px}
+.panel{padding:18px 24px 18px}
+.panel-head{margin-bottom:9px}
+.topbar{padding-top:calc(12px + env(safe-area-inset-top,0px)); padding-bottom:12px}
+.display{padding:10px 16px 10px; margin-bottom:12px}
+.freq, .freq-b{font-size:clamp(32px,5vw,52px)}
+.freq-meta{margin:4px 0 7px}
+.sql-row{margin:-2px 0 12px}
+.tuner{margin-bottom:10px; gap:10px}
+.freq-spin{padding:6px 10px}
+.dig{font-size:20px; width:24px} .dbar{width:24px; height:8px} .fdot{font-size:20px}
+.sel-row{margin-bottom:6px}
+.chain{gap:12px}
+.group{padding:9px 12px 7px}
+.g-row{margin:5px 0}
+.seg .sg{padding:4px 9px}
+/* PTT panel: memories 2 × 4 per side instead of a column of 8 — half the height */
+.quick-col{grid-template-columns:repeat(2, 78px); gap:4px}
+.qbtn{width:78px; padding:4px 4px; font-size:10px}
+.qbtn small{font-size:8px}
+.ptt{width:140px; height:140px}
+.ptt-core{inset:15px}
+.ptt-mic{width:34px; height:34px}
+.ptt-core-txt{font-size:20px}
+.ptt-vu-bar{height:104px}
+.ptt-center{gap:10px}
+.ptt-stage{gap:12px}
+.ptt-hint{font-size:9px}
+.audio-graph{min-height:150px}
+.audio-graph canvas{height:118px}
+.tbl{height:380px}
+@media (max-width:640px){ .quick-col{grid-template-columns:repeat(4,1fr)} .qbtn{width:auto} }
+/* VFO B a little smaller than A (~¾) */
+.freq-b{font-size:clamp(26px,3.8vw,40px)}
+
+/* ================= LCD after the FT-950's own display ================= */
+.lcd{--lb:#8fd6ff; --lb-glow:#3fb4ff; --lg:#7fd36a; --lr:#ef4b3c; --lbg:#03070b;
+  display:grid; grid-template-columns:minmax(300px,1.2fr) minmax(320px,1fr) minmax(360px,1.2fr); gap:18px;
+  align-items:stretch; margin:2px 0 12px; padding:12px 16px; border-radius:10px;
+  background:radial-gradient(130% 160% at 60% 0%, #0a1219, var(--lbg) 70%);
+  border:1px solid #05080a; box-shadow:inset 0 2px 16px #000, inset 0 0 0 1px #ffffff06; color:var(--lb)}
+:root[data-theme="light"] .lcd{--lbg:#05090d}
+/* indicator boxes: lit = filled, unlit = a faint ghost (layout never jumps) */
+.ind{display:inline-block; font:700 11px/1 var(--font-ui); letter-spacing:.06em; padding:3px 6px; border-radius:3px;
+  white-space:nowrap; opacity:.13; transition:opacity .15s}
+.ind.on{opacity:1}
+.ind.green{background:var(--lg); color:#06210c}
+.ind.red{background:var(--lr); color:#2a0400}
+.ind.blue{background:#6fb8ee; color:#04192b; opacity:1}
+.ind.blue-o{border:1.5px solid var(--lb); color:var(--lb); background:transparent; padding:2px 5px}
+.ind.blue-o.on{background:var(--lb); color:#04192b}
+.dsp-tags .ind.blue-o:first-child{opacity:1}
+/* analog meter */
+.lcd-meter{display:flex; flex-direction:column; gap:7px; min-width:0}
+.ameter{width:100%; max-width:480px; height:auto; display:block; border-radius:8px;
+  box-shadow:0 0 0 1px #000, inset 0 0 0 1px #0006; --am-w:#e6eeff; --am-b:#5b8cff}
+.am-arc{fill:none; stroke:var(--am-w); stroke-width:2.6; filter:drop-shadow(0 0 2px #9fbaff88)}
+.am-arc.blue{stroke:var(--am-b); stroke-width:6}
+.am-tick{stroke:var(--am-w); stroke-width:2}
+.am-tick.blue{stroke:var(--am-b)}
+.am-tick.minor{stroke-width:1.2}
+.am-lbl{font:italic 800 11px var(--font-ui); fill:var(--am-w); text-anchor:middle; dominant-baseline:middle;
+  filter:drop-shadow(0 0 2px #9fbaff66)}
+.am-lbl.big{font-size:15px}
+.am-lbl.blue{fill:#7ea6ff}
+.am-lbl.small{font-size:10px}
+.am-side{font:italic 800 11px var(--font-ui); fill:var(--am-w); text-anchor:end; dominant-baseline:middle}
+.am-side.blue{fill:#7ea6ff}
+.am-needle{stroke:#e8231a; stroke-width:2; stroke-linecap:round; opacity:1; filter:drop-shadow(0 0 2px #ff2a1a88)}   /* motion: needleStep() in app.js */
+.am-mode{font:700 10px var(--font-mono); fill:#7ea6ff; text-anchor:start}
+.lcd-inds{display:flex; flex-wrap:wrap; gap:6px 8px}
+.lcd-txm{display:grid; grid-template-columns:38px 1fr 58px; gap:7px 10px; width:88%; align-self:center; align-items:center; font:700 12px var(--font-ui);
+  letter-spacing:.08em; color:var(--lb)}
+.lcd-txm.on{opacity:1}
+.lbar{display:grid; grid-template-columns:repeat(24,1fr); gap:2px; height:11px}
+.lbar i{background:var(--lb); opacity:.1; border-radius:1px}
+.lbar i.on{opacity:1; box-shadow:0 0 5px var(--lb-glow)}
+.lbar i.hot{background:var(--lr)}
+.lbar i.hot.on{box-shadow:0 0 5px var(--lr)}
+/* signal path */
+.lcd-path{display:flex; flex-direction:column; justify-content:space-between; gap:12px; min-width:0}
+.chain{display:flex; align-items:flex-start; gap:0; flex-wrap:nowrap}
+.cb{display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0}
+.cl{font:700 11px var(--font-ui); letter-spacing:.04em; border:1.5px solid var(--lb); border-radius:3px; padding:1px 5px;
+  color:var(--lb); white-space:nowrap}
+.cv{font:700 11px/1.15 var(--font-ui); background:var(--lg); color:#06210c; border-radius:3px; padding:2px 5px; text-align:center;
+  white-space:nowrap}
+.ca{flex:1 1 10px; min-width:8px; height:2px; margin-top:28px; background:var(--lb); position:relative; opacity:.8}
+.ca::after{content:""; position:absolute; right:-1px; top:-4px; border:5px solid transparent; border-left:7px solid var(--lb); border-right:0}
+.dsp{display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center}
+.dsp-tags{display:flex; flex-direction:column; gap:5px}
+.dsp-bars{display:grid; grid-template-columns:70px 1fr; gap:5px 8px; align-items:center}
+.dl{font:700 10px var(--font-ui); letter-spacing:.04em; background:#6fb8ee; color:#04192b; border-radius:3px; padding:2px 5px; text-align:center}
+.dbars{position:relative; display:grid; grid-template-columns:repeat(21,1fr); gap:2px; height:11px; padding:0 4px;
+  border-left:1.5px solid var(--lb); border-right:1.5px solid var(--lb)}
+.dbars i{background:var(--lg); opacity:.1; border-radius:1px}
+.dbars i.on{opacity:1; box-shadow:0 0 4px #7fd36a88}
+.dbars::after{content:""; position:absolute; left:50%; top:-3px; bottom:-3px; width:2px; margin-left:-1px; background:var(--lr)}
+/* frequency */
+.lcd-freq{display:flex; flex-direction:column; justify-content:space-between; gap:6px; min-width:0}
+.lf-top{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.lf-top .mode-tag{margin:0 auto 0 4px}
+.lf-info{font:500 10px var(--font-mono); color:var(--lb); opacity:.6; letter-spacing:.04em}
+.lcd .freq-line{display:block; margin:0; text-align:right}
+.lcd .freq{font-family:"DSEG7-Classic",var(--font-mono); font-style:italic; font-weight:400;
+  font-size:clamp(40px,5.4vw,76px); line-height:1.05; letter-spacing:.02em; color:var(--lb);
+  text-shadow:0 0 10px var(--lb-glow), 0 0 26px #1e8fe066; white-space:nowrap}
+.lcd .freq .dg.lead{opacity:.08}
+.lcd .freq .sep{margin:0}
+@media (hover:hover){.lcd .freq .dg:hover{background:#8fd6ff1f}}
+.lf-bottom{display:flex; align-items:center; gap:12px; justify-content:flex-end}
+.tune-scale{position:relative; flex:1 1 160px; max-width:240px; height:30px; border:1.5px solid var(--lb); border-radius:6px;
+  background:repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), #8fd6ff66 calc(10% - 1px) 10%) center/90% 6px no-repeat}
+.tune-scale::before{content:""; position:absolute; left:5%; right:5%; top:50%; height:1.5px; background:var(--lb)}
+.tune-scale i{position:absolute; top:4px; bottom:4px; width:3px; margin-left:-1.5px; left:50%; background:var(--lr);
+  box-shadow:0 0 6px var(--lr); transition:left .15s}
+.clar-box{display:flex; align-items:baseline; gap:8px; border:1.5px solid var(--lb); border-radius:6px; padding:3px 10px}
+.clar-box > span:first-child{font:700 11px var(--font-ui); color:var(--lg)}
+.clar-val{font-family:"DSEG7-Classic",var(--font-mono); font-style:italic; font-size:22px; color:var(--lg);
+  text-shadow:0 0 8px #7fd36a66}
+.clar-val .cdot{display:inline-block; width:5px; height:5px; margin:0 3px 0 2px; border-radius:1px; background:currentColor;
+  box-shadow:0 0 6px #7fd36a99}
+.lcd .vfo-b{display:flex; align-items:baseline; gap:10px; justify-content:flex-end; margin:0; padding:0; border:0}
+.lcd .vfo-b .lbl{font:700 10px var(--font-ui); color:var(--lb); opacity:.7}
+.lcd .freq-b{font-family:"DSEG7-Classic",var(--font-mono); font-style:italic; font-size:20px; color:var(--lb); opacity:.75;
+  text-shadow:0 0 6px var(--lb-glow)}
+.lcd .mode-b{font:600 11px var(--font-mono); color:var(--lb); opacity:.7}
+@media (max-width:1180px){ .lcd{grid-template-columns:1fr 1fr} .lcd-freq{grid-column:1 / -1; order:-1} }
+@media (max-width:700px){ .lcd{grid-template-columns:1fr} .chain{flex-wrap:wrap; row-gap:8px} }
+/* transmit readout next to the TX lamp: only lit while transmitting */
+.tx-read{display:inline-flex; align-items:baseline; gap:5px; padding:2px 8px; border:1.5px solid var(--lr); border-radius:4px;
+  font:700 10px var(--font-ui); letter-spacing:.06em; color:var(--lr); opacity:.13; transition:opacity .15s}
+.tx-read.on{opacity:1; box-shadow:0 0 10px -2px var(--lr)}
+.tx-read b{font:italic 400 17px "DSEG7-Classic",var(--font-mono); color:#ffd2c8; min-width:2.2em; text-align:right}
+.tx-read b.warn{color:#ff6a4a}
+.tx-read span + span{margin-left:4px}
+.lcd-txm b{font:italic 400 15px "DSEG7-Classic",var(--font-mono); color:var(--lb); text-align:right}
+.head-sep{width:1px; height:18px; background:var(--line,#ffffff22); margin:0 4px}
+/* settings ▸ memories */
+.mem-row{display:grid; grid-template-columns:34px 104px 86px 64px 70px 40px 104px minmax(70px,1fr) 58px 62px; align-items:center; gap:6px;
+  padding:5px 12px; border-bottom:1px solid color-mix(in srgb,var(--edge) 55%,transparent)}
+.mem-row:last-child{border-bottom:0}
+.mem-row .mn{font:700 12px var(--font-mono); color:var(--amber)}
+.mem-row input,.mem-row select{font:500 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge);
+  border-radius:6px; padding:4px 6px; min-width:0; width:100%; box-sizing:border-box}
+.mem-row button{font:600 10px var(--font-ui); letter-spacing:.1em; cursor:pointer; color:var(--text); background:var(--ctrl-bg);
+  border:1px solid var(--edge); border-radius:6px; padding:5px 6px}
+.mem-row .mw{color:var(--amber); visibility:hidden}
+.mem-row.changed{background:color-mix(in srgb,var(--amber) 9%,transparent)}
+.mem-row.changed .mw{visibility:visible; border-color:var(--amber)}
+.mem-row.empty .mn{opacity:.5}
+.mem-row.busy{opacity:.55}
+.mem-row.mem-head{font:600 9px var(--font-ui); letter-spacing:.12em; color:var(--text-dim); padding-top:2px; padding-bottom:2px}
+.mem-row .ms{display:flex; justify-content:center}
+.mem-row select:disabled{opacity:.35}
+.mem-row .ms input{width:auto; accent-color:var(--amber)}
+@media (max-width:640px){ .mem-row{grid-template-columns:34px 1fr 1fr} .mem-row .ml{grid-column:2 / -1} .mem-row.mem-head{display:none} }
+/* audio panel: RX recorder (as TM-V71 Remote) */
+.rec-tools{display:inline-flex; align-items:center; gap:5px; margin-left:8px}
+.rec-btn{font:500 10px var(--font-mono); letter-spacing:.06em; color:var(--text-dim); background:transparent;
+  border:1px solid var(--edge); border-radius:5px; padding:3px 7px; cursor:pointer; white-space:nowrap; transition:.15s}
+@media (hover:hover){.rec-btn:hover:not(:disabled){color:var(--text); border-color:var(--text-dim)}}
+.rec-btn:disabled{opacity:.4; cursor:default}
+#rec-toggle.on{color:#fff; background:var(--tx); border-color:var(--tx); animation:lockpulse 1.4s ease-in-out infinite}
+.rec-time,.rec-playtime{font:500 10px var(--font-mono); color:var(--text-dim); white-space:nowrap}
+.rec-playtime{color:var(--cyan)}
+.rec-playtime[hidden]{display:none}
+.rec-time{display:none}
+.rec-tools:has(#rec-toggle.on) .rec-time{display:inline}
+@media (hover:hover){.rec-tools:hover .rec-time{display:inline}}
+#audiop .panel-head{gap:8px}
+#audiop #audio-toggle{min-width:92px}
+#audiop .rec-tools{margin-left:4px; gap:4px}
+/* keep header controls clear of the corner screws */
+.panel > .panel-head{padding:0 18px}
+/* PTT · MEMORY: more room — keys clear of the screws, centred, taller panel */
+#pttp{padding-bottom:30px}
+#pttp .ptt-body{padding:8px 18px 4px; align-items:center}
+#pttp .quick-col{grid-template-columns:repeat(2, 80px); gap:8px 6px; align-content:center}
+#pttp .qbtn{width:80px; padding:6px 3px; font-size:11px}
+#pttp .qbtn small{font-size:9px}
+#pttp .ptt{width:156px; height:156px}
+#pttp .ptt-vu-bar{height:122px}
+#pttp .ptt-center{gap:14px}
+/* audio panel next to it: the level graph takes the extra height */
+#audiop{display:flex; flex-direction:column}
+#audiop .audio-graph{flex:1 1 auto; display:flex; flex-direction:column}
+/* level graph and spectrum share the height (basis 0: a canvas's own pixel size must not grow the panel) */
+#audiop .audio-graph > canvas{flex:1 1 0; height:0; min-height:60px}
+/* audio spectrum under the level graph */
+#audiop .spec-wrap{position:relative; flex:1 1 0; min-height:60px; border-top:1px solid var(--edge)}
+#audiop .spec-wrap canvas{position:absolute; inset:0; width:100%; height:100%}
+.spec-hint{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;
+  font:500 9px var(--font-mono); letter-spacing:.16em; color:rgba(127,140,150,0.6)}
+.spec-hint[hidden]{display:none}
+/* kHz labels exactly under the grid lines */
+.graph-axis.spec-axis{position:relative; display:block; height:1.3em; padding:3px 0 4px; white-space:nowrap}
+.spec-axis span{position:absolute; transform:translateX(-50%)}
+.spec-axis span:first-child{transform:none; margin-left:8px}
+.spec-axis span:last-child{transform:translateX(-100%); margin-left:-8px}
+#pttp #ptt-lock{white-space:nowrap}
+/* light theme: a lighter LCD (slate instead of near-black), still dark enough for the blue segments */
+:root[data-theme="light"] .lcd{--lbg:#2f4152;
+  background:radial-gradient(130% 160% at 60% 0%, #4a5f72, var(--lbg) 72%);
+  border-color:#24323f; box-shadow:inset 0 2px 12px #0006, inset 0 0 0 1px #ffffff14}
+:root[data-theme="light"] #am-face stop:nth-child(1){stop-color:#3d5470}
+:root[data-theme="light"] #am-face stop:nth-child(2){stop-color:#2c3f56}
+:root[data-theme="light"] #am-face stop:nth-child(3){stop-color:#213041}
+:root[data-theme="light"] .dbars i{background-color:#1f2c38}
+:root[data-theme="light"] .dbars i.on{background:var(--lg)}
+/* audio panel: TX auto gain toggle */
+.agc-btn{font:600 10px var(--font-ui); letter-spacing:.12em; color:var(--text-dim); background:var(--ctrl-bg);
+  border:1px solid var(--edge); border-radius:5px; padding:3px 8px; cursor:pointer; transition:.15s}
+.agc-btn.on{color:#fff; background:var(--tx); border-color:var(--tx); box-shadow:0 0 10px -3px var(--tx-glow)}
+.acg.is-auto input[type=range]{opacity:.55; cursor:default}
+/* DIGI level meter: green up to −20 dBFS, yellow −20 … −10, red above (scale −60 … 0) */
+.lvl-bar{background:linear-gradient(90deg, var(--field-bg) 0 66.7%,
+  color-mix(in srgb,#e3b341 16%,var(--field-bg)) 66.7% 83.3%, color-mix(in srgb,#f85149 18%,var(--field-bg)) 83.3%)}
+.lvl-bar i{width:100% !important; background:linear-gradient(90deg, var(--ok) 0 66.7%, #e3b341 66.7% 83.3%, #f85149 83.3%);
+  clip-path:inset(0 calc(100% - var(--p, 0%)) 0 0)}
+/* fixed-width value next to the DIGI RX slider: "+20 dB" no longer shifts the row */
+.txlvl b{min-width:6.5ch; text-align:left; font-variant-numeric:tabular-nums; white-space:nowrap}   /* next to its slider; fixed width so nothing shifts */
+.lvl > b{font-variant-numeric:tabular-nums; white-space:nowrap; min-width:10.5ch}
+.tx-read{font:700 12px var(--font-ui); letter-spacing:.18em; padding:3px 10px}
+/* whole-window TX alarm glow (as TM-V71 Remote) */
+body.transmitting::after{content:""; position:fixed; inset:0; pointer-events:none; z-index:50;
+  box-shadow:inset 0 0 120px -20px var(--tx-glow), inset 0 0 0 2px #ff3b3040;
+  animation:txpulse 1.4s ease-in-out infinite}
+@keyframes txpulse{0%,100%{opacity:.55}50%{opacity:1}}
+/* audio panel row: RX GAIN · TX GAIN · recorder on one line */
+#audiop .audio-ctl{gap:12px 18px}
+#audiop .audio-ctl .acg input[type=range]{width:110px}
+#audiop .audio-ctl .rec-tools{margin-left:auto}
+.pm-pwr{color:inherit}
+.tx-read{opacity:1}
+
+/* ---------------- HACKRF waterfall (ported from TM-V71 Remote) ---------------- */
+.hackrf{--accent:#2ec4c9; --accent-glow:#1fb3b8; --hrf-vfo:var(--amber)}
+.hackrf::before{box-shadow:0 0 9px -2px var(--accent-glow)}
+:root[data-theme="light"] .hackrf{--accent:#0b8389; --accent-glow:#12a2a8}
+.hrf-src{margin-left:10px; font:500 10px var(--font-mono); letter-spacing:.08em; color:var(--text-dim); text-transform:none}
+.hrf-power{font:700 12px var(--font-mono); letter-spacing:.08em; padding:5px 14px; border-radius:7px; cursor:pointer; transition:.15s;
+  color:var(--text-dim); background:var(--ctrl-bg); border:1px solid var(--sw-edge)}
+.hrf-power[aria-pressed="true"]{color:#04201f; background:var(--accent); border-color:var(--accent); box-shadow:0 0 12px -3px var(--accent-glow)}
+:root[data-theme="light"] .hrf-power[aria-pressed="true"]{color:#fff}
+.hrf-power:disabled{opacity:.4; cursor:not-allowed}
+@media (hover:hover){.hrf-power:hover:not(:disabled){border-color:var(--accent); color:var(--accent)}
+  .hrf-power[aria-pressed="true"]:hover:not(:disabled){color:#04201f}}
+#hrf-stat{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%}
+.hrf-ready{display:inline-flex; align-items:center; gap:7px; font:500 10px var(--font-mono); letter-spacing:.06em;
+  color:var(--text-dim); text-transform:uppercase}
+.hrf-ready[hidden]{display:none}
+.hrf-ready .dot{width:8px; height:8px; border-radius:50%; flex:none; background:var(--accent); box-shadow:0 0 7px 1px var(--accent-glow)}
+.hrf-body{transition:opacity .25s, filter .25s}
+.hackrf.hrf-off .hrf-body{opacity:.4; filter:grayscale(.6) brightness(.85)}
+:root[data-theme="light"] .hackrf.hrf-off .hrf-body{filter:grayscale(.6)}
+
+.hrf-ctrls{display:flex; align-items:center; gap:11px 16px; flex-wrap:wrap; margin-bottom:12px}
+.hrf-ctrls [hidden]{display:none !important}
+.hrf-modes{display:inline-flex; border:1px solid var(--sw-edge); border-radius:7px; overflow:hidden}
+.hrf-m{font:500 11px var(--font-mono); padding:6px 11px; cursor:pointer; color:var(--text-dim);
+  background:var(--ctrl-bg); border:none; border-right:1px solid var(--sw-edge); transition:.15s}
+.hrf-m:last-child{border-right:none}
+@media (hover:hover){.hrf-m:hover:not(.active){color:var(--accent)}}
+.hrf-m.active{color:#04201f; background:var(--accent); font-weight:600}
+:root[data-theme="light"] .hrf-m.active{color:#fff}
+.hrf-follow, .hrf-amp{display:inline-flex; align-items:center; gap:6px; font:500 11px var(--font-mono);
+  color:var(--text-dim); cursor:pointer; user-select:none}
+.hrf-amp input, .hrf-follow input{accent-color:var(--accent)}
+.hrf-field{display:inline-flex; align-items:center; gap:7px; font:500 11px var(--font-mono); color:var(--text-dim)}
+.hrf-field input[type=text]{width:96px; padding:4px 7px; font:500 12px var(--font-mono);
+  color:var(--text); background:var(--field-bg); border:1px solid var(--sw-edge); border-radius:6px}
+.hrf-field input[type=text]:focus{outline:none; border-color:var(--accent)}
+.hrf-field input[type=text]:disabled{opacity:.5}
+.hrf-gains{display:inline-flex; align-items:center; gap:10px 13px; flex-wrap:wrap}
+.hrf-gv{min-width:18px; color:var(--accent); font-weight:600}
+/* sliders as in the AUDIO panel: coloured fill (--gpct) and thumb */
+.hrf-field input[type=range]{-webkit-appearance:none; appearance:none; width:74px; height:5px; border-radius:3px;
+  cursor:pointer; outline:none; --g-accent:var(--accent);
+  background:linear-gradient(90deg, var(--g-accent) var(--gpct,0%), var(--track-empty,#26333d) var(--gpct,0%))}
+:root[data-theme="light"] .hrf-field input[type=range]{--track-empty:#c8d2d9}
+.hrf-field input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:14px; height:14px;
+  border-radius:50%; background:var(--g-accent); box-shadow:0 0 7px -1px var(--g-accent); cursor:pointer}
+.hrf-field input[type=range]::-moz-range-thumb{width:14px; height:14px; border:none; border-radius:50%; background:var(--g-accent); cursor:pointer}
+#hrf-level{--g-accent:#6fd89a}      /* matches the green spectrum trace */
+#hrf-level-v{color:#6fd89a}
+:root[data-theme="light"] #hrf-level{--g-accent:#1f9d57}
+:root[data-theme="light"] #hrf-level-v{color:#1f9d57}
+
+/* graph: live spectrum stacked over the waterfall */
+.hrf-graph{position:relative; height:400px; border:1px solid #4a5a67; border-radius:10px; overflow:hidden;
+  background:var(--field-bg); box-shadow:inset 0 1px 6px #00000033; cursor:crosshair}
+:root[data-theme="light"] .hrf-graph{border-color:var(--edge)}
+#hrf-spectrum, #hrf-wf{position:absolute; left:0; width:100%; display:block}
+#hrf-spectrum{top:0; height:95px}            /* spectrum keeps its height, */
+#hrf-wf{top:95px; height:calc(100% - 95px)}   /* the waterfall gets the rest */
+.hrf-split{position:absolute; left:0; right:0; top:95px; height:0; z-index:1; pointer-events:none;
+  border-top:2px solid var(--accent); box-shadow:0 0 8px -1px var(--accent-glow), 0 1px 0 rgba(0,0,0,.45)}
+/* FT-950 VFO A marker (amber, like the VFO A display) */
+.hrf-vfoline{position:absolute; top:0; bottom:0; width:0; z-index:2; pointer-events:none; transform:translateX(-50%);
+  border-left:1px dashed var(--hrf-vfo); box-shadow:0 0 6px var(--amber-glow)}
+.hrf-vfoline::before{content:""; position:absolute; top:0; left:-5px;
+  border-left:5px solid transparent; border-right:5px solid transparent; border-top:6px solid var(--hrf-vfo)}
+.hrf-vfoline[hidden], .hrf-cur[hidden], .hrf-tip[hidden]{display:none}
+/* hover readout: cursor line + frequency/level tip (fixed light-on-dark) */
+.hrf-cur{position:absolute; top:0; bottom:0; width:1px; z-index:3; pointer-events:none;
+  background:rgba(255,255,255,0.6); box-shadow:0 0 6px rgba(255,255,255,0.4)}
+:root[data-theme="light"] .hrf-cur{background:rgba(20,30,40,0.6); box-shadow:none}
+.hrf-tip{position:absolute; top:4px; transform:translateX(-50%); z-index:4; pointer-events:none;
+  font:500 10px var(--font-mono); letter-spacing:.04em; white-space:nowrap;
+  color:#eef3f6; background:rgba(8,12,16,0.92); border:1px solid rgba(255,255,255,0.28); border-radius:5px; padding:2px 7px}
+.hrf-axis{display:flex; justify-content:space-between; margin-top:5px;
+  font:500 10px var(--font-mono); color:var(--text-dim); letter-spacing:.06em}
+@media (max-width:640px){
+  .hrf-graph{height:300px}
+  .hrf-ctrls{gap:10px 12px}
+  .hrf-field input[type=range]{width:64px}
+  .hrf-src{display:block; margin:2px 0 0}
+}
+#tx-auto.on{color:#fff; background:var(--tx); border-color:var(--tx); box-shadow:0 0 10px -3px var(--tx-glow)}
+#audiop #audio-toggle{width:110px; min-width:0; text-align:center; white-space:nowrap}
+/* PTT: hint closer to the title, bigger button */
+#pttp .ptt-center{justify-content:flex-start; gap:10px}
+#pttp .ptt-meta{margin-top:-14px}
+#pttp .ptt{width:196px; height:196px}
+#pttp .ptt-core{inset:20px}
+#pttp .ptt-mic{width:42px; height:42px}
+#pttp .ptt-core-txt{font-size:26px}
+#pttp .ptt-vu-bar{height:156px}
+.wf-val{display:inline-block; min-width:3ch; text-align:left; font:500 11px var(--font-mono); font-variant-numeric:tabular-nums; margin-left:-3px}
+label:has(> .wf-val){margin-right:14px}
+#parity{min-width:5.2em; text-align:center; justify-content:center; box-sizing:border-box}
+/* ===== radio power switch (title bar) and power-off plate, as TM-V71 Remote ===== */
+.power-switch{display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+  color:var(--text-dim); background:var(--ctrl-bg); border:1px solid var(--edge);
+  border-radius:9px; width:38px; height:38px; padding:0; transition:.18s}
+.power-switch .ps-icon{font-size:18px; line-height:1}
+.pwr-svg{width:1em; height:1em; display:block}
+@media (hover:hover){.power-switch:hover{border-color:var(--edge-hi); color:var(--text)}}
+.power-switch.on{color:#04220f; background:#48b074; border-color:#48b074; box-shadow:0 0 13px -5px #48b074}
+.power-switch.off{color:var(--tx); background:#160d0e; border-color:#5a2a2d}
+.power-switch.off .ps-icon{filter:drop-shadow(0 0 5px var(--tx-glow))}
+:root[data-theme="light"] .power-switch.off{color:#c62f26; background:#fbe3e1; border-color:#e3a7a2}
+:root[data-theme="light"] .power-switch.off .ps-icon{filter:none}
+.power-switch.unavailable{opacity:.45}
+.radio-hint{position:fixed; inset:0; z-index:15; display:flex; align-items:center; justify-content:center;
+  padding:20px; background:#04070ae0}   /* solid dim, no backdrop-filter: a
+    full-screen blur recomputes every frame over the panels behind it */
+:root[data-theme="light"] .radio-hint{background:#8e9ba6cc}
+.radio-hint[hidden]{display:none}
+.rh-plate{position:relative; display:flex; flex-direction:column; align-items:center; gap:14px;
+  padding:26px 56px; text-align:center; max-width:100%; box-sizing:border-box;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--edge); border-radius:14px;
+  box-shadow:inset 0 1px 0 #ffffff18, inset 0 -1px 1px #00000075, inset 0 0 0 1px #00000045, 0 2px 0 #0000002e, 0 30px 70px -20px #000}
+.rh-title{margin:0; font-family:'Neuropol', var(--font-disp); font-weight:400; font-size:clamp(22px,4vw,34px);
+  letter-spacing:.14em; line-height:1; color:#bcd6c6; white-space:nowrap}
+.rh-title .dot{color:var(--text-dim); margin:0 .22em}
+/* the warning itself: a framed row whose colour carries the state — red while
+   the mains are off, amber while the rig boots, red again if it never answers */
+.rh-msg{display:flex; align-items:center; gap:11px; padding:10px 18px; border-radius:10px;
+  border:1px solid var(--edge); background:var(--ctrl-bg); color:var(--text);
+  font-family:var(--font-ui); font-size:15px; font-weight:600; letter-spacing:.13em;
+  text-transform:uppercase; white-space:nowrap}
+.rh-msg .rh-ico{font-size:26px; display:flex; align-items:center}
+[data-state="off"] .rh-msg, [data-state="wait"] .rh-msg{
+  color:var(--tx); border-color:#5a2a2d; background:#160d0e}
+[data-state="off"] .rh-ico, [data-state="wait"] .rh-ico{filter:drop-shadow(0 0 6px var(--tx-glow,#ff5b4a))}
+[data-state="boot"] .rh-msg{color:var(--amber); border-color:#5a4520; background:#161008}
+:root[data-theme="light"] [data-state="off"] .rh-msg,
+:root[data-theme="light"] [data-state="wait"] .rh-msg{
+  color:#c62f26; border-color:#e3a7a2; background:#fbe3e1}
+:root[data-theme="light"] [data-state="boot"] .rh-msg{
+  color:#8a5000; border-color:#e8c88e; background:#fdf3e2}
+:root[data-theme="light"] [data-state="off"] .rh-ico,
+:root[data-theme="light"] [data-state="wait"] .rh-ico{filter:none}
+/* what to do about it, one size down and quiet */
+.rh-sub{margin:0; max-width:46ch; color:var(--text-dim);
+  font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; line-height:1.6}
+/* boot progress: indeterminate, and only mounted while that state lasts, so
+   nothing animates during the long off state */
+.rh-prog{position:relative; width:min(260px,70vw); height:3px; border-radius:2px;
+  background:#ffffff14; overflow:hidden}
+:root[data-theme="light"] .rh-prog{background:#00000018}
+.rh-prog[hidden]{display:none}
+.rh-prog>i{position:absolute; inset:0 auto 0 0; width:42%; border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--amber),transparent);
+  animation:rh-sweep 1.5s linear infinite}
+@keyframes rh-sweep{0%{transform:translateX(-100%)}100%{transform:translateX(240%)}}
+@media (prefers-reduced-motion:reduce){.rh-prog>i{animation:none; width:100%; opacity:.5}}
+.rh-cert-btn{font:600 11px var(--font-ui); letter-spacing:.14em; text-decoration:none; color:var(--text);
+  background:var(--ctrl-bg); border:1px solid var(--edge); border-radius:8px; padding:8px 14px}
+.rh-cert-btn[hidden]{display:none}
+@media (hover:hover){.rh-cert-btn:hover{border-color:var(--ok)}}
+.rh-x{position:absolute; top:7px; right:9px; background:none; border:0; color:var(--text-dim);
+  font-size:13px; cursor:pointer; padding:2px 5px; border-radius:5px; line-height:1}
+@media (hover:hover){.rh-x:hover{color:#fff; background:var(--tx)}}
+body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
+/* title bar: keep the status cluster clear of the centred nameplate */
+@media (max-width:1450px){ .topbar .stat-label{display:none} }
+@media (max-width:1200px){ .topbar #clock{display:none} }
+/* DIGI: Received Messages fills its pane, bottom-aligned with the right column */
+.rx-pane{display:flex; flex-direction:column}
+.rx-pane #rx-wrap{flex:1 1 0; height:0; min-height:200px}
+/* PTT panel: TX power slider top left, in the panel's red */
+.ptt-zone .panel-head .pm-power{position:absolute; left:18px; top:50%; transform:translateY(-50%); z-index:2;
+  display:flex; align-items:center; gap:7px; font:600 10px var(--font-ui); letter-spacing:.14em; color:var(--accent)}
+.pm-power input{width:110px; -webkit-appearance:none; appearance:none; height:5px; border-radius:3px; cursor:pointer; outline:none;
+  background:linear-gradient(90deg, #e0453a var(--gpct,0%), #4a1c1a var(--gpct,0%))}
+.pm-power input::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:14px; height:14px; border-radius:50%;
+  background:#e0453a; box-shadow:0 0 8px -1px #e0453a; cursor:pointer}
+.pm-power input::-moz-range-thumb{width:14px; height:14px; border:none; border-radius:50%; background:#e0453a; cursor:pointer}
+:root[data-theme="light"] .pm-power input{background:linear-gradient(90deg, #c62f26 var(--gpct,0%), #f0c4c0 var(--gpct,0%))}
+.pm-power b{font:500 11px var(--font-mono); font-variant-numeric:tabular-nums; min-width:4.5ch; color:var(--accent)}
+.ptt-zone .panel-head .panel-stat{left:200px}
+@media (max-width:1400px){ .pm-power input{width:64px} }
+.panel-head .chip.seq-tx{max-width:360px; margin-right:8px}
+.strip{gap:6px} .cycle{width:132px}
+/* PTT panel PWR slider in the colour of the collapse toggle (not the panel red) */
+.ptt-zone .panel-head .pm-power, .pm-power b{color:var(--text-dim)}
+.pm-power input{background:linear-gradient(90deg, var(--text-dim) var(--gpct,0%), #26333d var(--gpct,0%))}
+.pm-power input::-webkit-slider-thumb{background:var(--text-dim); box-shadow:0 0 6px -1px var(--text-dim)}
+.pm-power input::-moz-range-thumb{background:var(--text-dim)}
+:root[data-theme="light"] .pm-power input{background:linear-gradient(90deg, var(--text-dim) var(--gpct,0%), #c8d2d9 var(--gpct,0%))}
+/* unit after the LCD frequencies */
+.lcd .freq-unit{font:700 15px var(--font-ui); letter-spacing:.12em; color:var(--lb); opacity:.8; margin-left:8px;
+  text-shadow:0 0 8px var(--lb-glow)}
+.lcd .freq-unit.small{font-size:10px; margin-left:4px; opacity:.65}
+.lcd .freq-line{display:flex; align-items:baseline; justify-content:flex-end; flex-wrap:nowrap}
+.lcd .freq{font-size:clamp(36px,4.6vw,72px)}
+/* unlit LCD segments as small dots, as on the FT-950's own display */
+.lbar i:not(.on), .dbars i:not(.on){opacity:1; box-shadow:none;
+  background:radial-gradient(circle at center, var(--dot,#5f8fb0) 0 1.3px, transparent 1.8px) center / 100% 100% no-repeat}
+.lbar i.hot:not(.on){--dot:#9a4a43}
+.dbars i:not(.on){--dot:#4f8a5a}
+:root[data-theme="light"] .lbar i:not(.on){--dot:#7aa6c4}
+:root[data-theme="light"] .lbar i.hot:not(.on){--dot:#c0726a}
+:root[data-theme="light"] .dbars i:not(.on){--dot:#6aa676}
+.lbar{border-left:1.5px solid var(--lb); border-right:1.5px solid var(--lb); padding:0 4px; height:11px; box-sizing:border-box}
+.lcd-txm b .u{font:600 10px var(--font-ui); font-style:normal; margin-left:3px; opacity:.85}
+.lcd-txm b .u:first-child{margin:0 2px 0 0}
+/* VFO panel: PWR in transmit red */
+#power{accent-color:#e0453a}
+:root[data-theme="light"] #power{accent-color:#c62f26}
+/* RX · FILTER · LEVEL toggle: clear of the bottom-left screw, readable chevron */
+.chain-toggle{margin-left:16px; margin-bottom:6px; width:calc(100% - 16px)}
+.chain-toggle .chev{font-size:15px; line-height:1; color:var(--accent); display:inline-block}
+.chain-toggle .chev{width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box;
+  font-size:12px; border:1px solid var(--sw-edge); border-radius:6px; background:var(--ctrl-bg)}
+@media (hover:hover){.chain-toggle:hover .chev{border-color:var(--accent)}}
+/* LCD: divider between the analog meter column and the rest */
+.lcd-path .lcd-txm{align-self:flex-start}          /* bars start at the column edge: 18 px right of the divider */
+/* ===== two LCD windows, as on the FT-950: analog meter | signal path + frequency ===== */
+.lcd{display:grid; grid-template-columns:minmax(300px,1.2fr) minmax(0,2.2fr); gap:14px;
+  background:none; border:0; box-shadow:none; padding:0; border-radius:0}
+.lcd-meter, .lcd-main{padding:12px 16px; border-radius:10px;
+  background:radial-gradient(130% 160% at 60% 0%, #0a1219, var(--lbg) 70%);
+  border:1px solid #05080a; box-shadow:inset 0 2px 16px #000, inset 0 0 0 1px #ffffff06}
+.lcd-meter{align-items:center}
+.lcd-main{display:grid; grid-template-columns:minmax(320px,1fr) minmax(360px,1.2fr); gap:18px; align-items:stretch; min-width:0}
+:root[data-theme="light"] .lcd{background:none; box-shadow:none}
+:root[data-theme="light"] .lcd-meter, :root[data-theme="light"] .lcd-main{
+  background:radial-gradient(130% 160% at 60% 0%, #4a5f72, var(--lbg) 72%);
+  border-color:#24323f; box-shadow:inset 0 2px 12px #0006, inset 0 0 0 1px #ffffff14}
+@media (max-width:1180px){ .lcd{grid-template-columns:minmax(260px,1fr) minmax(0,1.3fr)}
+  .lcd-main{grid-template-columns:1fr} .lcd-freq{grid-column:auto; order:-1} }
+@media (max-width:700px){ .lcd{grid-template-columns:1fr} }
+.tx-proc{display:flex; gap:24px; flex-wrap:wrap; margin:6px 0 2px}
+/* CTCSS next to the mode row */
+.ctcss{display:inline-flex; align-items:center; gap:6px; margin-left:6px}
+.ctcss select{font:600 11px var(--font-mono); color:var(--text); background:var(--ctrl-bg); border:1px solid var(--edge);
+  border-radius:6px; padding:5px 6px}
+.ctcss.on #ctcss-mode{border-color:var(--accent); color:var(--accent)}
+@media (max-width:1700px){ #modes .sg{padding-left:6px; padding-right:6px} }
+/* CTCSS: same size as the buttons beside it; the chosen tone lights up while on */
+.ctcss select{font:600 12px var(--font-ui); letter-spacing:.08em; padding:6px 10px; border:1px solid var(--sw-edge);
+  border-radius:7px; background:var(--ctrl-bg); color:var(--text); cursor:pointer}
+.ctcss.on #ctcss-mode{border-color:var(--accent); color:var(--accent)}
+.ctcss.on #ctcss-tone{background:var(--accent); border-color:var(--accent); color:#06222a}
+.ctcss #ctcss-tone option, .ctcss #ctcss-mode option{background:var(--ctrl-bg); color:var(--text)}
+/* frequency shuttle next to BAND */
+.shuttle{position:relative; flex:1 1 180px; max-width:300px; min-width:150px; height:30px; margin-left:12px; cursor:ew-resize;
+  border:1px solid var(--sw-edge); border-radius:7px; touch-action:none; user-select:none; overflow:hidden;
+  background:linear-gradient(90deg, color-mix(in srgb,var(--accent) 26%,var(--ctrl-bg)), var(--ctrl-bg) 44%, var(--ctrl-bg) 56%,
+    color-mix(in srgb,var(--accent) 26%,var(--ctrl-bg)))}
+.shuttle .sh-zones{position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(90deg, transparent calc(50% - 1px), var(--sw-edge) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+    repeating-linear-gradient(90deg, transparent 0 calc(12.5% - 1px), color-mix(in srgb,var(--text-dim) 35%,transparent) calc(12.5% - 1px) 12.5%)}
+.shuttle .sh-knob{position:absolute; top:3px; bottom:3px; left:50%; width:16px; margin-left:-8px; border-radius:4px;
+  background:var(--accent); box-shadow:0 0 8px -1px var(--accent); transition:left .18s ease-out; pointer-events:none}
+.shuttle.up .sh-knob, .shuttle.down .sh-knob{transition:none}
+.shuttle .sh-lbl{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;
+  font:600 11px var(--font-ui); letter-spacing:.14em; color:var(--text-dim)}
+.shuttle.up .sh-lbl, .shuttle.down .sh-lbl{color:var(--text)}
+.shuttle{flex:1 1 180px; max-width:560px}
+.ctcss #btn-mon{margin-left:6px}
+.seg .sg.pending{animation:lockpulse 0.8s ease-in-out infinite}
+.hq b{font-weight:700; color:var(--accent); margin-left:4px}
+/* LCD signal path: fixed-width boxes, so switching a value never shifts the chain */
+.chain .cb{flex:1 1 0; min-width:0; width:auto}
+.chain .ca{flex:0 0 10px; min-width:10px}
+.chain .cl, .chain .cv{width:100%; box-sizing:border-box; white-space:nowrap; letter-spacing:.02em; overflow:hidden; text-overflow:clip}
+@media (max-width:1400px){ .chain .cl, .chain .cv{font-size:10px; padding-left:2px; padding-right:2px; letter-spacing:0} }
+/* chain: labels centred, arrows on the vertical centre of the value boxes */
+.chain .cl{text-align:center}
+.chain .ca{align-self:flex-end; margin-top:0; margin-bottom:calc(var(--cv-h, 17px) / 2 - 1px)}
+/* LCD mode lamps */
+.mode-lamps{display:inline-flex; gap:4px; flex-wrap:wrap}
+.ind.ml{background:#6fb8ee; color:#04192b; padding:3px 5px}
+.lf-top .mode-lamps{margin:0 auto 0 4px}
+.lcd .lf-info{display:none}            /* width text not wanted in the LCD */
+.mode-lamps{gap:3px}
+.ind.ml{padding:2px 4px; font-size:10px; letter-spacing:.04em}
+.lf-top{column-gap:8px}
+.mode-lamps{gap:2px}
+.ind.ml{padding:2px 3px}
+@media (max-width:1450px){ .lf-top .mode-lamps{order:5; flex-basis:100%; margin:4px 0 0} }
+@media (max-width:1450px){ .panel-head .pf{display:none} }
+/* ===== signal path as fixed cells (as the FT-950 display): only active values lit ===== */
+.chain .cb{flex:var(--n) 1 0; min-width:0}
+.chain .cvs{display:flex; gap:2px; width:100%}
+.chain .cvs .cv{flex:1 1 0; min-width:0; width:auto; padding:2px 0; font-size:10px; letter-spacing:0;
+  background:transparent; color:var(--lg); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--lg) 30%,transparent); opacity:.45}
+.chain .cvs .cv.on{background:var(--lg); color:#06210c; box-shadow:none; opacity:1}
+@media (max-width:1450px){ .chain .cvs .cv{font-size:9px} .chain .cvs{gap:1px} .chain .cl{font-size:10px} }
+.chain .ca{align-self:flex-start; margin-bottom:0; margin-top:calc(var(--cl-h, 18px) / 2 - 1px)}
+.chain{--cl-h:21px}
+@media (max-width:1450px){ .chain{--cl-h:19px} }
+.lf-top #lamp-tx{margin-left:auto}
+/* mode lamps: in the top line, each as wide as its text */
+.lf-top .mode-lamps{flex:0 0 auto; gap:2px; margin:0 auto 0 4px}
+.ind.ml{flex:0 0 auto; font-size:var(--ml-fs, 11px); padding:3px 3px; letter-spacing:.03em}
+@media (min-width:1700px){ .ind.ml{--ml-fs:12px} }
+/* ===== CW skimmer panel ===== */
+.cwp{--accent:#c9d4dc; --accent-glow:#aebfcc}
+:root[data-theme="light"] .cwp{--accent:#5f6f7c; --accent-glow:#8a9aa6}
+.cwp .panel-head{flex-wrap:wrap; row-gap:6px}
+.cw-ctl{display:flex; align-items:center; gap:6px; font:600 11px var(--font-ui); letter-spacing:.12em; color:var(--text-dim)}
+.cw-ctl input{width:56px; font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:4px 6px}
+.cw-ro{font:600 12px var(--font-mono); color:var(--text-dim); margin:0 4px}
+.cw-grid{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:12px}
+.cw-tbl{height:260px}
+.cw-tbl tr.cw-on td:first-child{color:var(--accent)}
+.cw-sel{display:flex; flex-direction:column; border:1px solid var(--edge); border-radius:8px; background:var(--field-bg); min-height:0; height:260px}
+.cw-sel-head{display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--edge); font:600 11px var(--font-mono); color:var(--text-dim)}
+.cw-text{flex:1; overflow:auto; padding:10px 12px; font:600 17px/1.5 var(--font-mono); letter-spacing:.06em; color:var(--text); white-space:pre-wrap; word-break:break-word}
+.cw-tx{display:flex; gap:8px; margin-top:10px}
+.cw-tx input{flex:1; font:600 14px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:7px; padding:7px 10px; text-transform:uppercase}
+@media (max-width:900px){ .cw-grid{grid-template-columns:1fr} }
+/* light theme: brighter RX / MIC level bars beside the PTT button */
+:root[data-theme="light"] .ptt-vu-bar{background:#d3dde4; box-shadow:inset 0 0 0 1px #b7c4cd}
+/* CW panel as panes, like DIGI: Signals | Text + Sent; TX row clear of the screws */
+.cw-body{border:1px solid var(--edge); border-radius:8px; overflow:hidden; margin:0 4px 6px}
+.cw-grid{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:0; border-bottom:1px solid var(--edge)}
+.cw-sig-pane{border-right:1px solid var(--edge)}
+.cw-tbl{height:300px}
+.cwp .side .pane{min-height:0}
+.cw-text{height:170px; border:0; border-radius:0; background:var(--field-bg)}
+.cw-sent{height:96px; overflow:auto; padding:6px 12px; font:600 13px/1.5 var(--font-mono); color:var(--text); background:var(--field-bg)}
+.cw-sent .t{color:var(--text-dim); margin-right:10px; font-weight:500}
+.cw-tx{margin:0; padding:10px; background:var(--panel-2)}
+.cwp{padding-bottom:30px}
+.cwp .side .pane:first-child{flex:1 1 auto}
+.cwp .side .pane:first-child .cw-text{flex:1 1 auto; height:auto; min-height:130px}
+.cwp .side .pane:last-child{flex:0 0 auto}
+/* CW: fixed-height panes (the text scrolls inside, nothing moves); macros row */
+.cw-grid{height:340px}
+.cw-grid > .pane, .cw-grid > .side{min-height:0; height:100%}
+.cw-sig-pane .cw-tbl{flex:1 1 0; height:auto; min-height:0}
+.cwp .side .pane:first-child{flex:1 1 0; min-height:0}
+.cwp .side .pane:first-child .cw-text{flex:1 1 0; min-height:0; height:auto; overflow:auto}
+.cw-macros{display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 10px 0; background:var(--panel-2)}
+.cw-call{display:flex; align-items:center; gap:6px; font:600 11px var(--font-ui); letter-spacing:.12em; color:var(--text-dim); margin-right:8px}
+.cw-call input{width:96px; font:700 13px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:4px 6px; text-transform:uppercase}
+#cw-macro-btns{display:flex; gap:6px; flex-wrap:wrap}
+/* CW signals table: fixed columns, the text cell shows the newest end and never widens the table */
+.cw-tbl table{table-layout:fixed; width:100%}
+.cw-tbl td.cw-tail{white-space:nowrap; overflow:hidden; direction:rtl; text-align:left}
+.cw-tbl td.cw-tail span{direction:ltr; unicode-bidi:bidi-override}
+/* memory key long press: fill sweeps while holding (store at 0.7 s) */
+.qbtn{position:relative; overflow:hidden}
+.qbtn::after{content:""; position:absolute; left:0; bottom:0; height:3px; width:0; background:var(--amber)}
+.qbtn.holding::after{width:100%; transition:width 3s linear}
+:root[data-theme="light"] .cwp .btn.toggle.on{color:#fff}
+/* whole panel view at 90 % (title bar stays full size) */
+.console{zoom:.9}
+/* VFO-B line in the LCD a little larger */
+.lcd .freq-b{font-size:28px}
+.lcd .vfo-b .lbl{font-size:12px}
+.lcd .freq-unit.small{font-size:12px}
+.lcd .mode-b{font-size:13px}
+/* PTT panel: MUTE · PTT → VFO · DROP row, as TM-V71 Remote */
+.ptt-band-row{display:flex; align-items:center; justify-content:center; gap:14px; margin-top:6px}
+.ptt-band-row .ptt-band{min-width:9.5em; text-align:center}
+/* ===== dominant TX power control next to RX · FILTER · LEVEL ===== */
+.chain-row{display:flex; align-items:center; gap:22px; margin:6px 0 6px 16px; padding-top:10px; border-top:1px solid var(--edge); width:calc(100% - 16px); box-sizing:border-box}
+.chain-row .chain-toggle{width:auto; margin:0; padding:0; border-top:0; flex:0 0 auto}
+.pwr-big{flex:1 1 auto; display:flex; align-items:center; gap:16px; min-width:0; max-width:760px; margin-left:auto;
+  padding:8px 16px 8px 14px; border:1px solid #5a2a2d; border-radius:12px;
+  background:radial-gradient(120% 140% at 85% 50%, #2a0f10, #120809 70%);
+  box-shadow:inset 0 1px 0 #ffffff10, inset 0 0 18px #0009, 0 0 18px -8px var(--tx-glow)}
+.pwr-big .pb-lbl{font:800 11px/1.05 var(--font-disp); letter-spacing:.22em; color:#e0453a; text-align:right}
+.pwr-big .pb-track{position:relative; flex:1 1 auto; min-width:160px; padding-bottom:16px}
+.pwr-big .pb-track::before{content:""; position:absolute; left:0; right:0; top:22px; height:7px; pointer-events:none;
+  background:repeating-linear-gradient(90deg, #e0453a99 0 1px, transparent 1px 5.263%)}
+.pwr-big .pb-scale{position:absolute; left:0; right:0; bottom:0; height:12px; pointer-events:none}
+.pwr-big .pb-scale span{position:absolute; transform:translateX(-50%); font:700 10px var(--font-mono); color:#d88a82; letter-spacing:0}
+#pwr-big{-webkit-appearance:none; appearance:none; width:100%; height:12px; border-radius:6px; cursor:pointer; outline:none; display:block; margin:6px 0 4px;
+  background:linear-gradient(90deg, #7a1712, #e0453a var(--gpct,0%), #2a1517 var(--gpct,0%)); box-shadow:inset 0 1px 3px #000c}
+#pwr-big::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:24px; height:24px; border-radius:50%;
+  background:linear-gradient(180deg, #a8322a, #6e1610 45%, #3a0906); border:2px solid #b5554d;
+  box-shadow:0 0 10px #0008, 0 2px 4px #000a}
+#pwr-big::-moz-range-thumb{width:22px; height:22px; border-radius:50%; background:#6e1610; border:2px solid #b5554d; box-shadow:0 0 10px #0008}
+.pwr-big .pb-val{display:flex; align-items:baseline; gap:4px; min-width:3.6em; justify-content:flex-end}
+.pwr-big .pb-val span{font:italic 400 34px/1 "DSEG7-Classic",var(--font-mono); color:#ff6a5a; text-shadow:0 0 12px #ff3b2f, 0 0 26px #ff3b2f66}
+.pwr-big .pb-val small{font:800 14px var(--font-disp); color:#e0453a; letter-spacing:.1em}
+:root[data-theme="light"] .pwr-big{background:linear-gradient(180deg,#fff3f1,#fbe3e1); border-color:#e3a7a2; box-shadow:inset 0 1px 0 #fff, 0 0 12px -6px #c62f26}
+:root[data-theme="light"] .pwr-big .pb-val span{color:#c62f26; text-shadow:none}
+:root[data-theme="light"] #pwr-big{background:linear-gradient(90deg, #e9a59e, #c62f26 var(--gpct,0%), #f3d6d3 var(--gpct,0%))}
+@media (max-width:900px){ .chain-row{flex-wrap:wrap} .pwr-big{max-width:none; flex-basis:100%} }
+/* power control: full row, bigger */
+.pwr-big{max-width:none; padding:12px 22px 12px 18px; gap:22px}
+.pwr-big .pb-lbl{font-size:14px; letter-spacing:.24em}
+.pwr-big .pb-track{padding-bottom:20px}
+.pwr-big .pb-track::before{top:30px; height:9px}
+#pwr-big{height:16px; border-radius:8px; margin:8px 0 6px}
+#pwr-big::-webkit-slider-thumb{width:32px; height:32px}
+#pwr-big::-moz-range-thumb{width:30px; height:30px}
+.pwr-big .pb-scale{height:14px}
+.pwr-big .pb-scale span{font-size:12px}
+.pwr-big .pb-val span{font-size:48px}
+.pwr-big .pb-val small{font-size:18px}
+.pwr-big .pb-val{min-width:4.4em}
+.pwr-big .pb-val{display:none}
+.pwr-big .pb-lbl{white-space:nowrap}
+/* power control: slimmer */
+.pwr-big{padding:5px 16px 5px 14px; border-radius:9px}
+.pwr-big .pb-lbl{font-size:12px}
+.pwr-big .pb-track{padding-bottom:13px}
+.pwr-big .pb-track::before{top:17px; height:5px}
+#pwr-big{height:13px; border-radius:7px; margin:4px 0 4px}
+#pwr-big::-webkit-slider-thumb{width:30px; height:18px; border-radius:6px}
+#pwr-big::-moz-range-thumb{width:26px; height:14px; border-radius:6px}
+/* scale and ticks follow the knob's centre, which travels half a knob width in from each end */
+.pwr-big .pb-scale, .pwr-big .pb-track::before{left:15px; right:15px}
+.pwr-big{margin-left:21px}          /* ~5 mm shorter than the free space */
+.pwr-big .pb-scale{height:11px}
+.pwr-big .pb-scale span{font-size:10px}
+#hackrf{padding-bottom:34px}   /* the frequency axis ends above the corner screws */
+#pttp .quick-col{transform:translateY(-12px)}   /* centred in the panel height (the head sits above) */
+
+/* the level bars next to PTT only in the installed PWA */
+:root:not(.pwa) .ptt-vu{display:none}
+
+/* MIC TEST and AGC as toggle switches, as in TM-V71 Remote */
+.switch-label{display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap; flex:0 0 auto;
+  font:600 10px var(--font-ui); letter-spacing:.16em; color:var(--text-dim)}
+.switch{-webkit-appearance:none; appearance:none; cursor:pointer; flex:0 0 auto; margin:0;
+  width:40px; height:22px; border-radius:12px; position:relative;
+  background:var(--track-empty,#0c151b); border:1px solid var(--edge); transition:.18s}
+.switch::after{content:""; position:absolute; top:50%; left:2px; transform:translateY(-50%);
+  width:16px; height:16px; border-radius:50%; background:var(--text-dim); transition:.18s}
+.switch:checked{background:var(--tx); border-color:var(--tx)}          /* MIC TEST: red like transmit */
+.switch:checked::after{left:20px; background:#fff}
+#tx-auto:checked{background:#8b7ad6; border-color:#8b7ad6}            /* AGC: audio-panel violet */
+.switch:focus-visible{outline:none; box-shadow:0 0 0 2px var(--cyan)}
+:root[data-theme="light"] .switch{--track-empty:#c8d2d9}
+.mictest-toggle{margin-right:6px}
+
+/* Settings ▸ FT8: list colours */
+.color-grid{display:grid; grid-template-columns:1fr; gap:8px; max-width:640px}
+.color-row{display:flex; align-items:center; gap:10px; min-width:0}
+.color-row input[type=color]{inline-size:38px; block-size:28px; padding:0 2px; border:1px solid var(--sw-edge);
+  border-radius:6px; background:var(--field-bg); cursor:pointer; flex:none}
+.color-row .cname{flex:1; min-width:0; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.color-row .cprev{font:12px var(--font-mono); padding:2px 6px; border-radius:4px; white-space:nowrap}
+.color-row .mini-btn{flex:none}
+.color-row .dim{color:var(--text-dim); font-size:11px}
+.panel-head .btn.halt{margin-right:8px; flex:none}
+/* TX message: room reserved for the longest message, dimmed while idle */
+.panel-head .chip.seq-tx{flex:none; width:min(300px, 34vw); max-width:none; box-sizing:border-box; text-align:center}
+.panel-head .chip.seq-tx:not(.live){opacity:.45}
+/* DIGI strip: fixed widths so changing numbers do not shift the row */
+#dec-ms,#dec-n{box-sizing:content-box; text-align:center; font-variant-numeric:tabular-nums}
+#dec-ms{width:8ch}
+#dec-n{width:3ch}
+/* room for the scrollbar is always reserved: a list growing past its height
+   no longer shifts its columns */
+.tbl{scrollbar-gutter:stable}
+/* a finished QSO: all rows of that station, also those to/from me */
+.msgs tr.qso-done{background:var(--row-cq-worked); color:var(--row-cq-worked-ink)}
+.msgs tr.qso-done td.dx{color:inherit}

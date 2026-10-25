@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FT-950 Remote</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#07090b">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===================== TITLE BAR (as TM-V71 Remote) ===================== -->
+<header class="topbar">
+  <div class="brand">
+    <img class="brand-logo" id="brand-logo" alt="Logo" hidden>
+    <div class="callsign" id="callsign"></div>
+  </div>
+  <div class="title-center">
+    <span class="screw screw-l" aria-hidden="true"></span>
+    <h1 class="app-title">FT 950<span class="dot">·</span>REMOTE</h1>
+    <span class="screw screw-r" aria-hidden="true"></span>
+  </div>
+  <div class="status-cluster">
+    <div class="stat" id="stat-cat" title="CAT link to the FT-950"><span class="led"></span><span class="stat-label">CAT</span></div>
+    <div class="stat" id="stat-audio" title="Capture from the SCU-17 codec"><span class="led"></span><span class="stat-label">USB AUDIO</span></div>
+    <div class="clock" id="clock">--:--:--</div>
+    <button class="gear" id="theme" title="Light/Dark" aria-label="Theme">☾</button>
+    <button class="gear" id="open-settings" title="Settings" aria-label="Settings">⚙</button>
+    <button class="power-switch unavailable" id="power-switch" type="button" title="Radio on/off (Shelly)" aria-label="Radio on/off">
+      <span class="ps-icon"><svg class="pwr-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="12"></line><path d="M7.1 6.4a8 8 0 1 0 9.8 0"></path></svg></span>
+    </button>
+  </div>
+</header>
+
+<!-- shown while the radio is powered off (Shelly), as in TM-V71 Remote -->
+<div class="radio-hint" id="radio-hint" data-state="off" hidden>
+  <div class="rh-plate">
+    <span class="screw screw-l" aria-hidden="true"></span>
+    <span class="screw screw-r" aria-hidden="true"></span>
+    <h2 class="rh-title">FT 950<span class="dot">·</span>REMOTE</h2>
+    <!-- One plate, three states (data-state on #radio-hint): off, boot, wait.
+         The headline is the warning itself and sits in its own frame; the line
+         below says what to do about it. -->
+    <div class="rh-msg" role="status">
+      <span class="rh-ico"><svg class="pwr-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="12"></line><path d="M7.1 6.4a8 8 0 1 0 9.8 0"></path></svg></span>
+      <span class="rh-txt" id="rh-txt">RADIO IS OFF</span>
+    </div>
+    <p class="rh-sub" id="rh-sub">switch on with the power button in the title bar</p>
+    <!-- only while the rig boots: an indeterminate bar, because the FT-950
+         reports nothing at all until its CAT port answers -->
+    <div class="rh-prog" id="rh-prog" hidden aria-hidden="true"><i></i></div>
+    <a class="rh-cert-btn" id="rh-cert" href="/api/cert/ca.crt" hidden title="Root CA of this Pi — install it once per device for a warning-free HTTPS page and the microphone">INSTALL CERTIFICATE</a>
+    <button class="rh-x" id="radio-hint-x" title="Dismiss" aria-label="Dismiss">✕</button>
+  </div>
+</div>
+
+<main class="console">
+
+  <!-- ===================== VFO ===================== -->
+  <section class="panel vfo" id="vfo">
+    <div class="panel-head">
+      <h2>VFO</h2>
+      <span class="lamp" id="lamp-lock" title="Dial Lock (LK)">LOCK</span>
+      <span class="lamp warn" id="lamp-pll" title="PLL unlock (UL) — radio fault">PLL</span>
+      <button class="btn toggle split-btn" id="split" title="Split: receive on VFO A, transmit on VFO B (FT3 / FT2)">SPLIT</button>
+      <span class="head-sep"></span>
+      <button class="btn toggle split-btn" id="ant-1" title="Antenna 1 (AN01)">ANT 1</button>
+      <button class="btn toggle split-btn" id="ant-2" title="Antenna 2 (AN02)">ANT 2</button>
+      <span class="head-sep"></span>
+      <button class="btn toggle split-btn" id="tuner" title="Internal antenna tuner in line / bypassed (AC001 / AC000)">TUNER</button>
+      <span class="head-sep"></span>
+      <button class="btn toggle split-btn" id="hq-clar" title="RX clarifier on/off (RT) — like the radio's CLAR key; the offset shows under the frequency">CLAR</button>
+      <button class="btn split-btn" id="hq-clr" title="Clarifier offset to 0 (RC)">CLR</button>
+      <span class="head-sep"></span>
+      <button class="btn split-btn hq" id="hq-flt" title="FLT: VRF in line / THRU — click to switch">FLT</button>
+      <button class="btn split-btn hq" id="hq-ipo" title="Preamp: IPO → AMP1 → AMP2 — click for the next">IPO</button>
+      <button class="btn split-btn hq" id="hq-rflt" title="Roofing filter: AUTO → 15k → 6k → 3k — click for the next">R.FLT</button>
+      <button class="btn split-btn hq" id="hq-agc" title="AGC: OFF → FAST → MID → SLOW → AUTO — click for the next">AGC</button>
+      <span class="head-sep"></span>
+      <button class="btn split-btn" id="tuner-start" title="Start a tuning cycle (AC002) — the radio transmits a carrier until matched">ATU TUNE</button>
+      <span class="spacer"></span>
+      <button class="btn accent" id="voice-profile" title="Set the radio up for remote voice: DATA-L below 10 MHz / DATA-U above (the browser mic reaches the radio through the DATA jack), 2400 Hz, IF shift centred, roofing 3 kHz, AGC SLOW, notch/DNF/NB/contour off, squelch open — reads every value, writes only what differs, verifies by read-back">VOICE<span class="pf"> PROFILE</span></button>
+      <button class="btn accent" id="ft8-profile" title="Set the radio up for FT8/FT4: reads every value, writes only what differs, verifies by read-back">FT8<span class="pf"> PROFILE</span></button>
+      <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
+    </div>
+
+    <!-- LCD after the FT-950's own: analog meter · signal path + DSP · frequency -->
+    <div class="lcd" id="lcd">
+      <div class="lcd-meter">
+        <svg class="ameter" id="ameter" viewBox="0 0 340 200" aria-label="Analog meter: S on receive, PO on transmit">
+          <defs>
+            <radialGradient id="am-face" cx="50%" cy="0%" r="120%">
+              <stop offset="0" stop-color="#16263a"/><stop offset=".7" stop-color="#0b1522"/><stop offset="1" stop-color="#050a11"/>
+            </radialGradient>
+            <clipPath id="am-clip"><rect x="1" y="1" width="338" height="198" rx="8"/></clipPath>
+          </defs>
+          <rect x="1" y="1" width="338" height="198" rx="8" fill="url(#am-face)"/>
+          <g id="am-scales"></g>
+          <g clip-path="url(#am-clip)">
+            <line class="am-needle" id="am-needle" x1="170" y1="330" x2="170" y2="22"/>
+          </g>
+          <text class="am-mode" id="am-mode" x="10" y="192">S</text>
+        </svg>
+        <div class="lcd-inds">
+          <span class="ind red" id="ind-moni">MONI</span><span class="ind green" id="ind-nb">NB</span>
+          <span class="ind red" id="ind-tuner">TUNER</span><span class="ind red" id="ind-miceq">MIC EQ</span>
+        </div>
+      </div>
+
+      <div class="lcd-main">
+      <div class="lcd-path">
+        <div class="chain">
+          <div class="cb" style="--n:2"><span class="cl">ANT</span><span class="cvs" id="pv-ant"><span class="cv" data-v="1" title="Antenna 1">1</span><span class="cv" data-v="2" title="Antenna 2">2</span></span></div><i class="ca"></i>
+          <div class="cb" style="--n:3"><span class="cl">ATT</span><span class="cvs" id="pv-att"><span class="cv" data-v="6" title="6 dB">6</span><span class="cv" data-v="12" title="12 dB">12</span><span class="cv" data-v="18" title="18 dB">18</span></span></div><i class="ca"></i>
+          <div class="cb" style="--n:1.7"><span class="cl">FLT</span><span class="cvs" id="pv-flt"><span class="cv" data-v="VRF" title="VRF in line (unlit = THRU)">VRF</span></span></div><i class="ca"></i>
+          <div class="cb" style="--n:3"><span class="cl">IPO</span><span class="cvs" id="pv-ipo"><span class="cv" data-v="IPO" title="IPO (no preamp)">IPO</span><span class="cv" data-v="A1" title="AMP1">A1</span><span class="cv" data-v="A2" title="AMP2">A2</span></span></div><i class="ca"></i>
+          <div class="cb" style="--n:4"><span class="cl">R.FLT</span><span class="cvs" id="pv-rflt"><span class="cv" data-v="A" title="AUTO">A</span><span class="cv" data-v="3k" title="3 kHz">3k</span><span class="cv" data-v="6k" title="6 kHz">6k</span><span class="cv" data-v="15k" title="15 kHz">15k</span></span></div><i class="ca"></i>
+          <div class="cb" style="--n:4"><span class="cl">AGC</span><span class="cvs" id="pv-agc"><span class="cv" data-v="A" title="AUTO">A</span><span class="cv" data-v="F" title="FAST">F</span><span class="cv" data-v="M" title="MID">M</span><span class="cv" data-v="S" title="SLOW">S</span></span></div>
+        </div>
+        <div class="lcd-txm" id="tx-meters">
+          <span>PO</span><div class="lbar" id="m-po"></div><b id="v-po">0.0<small class="u">W</small></b>
+          <span>SWR</span><div class="lbar" id="m-swr"></div><b id="v-swr">1.0</b>
+          <span>ALC</span><div class="lbar" id="m-alc"></div><b id="v-alc">0<small class="u">%</small></b>
+          <span>ID</span><div class="lbar" id="m-id"></div><b id="v-id">0.0<small class="u">A</small></b>
+          <span title="Transmit audio: the microphone (after gain/AGC) on voice, the tone drive on FT8/FT4 and TUNE">AF</span><div class="lbar" id="m-af"></div><b id="v-af">−∞<small class="u">dB</small></b>
+        </div>
+        <div class="dsp">
+          <div class="dsp-tags"><span class="ind blue-o">DSP</span><span class="ind blue-o" id="ind-dnr">DNR</span><span class="ind blue-o" id="ind-dnf">DNF</span></div>
+          <div class="dsp-bars">
+            <span class="dl">CONTOUR</span><div class="dbars" id="bar-contour"></div>
+            <span class="dl">NOTCH</span><div class="dbars" id="bar-notch"></div>
+            <span class="dl">WIDTH</span><div class="dbars" id="bar-width"></div>
+            <span class="dl">SHIFT</span><div class="dbars" id="bar-shift"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lcd-freq">
+        <div class="lf-top">
+          <span class="ind green" id="lamp-busy">BUSY</span>
+          <span class="mode-lamps" id="mode-lamps" title="Mode, as the FT-950 display shows it"><span class="ind ml" data-m="LSB">LSB</span><span class="ind ml" data-m="USB">USB</span><span class="ind ml" data-m="CW">CW</span><span class="ind ml" data-m="AM">AM</span><span class="ind ml" data-m="FM">FM</span><span class="ind ml" data-m="RTTY">RTTY</span><span class="ind ml" data-m="PKT">PKT</span><span class="ind ml" data-m="REV">REV</span></span>
+          <span class="ind red" id="lamp-tx">TX</span>
+          <span class="tx-read" id="tx-read" title="Set TX power (PC) — lit while the radio transmits">PWR <b id="tx-pwr">—</b> W</span>
+          <span class="lf-info"><span hidden><span id="rxtx">RX A · TX A</span> · <span id="memmode">VFO</span> · </span><span id="width-tag">—</span></span>
+        </div>
+        <div class="freq-line"><span class="freq" id="freq" title="Mouse wheel or drag on a digit: tune">--.---.--</span><span class="freq-unit">MHz</span></div>
+        <div class="lf-bottom">
+          <div class="tune-scale" title="Clarifier offset (±1 kHz)"><i id="tune-mark"></i></div>
+          <span class="ind green" id="ind-clar">CLAR</span>
+          <div class="clar-box"><span id="clar-lbl">RX</span><span class="clar-val" id="clar-val">0<i class="cdot"></i>000</span></div>
+        </div>
+        <div class="vfo-b" title="VFO B (OI)"><span class="lbl">VFO-B</span><span class="freq-b" id="freq-b">—</span><span class="freq-unit small">MHz</span><span class="mode-b" id="mode-b"></span></div>
+      </div>
+      </div>
+    </div>
+
+    <!-- squelch right under the signal level, as in TM-V71 Remote -->
+    <div class="sql-row">
+      <span class="sql-label">SQL</span>
+      <input type="range" class="sql-slider" id="squelch" min="0" max="255" aria-label="Squelch (SQ)">
+      <span class="sql-val" id="squelch-val">—</span>
+    </div>
+
+    <!-- tuner row: frequency entry + mic UP/DN + VFO A/B -->
+    <div class="tuner">
+      <div class="freq-spin" id="spin" aria-label="Frequency entry"></div>
+      <div class="step-btns">
+        <button class="step-btn" id="up" title="Mic UP — one step up (step size from menu 087/088)" aria-label="Step up">▲</button>
+        <button class="step-btn" id="dn" title="Mic DOWN — one step down" aria-label="Step down">▼</button>
+      </div>
+      <div class="ab-btns">
+        <button class="btn" id="swap" title="VFO A ⇄ B (SV)">A⇄B</button>
+        <button class="btn" id="a2b" title="VFO A → B (AB)">A→B</button>
+      </div>
+      <div class="tuner-sel">
+        <div class="sel-row"><span class="row-lbl">BAND</span><div class="seg" id="bands"></div>
+          <div class="shuttle" id="shuttle" title="Frequency shuttle: hold left of the centre to tune down, right to tune up — the further out, the bigger the steps (10 Hz · 100 Hz · 1 kHz · 10 kHz)">
+            <span class="sh-zones" aria-hidden="true"></span><i class="sh-knob" id="sh-knob"></i><span class="sh-lbl" id="sh-lbl">◀ TUNE ▶</span>
+          </div></div>
+        <div class="sel-row"><span class="row-lbl">MODE</span><div class="seg" id="modes"></div>
+          <button class="btn toggle" id="narrow" title="Narrow (NA) — selects the N column of the width table">NAR</button>
+          <span class="ctcss" title="CTCSS sub-audible tone for FM repeaters (CT / CN), generated by the radio. ENC = send the tone, TSQ = send and open the squelch only on it (ENC/DEC)">
+            <select id="ctcss-mode"><option value="0">CTCSS off</option><option value="2">CTCSS ENC</option><option value="1">CTCSS TSQ</option></select>
+            <select id="ctcss-tone"></select>
+            <button class="btn toggle" id="btn-mon" title="Monitor: hear your own transmitted signal on the radio (ML0)">MON</button>
+          </span></div>
+      </div>
+    </div>
+
+    <div class="chain-row">
+      <button class="chain-toggle" id="chain-toggle" aria-expanded="true" aria-controls="chain">RX · FILTER · LEVEL <span class="chev">▾</span></button>
+      <div class="pwr-big" title="Transmit power (PC), 5 … 100 W">
+        <span class="pb-lbl">TX POWER</span>
+        <div class="pb-track">
+          <input type="range" id="pwr-big" min="5" max="100" step="1" aria-label="Transmit power">
+          <div class="pb-scale" aria-hidden="true"><span style="left:0.00%">5</span><span style="left:5.26%">10</span><span style="left:21.05%">25</span><span style="left:47.37%">50</span><span style="left:73.68%">75</span><span style="left:100.00%">100</span></div>
+        </div>
+        <b class="pb-val"><span id="pwr-big-val">—</span><small>W</small></b>
+      </div>
+    </div>
+    <div class="chain" id="chain">
+      <fieldset class="group">
+        <legend>RX</legend>
+        <div class="g-row"><span class="g-lbl">PRE</span><div class="seg" id="preamp"></div></div>
+        <div class="g-row"><span class="g-lbl">AGC</span><div class="seg" id="agc"></div></div>
+        <div class="g-row"><span class="g-lbl">ROOF</span><div class="seg" id="roofing"></div></div>
+      </fieldset>
+      <fieldset class="group">
+        <legend>FILTER</legend>
+        <label class="g-row slider"><span class="g-lbl">WIDTH</span><input type="range" id="width" min="0" max="0" step="1"><b id="width-val">—</b></label>
+        <label class="g-row slider"><span class="g-lbl">SHIFT</span><input type="range" id="ifshift" min="-1000" max="1000" step="10"><b id="ifshift-val">—</b></label>
+        <div class="g-row"><span class="g-lbl">DSP</span>
+          <div class="seg">
+            <button class="sg" data-toggle="BC0" id="t-dnf" title="Auto Notch (DNF)">DNF</button>
+            <button class="sg" data-toggle="NR0" id="t-nr" title="Noise Reduction">NR</button>
+            <button class="sg" data-toggle="NB0" id="t-nb" title="Noise Blanker">NB</button>
+          </div>
+        </div>
+      </fieldset>
+      <fieldset class="group">
+        <legend>LEVEL</legend>
+        <div class="g-row"><span class="g-lbl">ATT</span><div class="seg" id="att"></div></div>
+        <label class="g-row slider"><span class="g-lbl">RF</span><input type="range" id="rfgain" min="0" max="255"><b id="rfgain-val">—</b></label>
+        <label class="g-row slider"><span class="g-lbl">PWR</span><input type="range" id="power" min="5" max="100"><b id="power-val">—</b></label>
+      </fieldset>
+    </div>
+  </section>
+
+  <!-- ===================== PTT + AUDIO (side by side, as TM-V71 Remote) ===================== -->
+  <div class="duo">
+    <section class="panel ptt-zone" id="pttp">
+      <div class="panel-head">
+        <h2>PTT · MEMORY</h2>
+        <span class="panel-stat" id="ptt-stat"></span>
+        <span class="spacer"></span>
+      </div>
+      <div class="ptt-body">
+        <div class="quick-col" id="quick-mem" title="Memory → VFO A (frequency + mode)"></div>
+        <div class="ptt-center">
+          <div class="ptt-meta">
+            <span class="ptt-hint">HOLD SPACE TO TRANSMIT</span>
+            <div class="ptt-band-row">
+              <button class="ptt-mute" id="rx-mute" type="button" aria-pressed="false" title="Mute the received audio (stays until pressed again)">MUTE</button>
+              <span class="ptt-band" id="ptt-band">PTT → VFO A</span>
+              <button class="ptt-mute" id="sq-drop" type="button" aria-pressed="false" title="Blank the transmission in progress — lifts as soon as that station stops (BUSY off) or after three seconds without signal, with a chime">DROP</button>
+            </div>
+          </div>
+          <div class="ptt-stage">
+            <div class="ptt-vu rx" aria-hidden="true">
+              <span class="ptt-vu-bar"><i id="ptt-vu-rx"></i><b class="ptt-vu-pk" id="ptt-vu-rx-pk"></b></span>
+              <span class="ptt-vu-lbl" style="visibility:hidden">RX</span>
+            </div>
+            <button class="ptt" id="ptt" aria-label="Push to talk">
+              <span class="ptt-ring"></span>
+              <span class="ptt-sweep" aria-hidden="true"></span>
+              <span class="ptt-core">
+                <span class="ptt-core-lbl" aria-hidden="true">
+                  <svg class="ptt-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+                    <path d="M5 11a7 7 0 0 0 14 0"></path>
+                    <line x1="12" y1="18" x2="12" y2="22"></line>
+                    <line x1="8" y1="22" x2="16" y2="22"></line>
+                  </svg>
+                </span>
+                <span class="ptt-core-txt">PTT</span>
+                <span class="ptt-timer" id="ptt-timer">00:00</span>
+              </span>
+            </button>
+            <div class="ptt-vu tx" aria-hidden="true">
+              <span class="ptt-vu-bar"><i id="ptt-vu-tx"></i><b class="ptt-vu-pk" id="ptt-vu-tx-pk"></b></span>
+              <span class="ptt-vu-lbl">MIC</span>
+            </div>
+          </div>
+          <div class="ptt-lock-row">
+            <button class="ptt-side" id="btn-roger" type="button" aria-pressed="false" title="Roger beep on PTT release (d6 · a5 · e5, sent while PTT is still keyed)">ROGER</button>
+            <button class="ptt-lock" id="ptt-lock" type="button" aria-pressed="false" title="Latch transmit (watchdog stays active: without a keep-alive from the page the PTT drops after 2.5 s)">PTT-LOCK</button>
+            <button class="ptt-side tone1750" id="btn-1750" type="button" aria-pressed="false" title="1750 Hz tone call for FM repeaters: click to arm, then press PTT — the tone goes out instead of the microphone; releasing PTT disarms it. Radio in FM, FM-N or PKT-FM.">1.750 kHz</button>
+          </div>
+        </div>
+        <div class="quick-col quick-right" id="quick-mem2" title="Memory → VFO A (frequency + mode)"></div>
+      </div>
+    </section>
+
+    <section class="panel audio" id="audiop">
+      <div class="panel-head">
+        <h2>AUDIO · WEBRTC/OPUS</h2>
+        <span class="panel-stat" id="audio-stat"></span>
+        <span class="mt-rec" id="mt-rec" hidden>● REC</span>
+        <span class="mt-pb" id="mt-pb" hidden>▶ PLAYBACK</span>
+        <audio id="rec-audio" hidden></audio>
+        <span class="spacer"></span>
+        <label class="switch-label mictest-toggle" title="Echo test: record the microphone (max. 30 s, receive muted), play it back when switched off — over the whole path browser → Pi → browser, without transmitting">
+          <span>MIC TEST</span><input type="checkbox" id="mic-test" class="switch"></label>
+        <label class="switch-label audio-agc" title="Mic auto gain: rides the microphone level toward a fixed target while you talk (fast down, slow up, held in pauses). Overrides the TX GAIN slider, which then shows the live factor.">
+          <span>AGC</span><input type="checkbox" id="tx-auto" class="switch"></label>
+        <button id="audio-toggle" type="button">CONNECT</button>
+      </div>
+      <audio id="rx-audio" autoplay></audio>
+      <div class="audio-ctl">
+        <label class="acg">RX GAIN<input type="range" id="rx-gain" min="1" max="12" step="1" value="1"><span class="gv" id="rx-gain-val">1×</span></label>
+        <label class="acg">TX GAIN<input type="range" id="tx-gain" min="0.5" max="12" step="0.5" value="1"><span class="gv" id="tx-gain-val">1.0×</span></label>
+        <span class="rec-tools">
+          <button type="button" class="rec-btn" id="rec-toggle" title="Record the receive audio (as it comes from the radio) into a buffer on the Pi, max. 30 min">● REC</button>
+          <button type="button" class="rec-btn" id="rec-play" title="Play the recording in this browser" disabled>▶</button>
+          <span class="rec-playtime" id="rec-playtime" hidden>0:00 / 0:00</span>
+          <span class="rec-time" id="rec-time"></span>
+          <button type="button" class="rec-btn" id="rec-dl" title="Download the recording as WAV (16-bit mono, 16 kHz)" disabled>↓ WAV</button>
+        </span>
+      </div>
+      <div class="audio-graph">
+        <canvas id="level-graph"></canvas>
+        <span class="graph-bytes" id="graph-bytes" title="WebRTC data rate (RX ↓ from the radio · TX ↑ microphone)"></span>
+        <div class="graph-axis"><span>30s</span><span>20s</span><span>10s</span><span>now</span></div>
+        <div class="spec-wrap" title="Audio spectrum: receive audio (violet); your microphone while you transmit or test (red)">
+          <canvas id="spec-graph"></canvas>
+          <span class="spec-hint" id="spec-hint">AUDIO SPECTRUM · CONNECT</span>
+        </div>
+        <div class="graph-axis spec-axis"><span style="left:0%">0</span><span style="left:33.333%">1</span><span style="left:66.667%">2</span><span style="left:100%">3 kHz</span></div>
+        <div class="graph-legend"><span class="lg rx">RX</span><span class="lg mic">MIC</span><button type="button" class="lg peak" id="lg-peak" title="Peak hold in the audio spectrum on/off">PEAK</button></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== DIGI (layout after iDigi) ===================== -->
+  <section class="panel digi" id="digi">
+    <div class="panel-head">
+      <h2>DIGI · FT8/FT4</h2>
+      <button class="btn sm toggle on" id="digi-on" title="FT8/FT4 decoding on/off">DECODE</button>
+      <span class="panel-stat" id="digi-head-stat"></span>
+      <span class="spacer"></span>
+      <span class="chip seq-tx" id="seq-tx" title="Next sequencer transmission">TX —</span>
+      <button class="btn sm halt" id="halt" disabled title="Stop transmitting immediately (PTT off) and stop the sequencer — active during an FT8/FT4 transmission or while a sequence runs">Halt TRX</button>
+      <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
+    </div>
+    <div class="digi-body">
+      <div class="digi-grid">
+
+        <div class="pane rx-pane">
+          <div class="pane-head">
+            <h3>Received Messages</h3>
+            <div class="seg filt" id="rx-filter">
+              <button class="sg on" data-f="all">All</button>
+              <button class="sg" data-f="cq">CQ</button>
+              <button class="sg" data-f="rr73" title="RR73 (and the older RRR)">RR73</button>
+              <button class="sg" data-f="73">73</button>
+            </div>
+            <label class="chk" title="Auto-scroll new rows into view"><input type="checkbox" id="rx-follow" checked> follow</label>
+            <button class="btn sm" id="rx-clear" title="Clear list">✕</button>
+          </div>
+          <div class="tbl" id="rx-wrap">
+            <table class="msgs">
+              <thead><tr><th>Time</th><th class="n">SNR</th><th class="n">Δ</th><th class="n">Freq</th><th>Message</th><th>DXCC</th></tr></thead>
+              <tbody id="rx-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="pane">
+            <div class="pane-head"><h3 title="Double-click a received message (◀) to answer that station">My Messages</h3><span class="spacer"></span><label class="chk" title="Auto-scroll new rows into view"><input type="checkbox" id="my-follow" checked> follow</label><button class="btn sm" id="my-clear" title="Clear list">✕</button></div>
+            <div class="tbl short">
+              <table class="msgs">
+                <thead><tr><th>Time</th><th></th><th class="n">SNR</th><th class="n">Δ</th><th class="n">Freq</th><th>Message</th><th>DXCC</th></tr></thead>
+                <tbody id="my-body"></tbody>
+              </table>
+              <div class="empty" id="my-empty">No messages to you yet.</div>
+            </div>
+          </div>
+          <div class="pane">
+            <div class="pane-head"><h3>Sessions</h3><span class="spacer"></span><button class="btn sm toggle" id="sess-autolog" title="Auto-log: a QSO the sequencer completes goes into the log (Wavelog / QRZ.com, Settings ▸ Log) without a click. Off: it is offered in the log form instead.">Auto-log</button><button class="btn sm" id="sess-qrz" disabled title="Look up the marked session's call on QRZ.com (popup)">QRZ</button><button class="btn sm" id="sess-map" disabled title="Show the marked session's station on a world map (popup): locator, or the DXCC entity centre without one">Map</button><label class="chk" title="Keep the newest session (bottom row) in view"><input type="checkbox" id="sess-follow" checked> follow</label><button class="btn sm" id="sess-clear" title="Clear the session list (a QSO in progress stays)">✕</button></div>
+            <div class="tbl short">
+              <table class="msgs">
+                <thead><tr><th>Call</th><th>Time</th><th>Duration</th><th class="n">Freq</th><th>Band</th><th class="n">Tries</th><th>State</th><th>DXCC</th></tr></thead>
+                <tbody id="sess-body"></tbody>
+              </table>
+              <div class="empty">No QSOs yet — call CQ or double-click a station.</div>
+            </div>
+          </div>
+          <div class="pane">
+            <div class="pane-head"><h3>Session Messages</h3><span class="panel-stat" id="sessmsg-call"></span><span class="spacer"></span><label class="chk" title="Auto-scroll the newest message of the session into view"><input type="checkbox" id="sessmsg-follow" checked> follow</label></div>
+            <div class="tbl short">
+              <table class="msgs">
+                <thead><tr><th>Time</th><th></th><th class="n">SNR</th><th class="n">Δ</th><th class="n">Freq</th><th>Message</th></tr></thead>
+                <tbody id="sessmsg-body"></tbody>
+              </table>
+              <div class="empty">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="strip">
+        <div class="seg" id="digi-mode"></div>
+        <button class="btn sm toggle" id="seq-cq" title="Call CQ (auto-sequencer): CQ · report · RR73 · log">CQ</button>
+        <button class="btn sm toggle" id="seq-answer" title="Auto answer: while no QSO runs, a station calling you (locator, report or R-report to your call) is answered automatically on the TX frequency — the strongest if several call. Double-click a row to answer a station by hand.">Answer</button>
+        <button class="btn sm toggle" id="af" title="Adopt Frequency of caller: clicking a station also moves the TX window to its frequency">AF</button>
+        <label class="txlvl" title="DIGI RX level: software gain on the Pi, −20 … +20 dB, for the FT8/FT4 decoder, the waterfall and the meter on the right only (browser audio and the radio's own level are not changed) — aim for −40 … −20 dBFS. Double-click: 0 dB."><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg><input type="range" id="rx-level" min="-20" max="20" step="1" value="0"><b id="rx-level-val">—</b></label>
+        <button class="btn sm tune" id="tune" title="Steady tone on the TX frequency (max. 10 s) — for tuner and ALC/power adjustment">TUNE</button>
+        <label class="txlvl" title="FT8/FT4 TX drive: audio level into the radio's DATA input, 0 … 100 % (same value as Settings ▸ Audio ▸ FT8 TX DRIVE). Set it with TUNE: full power, ALC barely moving."><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"></path><path d="M8.5 7.5a5 5 0 0 1 7 0"></path><path d="M5.5 4.5a9 9 0 0 1 13 0"></path><circle cx="12" cy="10" r="1.5"></circle></svg><input type="range" id="dg-tx-level" min="0" max="100" step="1"><b id="dg-tx-level-val">—</b></label>
+        <div class="cycle" title="Progress of the current cycle"><i id="cycle-bar"></i><span id="cycle-txt">RECEIVE</span></div>
+        <span class="chip parity" id="parity">EVEN</span>
+        <span class="chip" id="dec-ms" title="jt9 run time of the last cycle">— ms</span>
+        <div class="seg" id="digi-depth" title="jt9 decode depth: D1 fast, D2 normal (default), D3 deep (subtraction + a-priori, slowest). AUTO picks the depth from the measured run time."></div>
+        <span class="chip" id="dec-n" title="Decodes in the last cycle">0</span>
+        <span class="lamps">
+          <span class="lamp" id="l-ntp" title="System clock synchronised via NTP — no decoding without sync">NTP</span>
+          <span class="lamp" id="l-ptt" title="Transmitter active">PTT</span>
+          <span class="lamp" id="l-ovl" title="Codec overload (peak > −1 dBFS)">OVL</span>
+        </span>
+        <span class="lvl" title="Receive level from the radio (RMS) — target −40 … −20 dBFS, adjustable on the radio (Settings ▸ Audio). Set it with the slider on the left (software gain on the Pi).">
+          <span class="lvl-bar"><i id="lvl-bar"></i></span><b id="lvl-val">— dBFS</b>
+        </span>
+      </div>
+
+      <div class="wf-axis" id="wf-axis"></div>
+      <div class="wf-wrap" id="wf-wrap">
+        <canvas id="wf"></canvas>
+        <div class="wf-box rx" id="box-rx" title="RX window (Shift+click)"></div>
+        <div class="wf-box tx" id="box-tx" title="TX window (click)"></div>
+        <div class="wf-tip" id="wf-tip" hidden></div>
+      </div>
+
+      <div class="foot">
+        <span id="f-grid">—</span>
+        <span id="f-dial">— kHz</span>
+        <span id="f-pwr">— W</span>
+        <span id="f-mode">—</span>
+        <span class="spacer"></span>
+        <label>Palette <select id="wf-cmap"><option>Purple</option><option>Rainbow</option><option>Blue</option></select></label>
+        <label>Contrast <input type="range" id="wf-contrast" min="0" max="100" value="55"><b class="wf-val" id="wf-contrast-val">55</b></label>
+        <label>Brightness <input type="range" id="wf-bright" min="0" max="100" value="45"><b class="wf-val" id="wf-bright-val">45</b></label>
+        <span class="txoff" title="TX offset (click in the waterfall)">TX <b id="f-tx">—</b> Hz</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== HACKRF (ported from TM-V71 Remote) ===================== -->
+  <!-- CW: skimmer (every carrier in the passband decoded at once, like the FT8 list) + the radio's keyer -->
+  <section class="panel cwp" id="cwp">
+    <div class="panel-head">
+      <h2>CW · SKIMMER</h2>
+      <button class="btn sm toggle" id="cw-on" title="Decode every CW signal in the receive passband (runs on the Pi while switched on)">DECODE</button>
+      <span class="panel-stat" id="cw-stat"></span>
+      <span class="spacer"></span>
+      <label class="cw-ctl" title="Keyer speed of the radio (KS)">WPM <input type="number" id="cw-wpm" min="4" max="60" step="1"></label>
+      <span class="cw-ro" id="cw-pitch" title="CW pitch of the radio (KP, set on the radio)">— Hz</span>
+      <button class="btn sm toggle" id="cw-bk" title="Break-in (BI) — the radio's keyer only transmits with break-in on">BK-IN</button>
+      <button class="btn sm" id="cw-clear" title="Clear the decoded text">CLEAR</button>
+      <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
+    </div>
+    <div class="cw-body">
+      <div class="cw-grid">
+        <div class="pane cw-sig-pane">
+          <div class="pane-head"><h3>Signals</h3><span class="chk" id="cw-count"></span></div>
+          <div class="tbl cw-tbl">
+            <table class="msgs">
+              <colgroup><col style="width:58px"><col style="width:84px"><col style="width:48px"><col style="width:46px"><col></colgroup>
+              <thead><tr><th class="n">Pitch</th><th class="n">Freq</th><th class="n">WPM</th><th class="n">SNR</th><th>Text</th></tr></thead>
+              <tbody id="cw-body"><tr class="empty"><td colspan="5">Switch DECODE on — every CW signal in the passband gets a row. Click one to follow it.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="side">
+          <div class="pane">
+            <div class="pane-head"><h3>Text</h3><span class="chk" id="cw-sel-lbl">no signal selected</span>
+              <button class="btn sm" id="cw-zb" disabled title="Tune VFO A so the selected signal sits exactly on the radio's CW pitch (zero beat)">ZERO BEAT</button></div>
+            <div class="cw-text" id="cw-text" aria-live="polite"></div>
+          </div>
+          <div class="pane">
+            <div class="pane-head"><h3>Sent</h3><span class="spacer"></span><button class="btn sm" id="cw-sent-clear" title="Clear list">✕</button></div>
+            <div class="cw-sent" id="cw-sent"></div>
+          </div>
+        </div>
+      </div>
+    <div class="cw-macros">
+      <label class="cw-call" title="Callsign for the macros — taken from the selected signal, editable">CALL <input type="text" id="cw-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <span id="cw-macro-btns"></span>
+    </div>
+    <div class="cw-tx">
+      <input type="text" id="cw-msg" placeholder="text to send in CW (the radio's keyer: CW/CW-R, BK-IN on)…" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button class="btn" id="cw-send">SEND</button>
+      <button class="btn halt" id="cw-stop" title="Drop the rest of the message (the radio finishes the current chunk)">STOP</button>
+    </div>
+    </div>
+  </section>
+
+  <section class="panel hackrf hrf-off" id="hackrf">
+    <div class="panel-head">
+      <h2>HACKRF · WATERFALL<span class="hrf-src" id="hrf-src" title="The HackRF is attached to TM-V71 Remote; this station proxies its stream">via .155</span></h2>
+      <button class="hrf-power" id="hrf-power" type="button" aria-pressed="false" title="Start / stop the HackRF">OFF</button>
+      <span class="panel-stat" id="hrf-stat"></span>
+      <span class="spacer"></span>
+      <span class="hrf-ready" id="hrf-ready" hidden><span class="dot"></span>HackRF ready</span>
+      <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
+    </div>
+    <div class="hrf-body" id="hrf-body">
+      <div class="hrf-ctrls">
+        <div class="hrf-modes" role="group" aria-label="Waterfall mode">
+          <button class="hrf-m active" type="button" data-mode="pan" title="Live panadapter around VFO A (~2 MHz span)">Panadapter</button>
+          <button class="hrf-m" type="button" data-mode="sweep" title="Wideband sweep across a range">Sweep</button>
+        </div>
+        <label class="hrf-follow" title="Keep the panadapter centred on the FT-950 VFO A"><input type="checkbox" id="hrf-follow" checked> follow</label>
+        <label class="hrf-follow" title="Peak hold — a slowly-decaying max line over the live trace"><input type="checkbox" id="hrf-peak" checked> PH</label>
+        <label class="hrf-field hrf-pan-only">Center<input type="text" id="hrf-center-in" inputmode="decimal" placeholder="MHz" disabled></label>
+        <label class="hrf-field hrf-sweep-only" hidden>Range<input type="text" id="hrf-range-in" inputmode="decimal" placeholder="1.8–30" value="1.8–30"></label>
+        <div class="hrf-gains">
+          <label class="hrf-field">LNA<input type="range" id="hrf-lna" min="0" max="40" step="8" value="24"><span class="hrf-gv" id="hrf-lna-v">24</span></label>
+          <label class="hrf-field">VGA<input type="range" id="hrf-vga" min="0" max="62" step="2" value="20"><span class="hrf-gv" id="hrf-vga-v">20</span></label>
+          <label class="hrf-amp"><input type="checkbox" id="hrf-amp"> AMP</label>
+          <label class="hrf-field" title="Display level — sets the waterfall/peak height (does not touch the HackRF)">LEVEL<input type="range" id="hrf-level" min="0" max="100" step="1" value="50"><span class="hrf-gv" id="hrf-level-v">50</span></label>
+        </div>
+      </div>
+      <div class="hrf-graph" id="hrf-graph" title="Hover to read frequency · click to tune VFO A">
+        <canvas id="hrf-spectrum"></canvas>
+        <canvas id="hrf-wf"></canvas>
+        <div class="hrf-split"></div>
+        <div class="hrf-vfoline" id="hrf-vfoline" hidden title="FT-950 VFO A"></div>
+        <div class="hrf-cur" id="hrf-cur" hidden></div>
+        <div class="hrf-tip" id="hrf-tip" hidden></div>
+      </div>
+      <div class="hrf-axis"><span id="hrf-f0">—</span><span id="hrf-fc">—</span><span id="hrf-f1">—</span></div>
+    </div>
+  </section>
+
+  <!-- ===================== LOG ===================== -->
+  <section class="panel logp" id="log">
+    <div class="panel-head">
+      <h2>LOG · WAVELOG</h2>
+      <span class="lamp" id="l-wl" title="Wavelog configured (Settings ▸ Log)">WAVELOG</span>
+      <span class="lamp" id="l-qrz" title="QRZ.com lookup configured">QRZ</span>
+      <span class="lamp" id="l-auto" title="Auto-log: completed QSOs of the auto-sequencer are logged without a click">AUTO</span>
+      <span class="panel-stat" id="log-stat"></span>
+      <span class="spacer"></span>
+      <button class="btn sm" id="log-sync" title="Reload the log from Wavelog — marks worked stations red">⟳ SYNC</button>
+      <div class="log-head-right">
+        <button type="button" id="q-lookup" class="log-btn ghost" title="Look up name, locator, QTH on QRZ.com (Enter in the callsign field)">QRZ LOOKUP</button>
+        <button type="button" id="q-log" class="log-btn primary" title="Log the QSO to Wavelog and the QRZ.com logbook">LOG QSO</button>
+      </div>
+      <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
+    </div>
+    <div class="log-grid">
+      <form class="qso-form" id="qso-form" autocomplete="off">
+        <div class="qf-row">
+          <label class="qf-call">Callsign<input id="q-call" maxlength="16" spellcheck="false" autocapitalize="characters"></label>
+          <span class="q-worked" id="q-worked"></span>
+        </div>
+        <div class="qf-grid">
+          <label>Name<input id="q-name"></label>
+          <label>Locator<input id="q-grid" maxlength="8"></label>
+          <label>QTH<input id="q-qth"></label>
+          <label>Country<input id="q-country"></label>
+          <label>Report sent<input id="q-sent" maxlength="5" placeholder="-10"></label>
+          <label>Report rcvd<input id="q-rcvd" maxlength="5" placeholder="-12"></label>
+          <label class="span-2">Comment<input id="q-comment"></label>
+        </div>
+        <div class="qf-foot">
+          <span class="q-auto" id="q-auto">— · — · —</span>
+          <button type="button" class="btn" id="q-clear">CLEAR</button>
+        </div>
+      </form>
+      <div class="pane recent-pane">
+        <div class="pane-head"><h3>Recent QSOs</h3><span class="panel-stat" id="worked-stat"></span><span class="spacer"></span><button class="btn sm" id="recent-qrz" disabled title="Look up the marked QSO's call on QRZ.com (popup)">QRZ</button><button class="btn sm" id="recent-map" disabled title="Show the marked QSO's station on a world map (popup)">Map</button></div>
+        <div class="tbl mid">
+          <table class="msgs">
+            <thead><tr><th>UTC</th><th>Call</th><th>Band</th><th>Mode</th><th>S</th><th>R</th><th>Name</th><th>Country</th><th title="Wavelog">WL</th><th title="QRZ.com logbook">QRZ</th><th></th></tr></thead>
+            <tbody id="recent-body"></tbody>
+          </table>
+          <div class="empty">Nothing logged yet.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===================== SETTINGS ===================== -->
+<div class="modal" id="settings" role="dialog" aria-modal="true" aria-labelledby="set-title">
+  <div class="modal-card settings-card">
+    <div class="settings-head">
+      <h3 id="set-title">Settings</h3>
+      <span class="app-ver" id="app-ver"></span>
+      <button id="set-close" class="set-x" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="general" role="tab">General</button>
+      <button class="tab" data-tab="ft8" role="tab">FT8</button>
+      <button class="tab" data-tab="audio" role="tab">Audio</button>
+      <button class="tab" data-tab="log" role="tab">Log</button>
+      <button class="tab" data-tab="memories" role="tab">Memories</button>
+      <button class="tab" data-tab="hardware" role="tab">Pi Hardware</button>
+    </div>
+
+    <!-- GENERAL -->
+    <section class="tab-pane active" data-pane="general">
+      <div class="form-grid">
+        <label>My callsign<input type="text" id="set-call" maxlength="12" placeholder="e.g. DJ0SH" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
+        <label title="Maidenhead locator; jt9 gets the 4-character form">Locator<input type="text" id="set-grid" maxlength="6" placeholder="z. B. JO62qk" autocomplete="off" spellcheck="false"></label>
+        <label class="span-2" title="CAT port of the SCU-17: the CP2105 &quot;Enhanced Com Port&quot; (interface 0). Paths under /dev/serial/by-id survive re-plugging.">Serial port (CAT)<select id="set-port"></select></label>
+        <label title="Must match menu 026 on the FT-950 (3 = 38400)">Baud rate<select id="set-baud"></select></label>
+        <span class="logo-label span-2">RADIO POWER (SHELLY)</span>
+        <label title="IP address or hostname of the Shelly that switches the FT-950's 13.8 V supply (Gen1 and Gen2/Plus/Pro are detected). Empty = no power switch.">Shelly address<input type="text" id="set-shelly-host" placeholder="e.g. 192.168.201.60" autocomplete="off" spellcheck="false"></label>
+        <label title="Relay / switch channel (0 on single-channel devices)">Channel<select id="set-shelly-ch"><option>0</option><option>1</option><option>2</option><option>3</option></select></label>
+        <label title="Only if the Shelly has authentication enabled (Gen2+: the user is always admin)">User<input type="text" id="set-shelly-user" placeholder="admin" autocomplete="off" spellcheck="false"></label>
+        <label title="Stored on the Pi only and never shown again. Leave empty to keep the stored password.">Password<input type="password" id="set-shelly-pass" autocomplete="new-password"></label>
+        <label title="Switch the radio off via the Shelly when no browser has had the page open for this long (a running transmission and the sequencer are stopped first)">Auto power-off<select id="set-autooff"><option value="0">off</option><option value="1">on</option></select></label>
+        <label title="Minutes without any open browser before the radio is switched off">After (minutes)<input type="number" id="set-autooff-min" min="1" max="120" step="1"></label>
+        <label class="span-2" title="TM-V71 Remote on the Pi with the HackRF One — the HackRF panel relays its waterfall. Empty = https://192.168.201.155:8443">HackRF source (TM-V71 Remote)<input type="text" id="set-hackrf" placeholder="https://192.168.201.155:8443" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <p class="pane-hint">Decode depth, range, the closing message and the list colours: Settings ▸ FT8. Callsign and locator enable jt9's a-priori decoding of replies to you. Stored locally on the Pi (runtime.json).</p>
+      <div class="logo-field">
+        <span class="logo-label">LOGO (TITLE BAR)</span>
+        <div class="logo-row">
+          <span class="logo-preview" id="logo-preview" data-empty="no logo"></span>
+          <label class="mini-btn">Choose image…<input type="file" id="logo-file" accept="image/svg+xml,image/png,image/jpeg,image/webp,image/gif" hidden></label>
+          <button type="button" id="logo-yaesu" class="mini-btn">Load Yaesu logo</button>
+          <button type="button" id="logo-remove" class="mini-btn danger">Remove</button>
+        </div>
+        <p class="pane-hint">The logo is a trademark: it is stored only locally on the Pi and never goes into the Git repo. "Load Yaesu logo" fetches the wordmark from Wikimedia Commons.</p>
+      </div>
+      <div class="cert-field" id="cert-field" hidden>
+        <span class="logo-label">ROOT CA (PHONE / PWA)</span>
+        <div class="logo-row">
+          <a id="ca-download" class="mini-btn" href="/api/cert/ca.crt" target="_blank" rel="noopener">Download CA certificate</a>
+        </div>
+        <p class="cert-meta" id="cert-meta"></p>
+        <p class="pane-hint">Same CA as TM-V71 Remote: devices that already trust it there need nothing new.</p>
+      </div>
+      <div class="modal-actions">
+        <button id="set-cancel" class="btn-ghost">CLOSE</button>
+        <button id="set-save" class="btn-primary">SAVE</button>
+      </div>
+    </section>
+
+    <!-- FT8: decoder, sequencer, list colours -->
+    <section class="tab-pane" data-pane="ft8">
+      <span class="logo-label">DECODING</span>
+      <div class="form-grid">
+        <label class="span-2" title="Same switch as D1/D2/D3/AUTO in the FT8 panel. Default 2; AUTO adapts the depth to the measured run time.">Decode depth<select id="set-depth">
+          <option value="AUTO">AUTO (adaptive)</option><option value="1">1 — fast</option>
+          <option value="2">2 — normal</option><option value="3">3 — deep</option></select></label>
+        <label>Decode from (Hz)<input type="number" id="set-low" min="0" max="3000" step="50"></label>
+        <label>Decode to (Hz)<input type="number" id="set-high" min="500" max="5000" step="50"></label>
+      </div>
+      <span class="logo-label sec">SEQUENCER</span>
+      <div class="form-grid">
+        <label class="span-2" title="The 4th message of a QSO after the partner's R-report, as WSJT-X's &quot;RR73&quot; box: RR73 lets the partner finish without another round, RRR asks for their 73. Only the text changes.">Closing message<select id="set-closing">
+          <option value="RR73">RR73 (default)</option><option value="RRR">RRR</option></select></label>
+      </div>
+      <span class="logo-label sec">COLOURS (RECEIVED / MY MESSAGES)</span>
+      <div class="color-grid" id="color-grid"></div>
+      <p class="pane-hint">Changes show at once; SAVE keeps them on the Pi for every browser. Reset = the colour of the current theme (dark / light).</p>
+      <div class="modal-actions">
+        <button type="button" id="col-reset-all" class="btn-ghost">RESET COLOURS</button>
+        <span class="spacer"></span>
+        <button class="btn-ghost" data-close>CLOSE</button>
+        <button id="ft8-save" class="btn-primary">SAVE</button>
+      </div>
+    </section>
+
+    <!-- AUDIO -->
+    <section class="tab-pane" data-pane="audio">
+      <div class="form-grid">
+        <label class="span-2">Capture device (SCU-17 codec)<select id="aud-device"></select></label>
+      </div>
+      <div class="aud-level">
+        <span class="logo-label">RX LEVEL AT THE CODEC (RMS)</span>
+        <div class="aud-meter"><span class="aud-target" title="Target range −40 … −20 dBFS"></span><i id="aud-fill"></i></div>
+        <div class="aud-scale"><span>−60</span><span>−50</span><span>−40</span><span>−30</span><span>−20</span><span>−10</span><span>0 dBFS</span></div>
+        <p class="aud-read" id="aud-read">—</p>
+      </div>
+      <div class="aud-ctl">
+        <label class="g-row slider" title="Codec playback level (amixer PCM) — how hard the Pi drives the radio's DATA input">
+          <span class="g-lbl">CODEC OUT</span><input type="range" id="aud-play" min="0" max="100"><b id="aud-play-val">—</b></label>
+        <label class="g-row slider" title="FT8/FT4 and TUNE drive: how hard the Pi drives the tone into the codec (software, 100 % ≈ 0 dBFS)">
+          <span class="g-lbl">FT8 TX DRIVE</span><input type="range" id="tx-level" min="0" max="100"><b id="tx-level-val">—</b></label>
+      </div>
+      <span class="logo-label sec">FT-950 AUDIO MENUS (EX)</span>
+      <div class="menu-tools">
+        <span class="update-status" id="menu-status">—</span>
+        <button type="button" class="mini-btn" id="menu-reset" title="Write all differing menus back to the saved default">ALL TO DEFAULT</button>
+        <button type="button" class="mini-btn" id="menu-snap" title="Save the current radio values as the new default">CURRENT AS DEFAULT</button>
+      </div>
+      <div class="menu-list" id="menu-list"></div>
+      <p class="pane-hint">Values are set in the FT-950 via CAT and read back. Default = the known-good state of the station (saved on the first read). Differences are marked, ↺ resets a single menu. Note: 051 is the only control for the RX level to the Pi (the codec has none), 050 is the modulation in DATA-U.</p>
+
+      <span class="logo-label sec">VOICE TX PROCESSING</span>
+      <div class="tx-proc">
+        <label class="check-label" title="Compressor: brings quiet syllables up and keeps loud ones down — more average talk power on SSB. The pauses between words are not pumped up."><input type="checkbox" id="tx-comp"> Compressor</label>
+        <label class="check-label" title="Pre-emphasis: treble lift for a brighter, more readable SSB voice — +6 dB/octave above 700 Hz, unchanged at 1 kHz (about −4 dB at 300 Hz, +7 dB at 2.7 kHz); followed by a 3 kHz low-pass so hiss above the SSB band is not lifted."><input type="checkbox" id="tx-preemph"> Pre-emphasis</label>
+      </div>
+      <p class="pane-hint">Applied to the microphone on transmit (and in MIC TEST, so you can listen to the result). A limiter at the end keeps peaks below full scale.</p>
+      <span class="logo-label sec">WEBRTC BUFFERS</span>
+      <div class="aud-ctl">
+        <label class="g-row slider" title="Upper limit for the microphone backlog"><span class="g-lbl">TX BUFFER</span><input type="range" id="tx-buffer" min="80" max="500" step="10"><b id="tx-buffer-val">—</b></label>
+        <label class="g-row slider" title="How long the PTT stays keyed after release so the buffer can play out"><span class="g-lbl">TX TRAIL</span><input type="range" id="ptt-tail" min="0" max="500" step="10"><b id="ptt-tail-val">—</b></label>
+        <label class="g-row slider" title="Jitter buffer between codec and WebRTC track (20 ms blocks)"><span class="g-lbl">RX BUFFER</span><input type="range" id="rx-buffer" min="20" max="300" step="20"><b id="rx-buffer-val">—</b></label>
+      </div>
+      <p class="pane-hint">TX BUFFER: upper limit of the microphone backlog — smaller = less delay, larger = more robust against network jitter (recommended 150 ms). Playback starts only at half the buffer size (max. 60 ms) so it does not sound choppy. TX TRAIL: hang time after release so the end is not cut off (recommended 250 ms). RX BUFFER: buffer between the codec clock and the WebRTC clock — raise it if receive audio crackles, lower it for the shortest delay (recommended 60 ms).</p>
+      <p class="pane-hint">051 and 050 are set in the radio via CAT and read back. For FT8, set the RX level so the bar sits in the green range; peaks above −1 dBFS light OVL.</p>
+      <div class="modal-actions"><span class="ma-note">Changes apply immediately</span>
+        <button class="btn-ghost" data-close>CLOSE</button>
+      </div>
+    </section>
+
+    <!-- LOG (layout as TM-V71 Remote: one section per service, each with its own test) -->
+    <section class="tab-pane" data-pane="log">
+      <div class="logsec">
+        <span class="logo-label">WAVELOG</span>
+        <div class="form-grid">
+          <label class="span-2">Wavelog-URL<input type="text" id="wl-url" placeholder="e.g. https://log.example.org" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
+          <label class="span-2">API-Token<input type="password" id="wl-key" placeholder="read/write API-Key" autocomplete="new-password" spellcheck="false"></label>
+          <label>Station profile<select id="wl-station"><option value="">—</option></select></label>
+          <label class="check-label"><button type="button" id="wl-reload" class="mini-btn">Load profiles</button></label>
+        </div>
+        <div class="logo-row log-test-row">
+          <span class="update-status" id="wl-status">not tested</span>
+          <button type="button" id="wl-test" class="mini-btn">Test connection</button>
+        </div>
+        <p class="pane-hint">Wavelog creates the API token under Account → API Keys (read/write). It stays on the Pi only (runtime.json, readable by root only) and is never sent back to the browser — an empty field keeps the saved value.</p>
+        <div class="logo-row">
+          <span class="update-status" id="log-sync-out"></span>
+          <button type="button" class="mini-btn" id="log-resync" title="Reload the index of worked stations from Wavelog from scratch">Full log reload</button>
+        </div>
+      </div>
+
+      <div class="logsec">
+        <span class="logo-label">QRZ.COM</span>
+        <div class="form-grid">
+          <label>Username<input type="text" id="qrz-user" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+          <label>Password<input type="password" id="qrz-pass" autocomplete="new-password"></label>
+          <label class="span-2">Logbook API key<input type="password" id="qrz-key" autocomplete="new-password" spellcheck="false"></label>
+        </div>
+        <div class="logo-row log-test-row">
+          <span class="update-status" id="qrz-status">not tested</span>
+          <button type="button" id="qrz-test" class="mini-btn">Test connection</button>
+        </div>
+        <p class="pane-hint">Username + password: callsign lookup (name, locator, QTH) via the QRZ XML service — requires a QRZ XML subscription. Logbook API key (QRZ.com → My Logbook → Settings): every QSO is additionally uploaded to the QRZ logbook.</p>
+      </div>
+
+      <div class="logsec">
+        <span class="logo-label">AUTOMATION</span>
+        <div class="form-grid">
+          <label class="check-label span-2"><input type="checkbox" id="qrz-before"> QRZ lookup before every log (fills name, QTH, locator)</label>
+          <label class="check-label span-2"><input type="checkbox" id="auto-log"> Auto-log: log completed QSOs automatically</label>
+        </div>
+        <p class="pane-hint">Worked-before check as in iDigi: CQ red = station already in the log on this band, green = new; NEW = DXCC entity never worked. The index is reloaded from Wavelog at start-up and every 10 minutes. Auto-log kicks in as soon as the auto-sequencer completes QSOs.</p>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-ghost" data-close>CLOSE</button>
+        <button id="log-save" class="btn-primary">SAVE</button>
+      </div>
+    </section>
+
+    <!-- MEMORIES: the 32 quick keys of the PTT · MEMORY panel -->
+    <section class="tab-pane" data-pane="memories">
+      <div class="menu-tools"><span class="menu-status" id="mem-status">—</span><span class="spacer"></span>
+        <button class="mini-btn" id="mem-defaults" title="Default plan for all 32 keys, one band per key row (80/40/20/15/10/6 m, Diamond CP6): left SSB | CW calling frequencies, right FT8 | FT4; then 10/6 m FM, the 10 m repeater (split −100 kHz), SSTV and the IARU R1 emergency centres">DEFAULTS (M1-M32)</button></div>
+      <div class="menu-list" id="mem-list"></div>
+      <p class="pane-hint">Frequency and mode are written into the radio's memory channel (MW) and checked by reading it back.
+        CTCSS (mode and tone) is stored in the radio too and set on recall in FM; clarifier and shift of an existing
+        channel are kept. The FT-950's memories have no split and no VFO B, and it cannot name or clear a memory over CAT —
+        so split, VFO B and the name are stored here on the Pi and applied on recall (VFO B gets A's mode, then its own frequency;
+        split sets TX on B, a key without split sets TX on A).</p>
+      <div class="modal-actions"><span class="ma-note">Each row is saved with its WRITE button</span>
+        <button class="btn-ghost" data-close>CLOSE</button>
+      </div>
+    </section>
+
+    <!-- PI HARDWARE -->
+    <section class="tab-pane" data-pane="hardware">
+      <dl class="info-grid">
+        <dt>Model</dt><dd id="sys-model">—</dd>
+        <dt>CPU</dt><dd id="sys-cpu">—</dd>
+        <dt>Load (1/5/15 min)</dt><dd id="sys-load">—</dd>
+        <dt>Temperature</dt><dd id="sys-temp">—</dd>
+        <dt>Memory</dt><dd id="sys-mem">—</dd>
+        <dt>Swap</dt><dd id="sys-swap">—</dd>
+        <dt>Disk (/)</dt><dd id="sys-disk">—</dd>
+        <dt>This service</dt><dd id="sys-app">—</dd>
+        <dt>Uptime</dt><dd id="sys-uptime">—</dd>
+      </dl>
+      <figure class="sys-graph">
+        <div class="sys-graph-head">
+          <figcaption>History</figcaption>
+          <div class="sys-range" role="group" aria-label="Time range">
+            <button type="button" class="sys-range-btn" data-hours="1">1h</button>
+            <button type="button" class="sys-range-btn" data-hours="6">6h</button>
+            <button type="button" class="sys-range-btn is-on" data-hours="24">24h</button>
+          </div>
+        </div>
+        <canvas id="sys-canvas" aria-label="Temperature, load and memory over time"></canvas>
+        <div id="sys-tip" class="sys-tip" hidden></div>
+      </figure>
+      <p class="pane-hint">Live figures of the Raspberry Pi, updated while this tab is open. The graph records one value per minute and survives restarts.</p>
+      <div class="modal-actions"><span class="ma-note">Read only</span>
+        <button class="btn-ghost" data-close>CLOSE</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Styled stand-in for window.confirm: the browser's own dialog was the one
+     piece of foreign chrome in this console, and it appeared at the worst
+     moment - in front of the switch that cuts the radio's mains. -->
+<div class="modal" id="ask" role="dialog" aria-modal="true" aria-labelledby="ask-title">
+  <div class="modal-card ask-card">
+    <h3 class="ask-title" id="ask-title">Please confirm</h3>
+    <p class="ask-text" id="ask-text"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="ask-no">CANCEL</button>
+      <button class="btn-primary" id="ask-yes">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

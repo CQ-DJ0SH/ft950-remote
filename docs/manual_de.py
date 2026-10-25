@@ -120,7 +120,9 @@ DE = [
     ("img", "manual/vfo.png", 174),
     ("h2", "Titelleiste"),
     ("ul", [
-        "Lampen LOCK und PLL: Abstimmsperre, PLL nicht eingerastet (ein Gerätefehler).",
+        "Lampen LOCK und PLL: Abstimmsperre, PLL nicht eingerastet (ein Gerätefehler). "
+        "Ein Klick auf LOCK (oder Enter/Leertaste) sperrt den Abstimmknopf oder gibt "
+        "ihn frei (LK, durch Zurücklesen geprüft).",
         "SPLIT: Empfang auf VFO A, Senden auf VFO B.",
         "ANT 1 / ANT 2, TUNER (interner Antennentuner ein/aus), ATU TUNE (startet "
         "einen Abstimmvorgang — das Funkgerät sendet einen Träger; mit Rückfrage).",
@@ -139,12 +141,22 @@ DE = [
           "feste Felder (nur die aktiven Werte leuchten), BUSY, die "
           "Betriebsartenlampen LSB USB CW AM FM RTTY PKT REV (bei DATA-U leuchten PKT "
           "+ USB, bei CW-R CW + REV), TX-Lampe und eingestellte Leistung, die "
-          "PO/SWR/ALC/ID/AF-Balken, die DSP-Balken, die Frequenz, die Ablageskala "
-          "(rote Marke = Ablage, ±1 kHz) mit ihrem Wert sowie VFO-B."),
+          "PO/SWR/ALC/ID/AF-Balken, die DSP-Balken, die Frequenz bis 1 Hz, die "
+          "Ablageskala (rote Marke = Ablage, ±1 kHz, ein Strich je 100 Hz) mit ihrem "
+          "Wert, die S-Anzeige sowie VFO-B."),
+    ("p", "Die S-Anzeige links von VFO-B zeigt den Wert der Nadel: S und die Ziffer "
+          "bleiben an ihrem Platz, der Teil über S9 (+20, +40, +60) steht in einem "
+          "eigenen roten zweistelligen Feld, unbeleuchtete Segmente abgedunkelt. "
+          "Beim Senden bleibt der Kasten stehen, sein Inhalt verschwindet."),
     ("p", "PO und SWR arbeiten mit ungefähren Kalibrierpunkten; ID (Ampere) folgt "
           "den 5/10/15-A-Marken des Instruments; AF zeigt bei Sprache den "
-          "Mikrofonpegel und bei FT8/TUNE die Tonansteuerung. Nach einer Durchgabe "
-          "bleiben die letzten Werte stehen. Die Nadel bewegt sich wie bei einem "
+          "Mikrofonpegel und bei FT8/TUNE die Tonansteuerung (aus FT8 TX DRIVE "
+          "berechnet, nicht gemessen). Spitzenwerte: beim Senden markiert ein "
+          "stehendes Segment den höchsten Wert jeder Anzeige; nach der Durchgabe "
+          "zeigen Balken und Werte diese Spitzen — die Werte in einem roten Kasten, "
+          "daneben leuchtet PEAK — bis zum nächsten Senden. SWR zählt nur mit etwas "
+          "Ausgangsleistung. Die Werte haben feste Stellenzahlen (SWR als 1.5:1), "
+          "damit nichts springt. Die Nadel bewegt sich wie bei einem "
           "Drehspulinstrument: gedämpft, sie steigt in etwa 0,35 s an und fällt "
           "etwas langsamer zurück."),
     ("h2", "Abstimmen"),
@@ -153,17 +165,24 @@ DE = [
         "Frequenzeingabe mit ▲▼ (UP/DN am Mikrofon), A⇄B und A→B.",
         "Die BAND- und MODE-Tasten leuchten sofort auf und bestätigen, sobald das "
         "Funkgerät zurückmeldet.",
-        "Shuttle neben BAND: links der Mitte halten stimmt abwärts, rechts aufwärts; "
-        "je weiter außen, desto größer die Schritte (10 Hz, 100 Hz, 1 kHz, 10 kHz).",
+        "Shuttle neben BAND (◀ DOWN · TUNE · UP ▶): links der Mitte halten stimmt "
+        "abwärts, rechts aufwärts; je weiter außen, desto größer die Schritte (10 Hz, "
+        "100 Hz, 1 kHz, 10 kHz) — die Beschriftung zeigt den aktuellen Schritt.",
         "CTCSS: aus / ENC (Ton senden) / TSQ (Tonsquelch) und die 50 Töne, die das "
         "Funkgerät selbst erzeugt. MON schaltet die Mithörkontrolle. NAR wählt die "
         "schmalen Filter.",
     ]),
     ("h2", "TX POWER und RX · FILTER · LEVEL"),
     ("p", "Der rote Regler TX POWER stellt die Sendeleistung von 5–100 W ein. "
-          "RX · FILTER · LEVEL öffnet die Gruppe mit Vorverstärker, AGC, "
-          "Roofing-Filter, Bandbreite, Shift, DSP (DNF/NR/NB), ATT, HF-Verstärkung "
-          "und Leistung."),
+          "RX · FILTER · LEVEL öffnet die Gruppen RX (Vorverstärker, AGC, ATT), "
+          "FILTER (Bandbreite, Shift), LEVEL (HF-Verstärkung), CLAR und DSP. Das "
+          "Roofing-Filter schaltet R.FLT in der Titelleiste."),
+    ("ul", [
+        "CLAR: ON schaltet die Empfangsablage, CLR setzt sie auf 0; der Regler "
+        "stellt die Ablage ein (±2,5 kHz in 10-Hz-Schritten, Doppelklick = 0) und "
+        "schaltet RX CLAR ein. Die Ablage wird vom Funkgerät zurückgelesen und geprüft.",
+        "DSP: DNF, NR und NB als Schalter.",
+    ]),
 
     ("h1", "7  PTT · Speicher"),
     ("img", "manual/ptt.png", 174),
@@ -234,6 +253,8 @@ DE = [
         "Die Filter über Received Messages zeigen alles, nur CQ, nur RR73 (samt RRR) "
         "oder nur 73. follow hält in jeder Liste die neueste Zeile im Blick, auch in "
         "Session Messages.",
+        "Eine fehlgeschlagene Session zeigt in der Liste nur error; den Grund "
+        "bringt ein Toast (beim Auftreten und beim Klick auf die Zeile) und der Tooltip.",
         "Eine markierte Session (Klick auf die Zeile) öffnet mit QRZ die Seite der "
         "Station auf QRZ.com und mit Map eine Weltkarte: Standort nach Locator (ohne "
         "Locator die Mitte des DXCC-Gebiets), Großkreis, Entfernung und Richtung ab "

@@ -15,16 +15,18 @@ decoding, plus voice operation over WebRTC.
   - FT-2000 style analog meter (S, PO, COMP, ID, SWR, ALC/VDD) in its own window
   - signal path (ANT · ATT · FLT · IPO · R.FLT · AGC) as fixed cells, only the
     active values lit; DSP bars; mode lamps (LSB USB CW AM FM RTTY PKT REV)
-  - seven-segment frequency, tunable by mouse wheel or drag on a digit;
-    clarifier scale, VFO-B
-  - PO / SWR / ALC / ID (amps) / AF bars while transmitting
-  - title bar: split, ANT 1/2, tuner and ATU tuning, CLAR/CLR, FLT · IPO ·
+  - seven-segment frequency to 1 Hz, tunable by mouse wheel or drag on a digit;
+    clarifier scale, S readout, VFO-B
+  - PO / SWR / ALC / ID (amps) / AF bars while transmitting, with **peak hold**
+    until the next transmission (PEAK)
+  - title bar: clickable dial LOCK, split, ANT 1/2, tuner and ATU tuning, CLAR/CLR, FLT · IPO ·
     R.FLT · AGC switches, **voice profile** and **FT8 profile** (both diff-apply
     and verify every value by reading it back)
   - band and mode keys, a frequency **shuttle** (hold left/right — the further
     out, the bigger the steps), CTCSS (ENC/TSQ, 50 tones), MON, NAR
   - a dominant scaled TX power control
-  - RX · filter · level group: width/shift, AGC, roofing, preamp, ATT, RF gain
+  - RX · filter · level group: preamp, AGC, ATT, width/shift, RF gain, a
+    clarifier offset slider (±2.5 kHz, read back) and DNF/NR/NB switches
 - **PTT · Memory**:
   - push-to-talk from the browser with a watchdog lease, PTT-LOCK, roger beep,
     1750 Hz tone call; MUTE and DROP (blank the current over) with chimes

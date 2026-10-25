@@ -41,6 +41,11 @@ class IfShiftReq(BaseModel):
     hz: int = Field(ge=-1000, le=1000)
 
 
+class ClarReq(BaseModel):
+    hz: int = Field(ge=-9999, le=9999)          # the radio's own range (RU/RD 0000-9999)
+    rx_on: bool | None = None                   # also switch RX CLAR (RT); None = leave it
+
+
 class NameReq(BaseModel):
     name: str
 

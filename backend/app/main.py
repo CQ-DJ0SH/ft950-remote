@@ -33,7 +33,7 @@ from .digi import MODES as DIGI_MODES, DigiService
 from .ft950 import (AGC_SET, ATT, BANDS, MODES, PREAMP, ROOF_SET, WIDTHS,
                     FT950Error, width_column)
 from .models import (zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
-                     IfShiftReq, LevelReq, LogConfigReq, MemoryReq, MenuResetReq,
+                     ClarReq, IfShiftReq, LevelReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
                      RadioAudioReq, SeqAnswerReq, SeqCqReq, SettingsReq,
@@ -425,6 +425,17 @@ async def clar_clear() -> dict:
     """Clarifier offset back to 0 (RC)."""
     await service.run(service.radio.clear_clar)
     return {"ok": True}
+
+
+@app.post("/api/clar/offset")
+async def clar_offset(req: ClarReq) -> dict:
+    """Clarifier offset in Hz (RC + RU/RD, read back from IF). With rx_on the
+    RX clarifier is switched as well - moving the CLAR slider means listening
+    off the dial, as turning the radio's CLAR knob does after pressing CLAR."""
+    hz = await service.run(service.radio.set_clar, req.hz)
+    if req.rx_on is not None:
+        await service.run(service.radio.set_rx_clar, req.rx_on)
+    return {"ok": True, "hz": hz}
 
 
 @app.post("/api/vrf")

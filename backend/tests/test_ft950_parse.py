@@ -215,3 +215,48 @@ def test_recall_ssb_skips_ctcss_and_clears_split():
     r._serial.write = lambda d: (sent.append(d.decode()), orig(d))[1]
     r.recall_to_vfo(3)
     assert "FT2;" in sent and not any(s.startswith(("CT", "CN", "AB", "FB")) for s in sent)
+
+
+class _ClarRig(_FakeSerial):
+    """A clarifier that RC clears and RU/RD move - relative or absolute, the
+    manual does not say which - read back through IF like the real radio."""
+    def __init__(self, relative=True, deaf=False, start=0):
+        super().__init__({})
+        self.hz, self.relative, self.deaf, self.sent = start, relative, deaf, []
+    def write(self, data):
+        cmd = data.decode().rstrip(";")
+        self.sent.append(cmd)
+        if self.deaf:
+            pass
+        elif cmd == "RC":
+            self.hz = 0
+        elif cmd[:2] in ("RU", "RD") and len(cmd) == 6:
+            step = int(cmd[2:]) * (1 if cmd[:2] == "RU" else -1)
+            self.hz = self.hz + step if self.relative else step
+        sign = "-" if self.hz < 0 else "+"
+        self.out = (f"IF00014074000{sign}{abs(self.hz):04d}10C00000;" if cmd == "IF" else "").encode()
+
+
+@pytest.mark.parametrize("relative", [True, False])
+@pytest.mark.parametrize("want", [250, -1230, 9999, -9999, 0])
+def test_set_clar_absolute_either_way(relative, want):
+    r = _radio({})
+    r._serial = rig = _ClarRig(relative=relative, start=480)   # an old offset is lying there
+    assert r.set_clar(want) == want
+    assert rig.hz == want
+    assert rig.sent[0] == "RC"                                  # cleared first
+    moves = [c for c in rig.sent if c[:2] in ("RU", "RD")]
+    assert moves == ([] if want == 0 else [f"{'RU' if want > 0 else 'RD'}{abs(want):04d}"])
+
+
+def test_set_clar_clamps_to_the_radios_range():
+    r = _radio({})
+    r._serial = rig = _ClarRig()
+    assert r.set_clar(12000) == 9999 and rig.sent[-2] == "RU9999"
+
+
+def test_set_clar_raises_when_the_radio_ignores_it():
+    r = _radio({})
+    r._serial = _ClarRig(deaf=True, start=480)
+    with pytest.raises(FT950Error):
+        r.set_clar(100)

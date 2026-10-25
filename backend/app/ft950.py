@@ -333,6 +333,26 @@ class FT950:
     def clear_clar(self) -> None:
         self.send("RC")
 
+    def set_clar(self, offset_hz: int) -> int:
+        """Clarifier offset in Hz, -9999 ... +9999, and the value the radio holds.
+
+        There is no absolute set: RU/RD move the offset up or down and carry
+        no sign (the direction is the command), RC clears it. So clear, move
+        once, and read the result back from IF - the same order hamlib's
+        newcat uses, and it is right whether RU/RD add to the offset or replace
+        it. The read-back is the proof; a radio that dropped the step raises.
+        """
+        hz = max(-9999, min(9999, int(offset_hz)))
+        with self._lock:
+            self.send("RC")
+            if hz:
+                self.send(f"{'RU' if hz > 0 else 'RD'}{abs(hz):04d}")
+            time.sleep(0.08)
+            got = self.info().clar_hz
+        if got != hz:
+            raise FT950Error(f"clarifier reads back {got:+d} Hz instead of {hz:+d} Hz")
+        return got
+
     # -- CW keyer (the radio keys: exact timing, no audio path involved) ----
     def get_cw(self) -> dict:
         return {"wpm": self._num("KS", 2), "pitch": 300 + 50 * self._num("KP", 2),

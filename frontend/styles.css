@@ -1653,3 +1653,49 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 #seq-hunt .hunt-left{font-size:.82em; margin-left:.4em; opacity:.85}
 /* Auto Answer and Auto Hunt the same width (Auto Answer's own), in every state */
 #seq-answer, #seq-hunt{min-width:9.2em; text-align:center}
+/* Hunt list: each call with its own x; a field to add one */
+.hunt-blocked-box .hb-call{display:inline-flex; align-items:center; gap:2px; padding:1px 2px 1px 7px; border:1px solid var(--edge);
+  border-radius:5px; color:var(--text)}
+.hunt-blocked-box .hb-call button{border:0; background:none; color:var(--text-dim); cursor:pointer; font-size:13px; line-height:1; padding:0 4px}
+@media (hover:hover){.hunt-blocked-box .hb-call button:hover{color:var(--tx)}}
+.hunt-blocked-box .hb-add{display:inline-flex; gap:6px; margin-left:auto}
+.hunt-blocked-box .hb-add input{width:110px; font:12px var(--font-mono); text-transform:uppercase}
+.hunt-blocked-box .hb-list{max-height:120px}
+/* the list's room is reserved: fixed height, scrolls inside, the same when empty */
+.hunt-blocked-box .hb-list{height:92px; max-height:none; overflow-y:auto; align-content:flex-start;
+  padding:6px 8px; border:1px solid var(--edge); border-radius:6px; background:var(--field-bg); box-sizing:border-box}
+.hunt-blocked-box .hb-add input{background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; color:var(--text);
+  padding:5px 8px; outline:none}
+.hunt-blocked-box .hb-add input:focus{border-color:var(--cyan)}
+.hunt-blocked-box .hb-add input::placeholder{color:var(--text-dim); text-transform:none}
+.hunt-blocked-box{max-width:none}   /* the list across the whole tab */
+/* Hunt list as a table: column heads stay put while it scrolls */
+.hunt-blocked-box .hb-list{display:block; height:168px; padding:0}
+.hb-table{width:100%; border-collapse:collapse; font:12px var(--font-mono)}
+.hb-table thead th{position:sticky; top:0; z-index:1; background:var(--panel-2); text-align:left; font:600 9px var(--font-ui);
+  letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); padding:6px 8px; border-bottom:1px solid var(--edge)}
+.hb-table td{padding:4px 8px; border-bottom:1px solid color-mix(in srgb,var(--edge) 50%,transparent); color:var(--text-dim); white-space:nowrap}
+.hb-table td.hb-c{color:var(--text); font-weight:600}
+.hb-table .n{text-align:right}
+.hb-table td.x{width:1%; text-align:right; padding:2px 6px}
+.hb-table td.x button{border:0; background:none; color:var(--text-dim); cursor:pointer; font-size:14px; line-height:1; padding:0 4px}
+@media (hover:hover){.hb-table td.x button:hover{color:var(--tx)} .hb-table tbody tr:hover td{background:color-mix(in srgb,var(--edge) 25%,transparent)}}
+.hb-table tr.empty td{text-align:center; padding:18px; color:var(--text-dim)}
+.hb-table .dim{opacity:.7}
+/* decoder version on the WSJT-X plate */
+.digi-brand .db-ver{margin-left:10px; font:600 11px var(--font-mono); letter-spacing:.06em; color:var(--accent); opacity:.8;
+  white-space:nowrap; align-self:center}
+.digi-brand .db-ver:empty{display:none}
+/* DIGI title bar: the next-TX field larger, readable at a glance */
+.panel-head .chip.seq-tx{font-size:14px; font-weight:600; padding:5px 14px; width:min(360px, 30vw); letter-spacing:.02em}
+.panel-head .chip.seq-tx{border-radius:7px}   /* rounded, as the buttons beside it */
+/* MODE row: CTCSS · tone · MON on the same line as the mode keys - mode keys with the
+   compact padding at every width (wide windows gave them 9 px and pushed CTCSS down),
+   MON and the CTCSS selects more compact */
+#modes .sg{padding-left:6px; padding-right:6px}
+#modes ~ #narrow{padding-left:10px; padding-right:10px}
+.ctcss{gap:4px; margin-left:2px}
+.ctcss select{padding-left:7px; padding-right:7px}
+.ctcss #btn-mon{margin-left:2px; padding:4px 8px; font-size:10px; letter-spacing:.1em}
+.tuner-sel .sel-row{gap:10px}   /* a little tighter: CTCSS fits beside the mode keys down to ~1400 px */
+.tuner-sel .sel-row .ctcss{margin-left:auto}   /* CTCSS · tone · MON at the right end of the MODE row */

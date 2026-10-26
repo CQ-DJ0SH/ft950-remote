@@ -29,14 +29,14 @@ from .voice import RadioRxTrack, VoiceHub, consume_mic, force_opus_mono
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from .audio import AudioCapture
 from .config import APP_VERSION, settings
-from .digi import DECODERS as DIGI_DECODERS, MODES as DIGI_MODES, DigiService, decoder_available, decoder_config
+from .digi import DECODERS as DIGI_DECODERS, MODES as DIGI_MODES, DigiService, decoder_available, decoder_config, decoder_tag
 from .ft950 import (AGC_SET, ATT, BANDS, MODES, PREAMP, ROOF_SET, WIDTHS,
                     FT950Error, width_column)
 from .models import (zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
                      ClarReq, IfShiftReq, LevelReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
-                     RadioAudioReq, SeqAnswerReq, SeqCqReq, SettingsReq,
+                     RadioAudioReq, HuntBlockReq, SeqAnswerReq, SeqCqReq, SettingsReq,
                      ToggleReq, TuneReq, TuneReq2,
                      ValueReq, VoiceCfgReq, WebRTCOffer, WidthReq)
 from .radio_service import RadioService
@@ -91,7 +91,9 @@ tx = Transmitter(service, lambda: settings.audio_device,
                  level=(_rt.get("tx_level", 50) or 0) / 100, hub=hub)
 sequencer = Sequencer(digi, tx, logbook, digi_manager, settings)
 sequencer.closing = _rt.get("ft_closing") or "RR73"
-sequencer.hunt_blocked = dict(_rt.get("hunt_blocked") or {})
+# older lists kept only the time: {"K1ABC": 1761480000.0}
+sequencer.hunt_blocked = {c: (v if isinstance(v, dict) else {"t": float(v)})
+                          for c, v in (_rt.get("hunt_blocked") or {}).items()}
 for _k in ("hunt_target", "hunt_min_snr", "hunt_minutes"):
     if _rt.get(_k) is not None:
         setattr(sequencer, _k, _rt[_k])
@@ -604,13 +606,15 @@ async def get_settings() -> dict:
             "digi_high_hz": digi.config["high_hz"],
             "digi_decoder": _rt.get("digi_decoder") or "jt9",
             "digi_decoder_path": digi.config["jt9"],          # what actually runs (fallback: jt9)
+            "digi_decoder_tag": decoder_tag(digi.config),     # "2.7" / "2.7 fast" / "3.3 MT"
             "digi_decoders": [{"id": d["id"], "label": d["label"], "available": decoder_available(d),
                                "mt": bool(d.get("mt"))}
                               for d in DIGI_DECODERS],
             "ft_closing": sequencer.closing,
             "hunt_target": sequencer.hunt_target, "hunt_min_snr": sequencer.hunt_min_snr,
             "hunt_minutes": sequencer.hunt_minutes,
-            "hunt_blocked": sorted(sequencer.hunt_blocked.items(), key=lambda kv: -kv[1]), "digi_colors": _rt.get("digi_colors") or {},
+            "hunt_blocked": sorted(({"call": c, **v} for c, v in sequencer.hunt_blocked.items()),
+                                   key=lambda r: -r.get("t", 0)),         # newest first "digi_colors": _rt.get("digi_colors") or {},
             "cert": _cert_info(), "ca_available": CA_CERT.is_file(),
             "hackrf_url": _rt.get("hackrf_url") or HACKRF_DEFAULT,
             "shelly_host": power.host, "shelly_channel": power.channel, "shelly_user": power.user,
@@ -1059,6 +1063,12 @@ async def seq_auto(req: SeqAutoReq) -> dict:
 async def seq_hunt(req: SeqAutoReq) -> dict:
     """Hunt on/off (the DIGI strip's auto-clicker): calls new stations' CQs."""
     return await sequencer.set_hunt(req.on, req.tx_hz)
+
+
+@app.post("/api/seq/hunt/block")
+async def seq_hunt_block(req: HuntBlockReq) -> dict:
+    """Add a call to Hunt's no-reply list, or take one off."""
+    return await sequencer.set_hunt_blocked(req.call, req.blocked)
 
 
 @app.post("/api/seq/hunt/clear")

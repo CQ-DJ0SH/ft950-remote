@@ -24,8 +24,9 @@ KEYS = {"my_call", "my_grid", "serial_port", "audio_device",
         "wavelog_url", "wavelog_key", "wavelog_station_id",
         "qrz_username", "qrz_password", "qrz_api_key", "auto_log", "qrz_before_log",
         "mem_labels",                    # {"4": "FT8 20m"}: memory key names (radio has no CAT tag)
-        "mem_extra",
-        "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes"}                  # {"K1ABC": 1761480000.0}: Hunt's no-reply list                     # {"7": {"split": true, "vfo_b_hz": 29540000}}: not in a radio memory
+        "mem_extra",                     # {"7": {"split": true, "vfo_b_hz": 29540000}}: not in a radio memory
+        # Hunt: {"K1ABC": {"t": 1761480000.0, "dxcc": …, "snr": …, "band": …}}: the no-reply list
+        "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes"}
 
 
 def load() -> dict:

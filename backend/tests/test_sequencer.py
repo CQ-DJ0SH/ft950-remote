@@ -171,7 +171,7 @@ def test_hunt_picks_new_plain_cq_and_skips_blocked_directed_worked():
     assert s.hunt_pick(decs)["from"] == "SP2DDD"
     s.hunt_min_snr = -30
     assert s.hunt_pick(decs)["from"] == "K1FFF"                            # a new DXCC goes first
-    s.hunt_blocked["K1FFF"] = 1.0
+    s.hunt_blocked["K1FFF"] = {"t": 1.0}
     assert s.hunt_pick(decs)["from"] == "SP2DDD"
     s.hunt_target = "dxcc"
     assert s.hunt_pick(decs) is None                                       # only new DXCC wanted
@@ -221,3 +221,15 @@ def test_hunt_without_switch_off():
     assert s.status()["hunt_left_s"] is None
     asyncio.run(s.on_decodes([], 15.0, "FT8", False))
     assert s.hunt is True
+
+
+def test_hunt_list_edited_by_hand():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    saved = []
+    s.on_hunt_block = lambda b: saved.append(dict(b))
+    asyncio.run(s.set_hunt_blocked(" sp2ddd ", True))
+    assert "SP2DDD" in s.hunt_blocked and "SP2DDD" in saved[-1]
+    assert s.hunt_blocked["SP2DDD"]["manual"] and s.hunt_blocked["SP2DDD"]["t"] > 0
+    assert s.hunt_pick([_d("CQ SP2DDD JO93", worked=_w())]) is None
+    asyncio.run(s.set_hunt_blocked("SP2DDD", False))
+    assert s.hunt_blocked == {} and saved[-1] == {}

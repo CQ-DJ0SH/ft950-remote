@@ -186,13 +186,13 @@ def auto_mode(dial_hz: Optional[int]) -> str:
 # id, never a path. "jt9" is WSJT-X's own (Debian package, from PATH); the others
 # are local builds and are offered only where they are installed.
 DECODERS = [
-    {"id": "jt9", "path": "jt9",
+    {"id": "jt9", "path": "jt9", "tag": "2.7",
      "label": "jt9 · WSJT-X 2.7 (Debian package)"},
-    {"id": "jt9-fast", "path": "/usr/local/bin/jt9-fast",
+    {"id": "jt9-fast", "path": "/usr/local/bin/jt9-fast", "tag": "2.7 fast",
      "label": "jt9-fast · WSJT-X 2.7 built for the Pi 5, Rust OSD — same decodes, about twice as fast"},
     # MTft8 ("mt"): FT8's full pass is one process with threads over the whole
     # band instead of the band split over PARTS processes; it ignores the depth.
-    {"id": "jt9-33mt", "path": "/usr/local/bin/jt9-33", "mt": True,
+    {"id": "jt9-33mt", "path": "/usr/local/bin/jt9-33", "mt": True, "tag": "3.3 MT",
      "label": "jt9-33 · WSJT-X 3.3 beta, multithreaded MTft8 + Rust OSD — about 6 % more decodes, ~2.4 s"},
 ]
 
@@ -212,6 +212,14 @@ def decoder_config(decoder_id: str) -> dict:
     if decoder_id and decoder_id != "jt9":
         log.warning("Decoder %s not available, using jt9", decoder_id)
     return {"jt9": "jt9", "jt9_mt": False}
+
+
+def decoder_tag(config: dict) -> str:
+    """Short name of the decoder that actually runs (after any fallback),
+    for the DIGI panel's WSJT-X plate."""
+    d = next((x for x in DECODERS if x["path"] == config.get("jt9")
+              and bool(x.get("mt")) == bool(config.get("jt9_mt"))), DECODERS[0])
+    return d["tag"]
 
 
 def digi_jt9_path(decoder_id: str) -> str:
@@ -275,6 +283,7 @@ class DigiService:
     def status(self) -> dict:
         last = self.cycles[-1] if self.cycles else None
         return {"config": self.config, "mode": self.current_mode(),
+                "decoder": decoder_tag(self.config),       # the WSJT-X plate: "2.7 fast" …
                 "depth": self.depth, "dxcc_entities": len(self.dxcc),
                 "clock_synced": clock_synced(),
                 "capture": {"running": self.capture.running,

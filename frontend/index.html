@@ -346,7 +346,7 @@
   <section class="panel digi" id="digi">
     <div class="panel-head">
       <h2>DIGI · FT8/FT4</h2>
-      <span class="digi-brand" aria-hidden="true"><span class="screw screw-l"></span><span class="db-txt">WSJT-X</span><span class="screw screw-r"></span></span>
+      <span class="digi-brand" aria-hidden="true"><span class="screw screw-l"></span><span class="db-txt">WSJT-X</span><span class="db-ver" id="db-ver" title="The decoder that runs (Settings ▸ FT8 ▸ Decoder)"></span><span class="screw screw-r"></span></span>
       <button class="btn sm toggle on" id="digi-on" title="FT8/FT4 decoding on/off">DECODE</button>
       <span class="panel-stat" id="digi-head-stat"></span>
       <span class="spacer"></span>
@@ -695,6 +695,7 @@
       <div class="hunt-blocked-box">
         <span class="hb-head">No reply — not called again: <b id="hunt-blocked-n">0</b></span>
         <button type="button" class="mini-btn" id="hunt-unblock" title="Empty the list: these stations may be called again">Clear list</button>
+        <span class="hb-add"><input type="text" id="hunt-add-call" maxlength="12" placeholder="add call" autocapitalize="characters" autocomplete="off" spellcheck="false" title="A call Hunt must never call (Enter)"><button type="button" class="mini-btn" id="hunt-add">Add</button></span>
         <div class="hb-list" id="hunt-blocked-list"></div>
       </div>
       <span class="logo-label sec">COLOURS (RECEIVED / MY MESSAGES)</span>

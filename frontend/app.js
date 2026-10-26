@@ -1006,7 +1006,13 @@ function onDigi(m) {
   else followRx();
 }
 
+// the decoder that runs, on the WSJT-X plate in the DIGI title bar ("2.7 fast", "3.3 MT")
+function showDecoderTag(tag) {
+  const el = $("db-ver");
+  if (el && tag && el.textContent !== tag) el.textContent = tag;
+}
 function applyDigiStatus(s) {
+  showDecoderTag(s.decoder);
   digiMode = s.mode || digiMode;
   myCall = (s.config?.my_call || "").toUpperCase();
   $("my-empty").textContent = myCall ? `No messages to ${myCall} yet.`
@@ -1560,12 +1566,41 @@ function depthForDecoder() {
   $("set-depth").title = mt ? "MTft8 sets its own depth — this applies to FT4 and to the other decoders" : "";
 }
 $("set-decoder").onchange = depthForDecoder;
-function renderHuntBlocked(list) {             // [[call, unix time], …], newest first
+function renderHuntBlocked(list) {             // [{call, t, dxcc, snr, band, grid, tries, manual}], newest first
   $("hunt-blocked-n").textContent = list.length;
-  $("hunt-blocked-list").innerHTML = list.length ? list.map(([c, t]) =>
-    `<span title="blocked ${new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC">${esc(c)}</span>`).join("") : "—";
+  const utc = (t) => new Date(t * 1000).toISOString().slice(5, 16).replace("T", " ");   // MM-DD HH:MM
+  const v = (x) => (x == null || x === "" ? "—" : esc(String(x)));
+  $("hunt-blocked-list").innerHTML =
+    `<table class="hb-table"><thead><tr><th>Blocked (UTC)</th><th>Call</th><th>Country</th><th>Grid</th>` +
+    `<th>Band</th><th class="n">SNR</th><th class="n">Tries</th><th></th></tr></thead><tbody>` +
+    (list.length ? list.map((r) =>
+      `<tr><td>${r.t ? utc(r.t) : "—"}</td><td class="hb-c">${esc(r.call)}</td>` +
+      `<td>${r.manual ? '<span class="dim">added by hand</span>' : v(r.dxcc)}</td><td>${v(r.grid)}</td><td>${v(r.band)}</td>` +
+      `<td class="n">${r.snr == null ? "—" : r.snr}</td><td class="n">${v(r.tries)}</td>` +
+      `<td class="x"><button type="button" data-call="${esc(r.call)}" title="Take ${esc(r.call)} off the list: Hunt may call it again" aria-label="remove ${esc(r.call)}">×</button></td></tr>`).join("")
+      : '<tr class="empty"><td colspan="8">No station on the list</td></tr>') +
+    "</tbody></table>";
   $("hunt-unblock").disabled = !list.length;
+  for (const b of $("hunt-blocked-list").querySelectorAll("button[data-call]"))
+    b.onclick = () => huntBlockEdit(b.dataset.call, false);
 }
+// edit the list by hand: applied at once (as Clear list), the settings list reloads
+async function huntBlockEdit(call, blocked) {
+  try {
+    renderSeq(await api("/api/seq/hunt/block", { call, blocked }));
+    const s = await api("/api/settings");
+    renderHuntBlocked(s.hunt_blocked || []);
+    toast(blocked ? `${call} added — Hunt will not call it` : `${call} taken off — Hunt may call it again`);
+  } catch { /* toast */ }
+}
+function huntAdd() {
+  const c = $("hunt-add-call").value.trim().toUpperCase();
+  if (!/^[A-Z0-9/]{3,12}$/.test(c)) { toast("Not a callsign", true); return; }
+  $("hunt-add-call").value = "";
+  huntBlockEdit(c, true);
+}
+$("hunt-add").onclick = huntAdd;
+$("hunt-add-call").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); huntAdd(); } };
 $("hunt-unblock").onclick = async () => {
   try {
     renderSeq(await api("/api/seq/hunt/clear", {}));

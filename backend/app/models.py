@@ -215,6 +215,11 @@ class SeqAutoReq(BaseModel):
     tx_hz: float | None = Field(default=None, ge=200, le=2900)
 
 
+class HuntBlockReq(BaseModel):
+    call: Callsign = Field(pattern=r"^[A-Za-z0-9/]{3,12}$")
+    blocked: bool
+
+
 class SeqAnswerReq(BaseModel):
     decode: dict                            # a decode as /ws/digi delivered it
     tx_hz: float = Field(ge=200, le=2900)

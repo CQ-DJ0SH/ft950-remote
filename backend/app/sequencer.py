@@ -72,7 +72,8 @@ class Sequencer:
         # blocked list and is not called again (persisted by main.py).
         self.hunt = False
         self.hunt_until = 0.0
-        self.hunt_blocked: dict[str, float] = {}          # call -> when it was blocked
+        # call -> {"t": when, "dxcc", "snr", "band", "grid", "df", "mode", "tries"} (manual: only t)
+        self.hunt_blocked: dict[str, dict] = {}
         self.on_hunt_block = None                         # callback(dict) to persist the list
         # Settings ▸ FT8 ▸ Hunt
         self.hunt_target = "band"       # band: not worked on this band | call: never worked |
@@ -177,10 +178,19 @@ class Sequencer:
             self.on_hunt_block(self.hunt_blocked)
         return await self.publish()
 
-    def _hunt_block(self, call: str) -> None:
-        self.hunt_blocked[call] = time.time()
+    async def set_hunt_blocked(self, call: str, blocked: bool) -> dict:
+        """Edit the no-reply list by hand (Settings ▸ FT8 ▸ Hunt)."""
+        call = call.strip().upper()
+        if blocked:
+            self._hunt_block(call, {"manual": True})
+        elif self.hunt_blocked.pop(call, None) is not None and self.on_hunt_block:
+            self.on_hunt_block(self.hunt_blocked)
+        return await self.publish()
+
+    def _hunt_block(self, call: str, info: Optional[dict] = None) -> None:
+        self.hunt_blocked[call] = {"t": time.time(), **(info or {})}
         while len(self.hunt_blocked) > HUNT_BLOCK_MAX:              # oldest out
-            del self.hunt_blocked[min(self.hunt_blocked, key=self.hunt_blocked.get)]
+            del self.hunt_blocked[min(self.hunt_blocked, key=lambda c: self.hunt_blocked[c]["t"])]
         log.info("hunt: %s did not answer - not called again", call)
         if self.on_hunt_block:
             self.on_hunt_block(self.hunt_blocked)
@@ -348,8 +358,13 @@ class Sequencer:
                     self.kind = None
                 elif self.step not in ("cq", "done") and self.tries >= MAX_TRIES:
                     self.session["state"] = "no reply"
-                    if self.session.get("hunt") and not self.session.get("answered"):
-                        self._hunt_block(self.session["call"])
+                    s = self.session
+                    if s.get("hunt") and not s.get("answered"):
+                        vfo = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
+                        self._hunt_block(s["call"], {
+                            "dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",
+                            "df": s.get("df"), "mode": s.get("mode"), "tries": self.tries,
+                            "band": band_for_hz(s.get("freq_hz") or vfo)})
                     await self._finish_round()
         except asyncio.CancelledError:
             raise

@@ -1615,3 +1615,5 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .panel-head{min-height:33px}
 #hackrf.collapsed{padding-bottom:12px}
 .lcd .vfo-b{border-top:2px solid color-mix(in srgb, var(--lb) 40%, transparent)}   /* the divider 2 px, dimmed */
+/* DIGI RX level in the footer (it wrapped in the control row) */
+.foot .lvl{margin-left:8px}

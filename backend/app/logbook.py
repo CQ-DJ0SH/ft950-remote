@@ -546,9 +546,10 @@ class LogBook:
         os.replace(tmp, RECENT_FILE)
 
     def log_qso(self, q: dict, *, station_callsign: str, my_grid: str,
-                automatic: bool = False) -> dict:
-        """Log one QSO: QRZ lookup first (fills gaps), then Wavelog, then the
-        local recent list and the worked index."""
+                automatic: bool = False, to: tuple = ("wavelog", "qrz")) -> dict:
+        """Log one QSO: QRZ lookup first (fills gaps), then the targets in
+        ``to`` (Wavelog and/or the QRZ.com logbook), then the local recent
+        list and the worked index. A target left out is None in the entry."""
         call = (q.get("call") or "").strip().upper()
         if not call:
             raise LogError("callsign missing")
@@ -578,10 +579,12 @@ class LogBook:
         if not qso["country"]:
             qso["country"] = self.dxcc.lookup(call) or ""
         adif = build_adif(qso)
-        result = {"ok": False, "message": "no Wavelog configured (Settings ▸ Log)"}
-        if self.wavelog.configured() and self.wavelog.station_id:
-            result = self.wavelog.log_qso(adif, power_w=qso["tx_pwr"])
-        qrz = self.qrz.log_qso(adif) if self.qrz.upload_ready() else None
+        result = {"ok": None, "message": "not sent to Wavelog"}
+        if "wavelog" in to:
+            result = {"ok": False, "message": "no Wavelog configured (Settings ▸ Log)"}
+            if self.wavelog.configured() and self.wavelog.station_id:
+                result = self.wavelog.log_qso(adif, power_w=qso["tx_pwr"])
+        qrz = self.qrz.log_qso(adif) if "qrz" in to and self.qrz.upload_ready() else None
         entry = {"ts": now.isoformat(timespec="seconds"), **{k: qso[k] for k in (
             "call", "band", "freq_mhz", "mode", "rst_sent", "rst_rcvd", "name",
             "gridsquare", "qth", "country")}, "wavelog": result["ok"],
@@ -590,7 +593,7 @@ class LogBook:
             "auto": automatic, "lookup_error": lookup_note}
         self._recent.insert(0, entry)
         self._save_recent()
-        if result["ok"]:
+        if result["ok"] or (qrz and qrz["ok"]):         # worked, wherever it went
             self.worked.add(call, qso["band"])
             self.worked.save()
         return {**result, "qrz": qrz, "entry": entry}

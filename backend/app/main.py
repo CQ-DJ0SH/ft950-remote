@@ -1022,7 +1022,10 @@ async def tx_tone1750(req: OnOffReq) -> dict:
 
 @app.post("/api/tx/halt")
 async def tx_halt() -> dict:
-    """Halt TRX: the sequencer and any transmission, at once."""
+    """Halt TRX: the sequencer, Auto Hunt and any transmission, at once
+    (Hunt would otherwise call the next station a period later)."""
+    if sequencer.hunt:
+        await sequencer.set_hunt(False)
     await sequencer.halt()
     return await tx.stop()
 
@@ -1056,13 +1059,13 @@ async def seq_sessions_clear() -> dict:
 @app.post("/api/seq/auto")
 async def seq_auto(req: SeqAutoReq) -> dict:
     """Auto answer on/off (the DIGI strip's Answer switch)."""
-    return await sequencer.set_auto(req.on, req.tx_hz)
+    return await sequencer.set_auto(req.on, req.tx_hz, req.adopt)
 
 
 @app.post("/api/seq/hunt")
 async def seq_hunt(req: SeqAutoReq) -> dict:
     """Hunt on/off (the DIGI strip's auto-clicker): calls new stations' CQs."""
-    return await sequencer.set_hunt(req.on, req.tx_hz)
+    return await sequencer.set_hunt(req.on, req.tx_hz, req.adopt)
 
 
 @app.post("/api/seq/hunt/block")
@@ -1152,7 +1155,8 @@ async def log_qso(req: QsoReq) -> dict:
     q.pop("tx_offset_hz", None)
     q["mode"] = q["mode"] or digi.current_mode()
     q["tx_pwr"] = service.status.get("power")
-    return await asyncio.to_thread(_logged, logbook.log_qso, q,
+    to = tuple(q.pop("to", None) or ("wavelog", "qrz"))
+    return await asyncio.to_thread(_logged, logbook.log_qso, q, to=to,
                                    station_callsign=settings.my_call, my_grid=settings.my_grid)
 
 

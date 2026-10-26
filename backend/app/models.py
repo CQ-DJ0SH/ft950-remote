@@ -153,6 +153,7 @@ class QsoReq(BaseModel):
     mode: str | None = None                 # default: current digi mode
     freq_hz: int | None = None              # default: dial + TX offset
     tx_offset_hz: int | None = None
+    to: list[Literal["wavelog", "qrz"]] = Field(default_factory=lambda: ["wavelog", "qrz"], min_length=1)
 
 
 class TuneReq2(BaseModel):
@@ -213,6 +214,7 @@ class SeqCqReq(BaseModel):
 class SeqAutoReq(BaseModel):
     on: bool
     tx_hz: float | None = Field(default=None, ge=200, le=2900)
+    adopt: bool | None = None               # AF: answer on the partner's frequency
 
 
 class HuntBlockReq(BaseModel):

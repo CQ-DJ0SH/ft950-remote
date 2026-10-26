@@ -244,7 +244,7 @@ class DigiService:
         self.worked_lookup: Optional[Callable[[str, Optional[int], Optional[str]], dict]] = None
         # Sequencer hooks (set by main.py): who gets decodes, whether an early
         # pass is wanted (None = no, else (low_hz, high_hz)), own TX periods.
-        self.on_decodes = None          # async (decodes, t0, mode, early) -> None
+        self.on_decodes = None          # async (decodes, t0, mode, early, partner=False) -> None
         self.early_range: Callable[[], Optional[tuple[int, int]]] = lambda: None
         self.tx_periods: set[float] = set()
         # Depth adapts per mode (see _adapt). Start values are measured on the
@@ -373,7 +373,8 @@ class DigiService:
                     ptext = await self._jt9(mode, wav, 2, rng, sub="partner")
                     pdec = self._enrich(dedupe(parse_jt9(ptext)), mode, t0, vfo.get("freq_hz"))
                     stat["partner_ms"] = round((time.monotonic() - t) * 1000)
-                    await self.on_decodes(pdec, t0, mode, True)
+                    # partner=True: the complete slice, the partner's range searched
+                    await self.on_decodes(pdec, t0, mode, True, partner=True)
                 except Exception as exc:  # noqa: BLE001
                     log.warning("partner pass %s failed: %s", mode, exc)
             depth = self._depth(mode)

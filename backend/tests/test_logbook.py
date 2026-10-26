@@ -58,3 +58,39 @@ def test_reset_index_is_not_synced(tmp_path, monkeypatch):
     w.add("OH6IH", "20m"); w.synced_at = 123.0
     w.reset()
     assert w.synced_at is None and w.count == 0
+
+
+def test_log_qso_to_one_target_only(tmp_path):
+    from app.logbook import LogBook
+
+    class WL:
+        sent = []
+        station_id = "1"
+        def configured(self): return True
+        def log_qso(self, adif, power_w=None): WL.sent.append(adif); return {"ok": True, "message": "ok"}
+
+    class Q:
+        sent = []
+        def configured(self): return False
+        def upload_ready(self): return True
+        def log_qso(self, adif): Q.sent.append(adif); return {"ok": True, "message": "QRZ-Log #1"}
+
+    class Worked:
+        added = []
+        def add(self, call, band): Worked.added.append(call)
+        def save(self): pass
+
+    class Dx:
+        def lookup(self, call): return "Poland"
+
+    lb = LogBook.__new__(LogBook)                      # no runtime.json, no network
+    lb.wavelog, lb.qrz, lb.worked, lb.dxcc = WL(), Q(), Worked(), Dx()
+    lb.qrz_before_log, lb._recent = False, []
+    lb._save_recent = lambda: None
+    q = {"call": "sp2ddd", "freq_hz": 14_074_000, "mode": "FT8"}
+
+    r = lb.log_qso(dict(q), station_callsign="DJ0SH", my_grid="JO62qk", to=("qrz",))
+    assert Q.sent and not WL.sent                        # QRZ only
+    assert r["entry"]["wavelog"] is None and r["entry"]["qrz"] is True and Worked.added == ["SP2DDD"]
+    r = lb.log_qso(dict(q), station_callsign="DJ0SH", my_grid="JO62qk", to=("wavelog",))
+    assert len(WL.sent) == 1 and len(Q.sent) == 1 and r["entry"]["qrz"] is None and r["ok"] is True

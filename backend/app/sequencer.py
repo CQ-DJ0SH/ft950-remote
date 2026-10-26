@@ -38,6 +38,7 @@ CQ_MAX = 40
 WAIT_MARGIN = 0.45          # stop waiting for decodes this long before the latest start
 # Hunt (the DIGI strip's auto-clicker): switches itself off after this long, and
 # only calls while a browser shows the DIGI panel - an operator at the station.
+PARTNER_SPAN_MAX = 1000    # wider than this, the fast partner pass looks at the partner only
 HUNT_MAX_S = 180 * 60       # default; Settings ▸ FT8 ▸ Hunt, 0 = no switch-off
 HUNT_BLOCK_MAX = 1000       # calls kept on the no-reply list
 
@@ -65,6 +66,9 @@ class Sequencer:
         # R-report to my call) is answered without a click, on auto_tx_hz.
         self.auto_answer = False
         self.auto_tx_hz: float = 1500.0
+        # AF (adopt frequency, the DIGI strip's switch): Auto Answer / Auto Hunt
+        # transmit on the partner's frequency instead of the TX box
+        self.adopt_freq = True
         self.tx_hz = 1500.0
         self.last_tx: Optional[dict] = None
         # Hunt: while idle, call a new station's CQ (not worked on this band),
@@ -160,22 +164,43 @@ class Sequencer:
         if not self.kind:
             return None
         if self.session and self.session.get("df"):
-            lo = min(self.session["df"], self.tx_hz) - 150
-            hi = max(self.session["df"], self.tx_hz) + 150
+            df = self.session["df"]
+            lo = min(df, self.tx_hz) - 150
+            hi = max(df, self.tx_hz) + 150
+            if hi - lo > PARTNER_SPAN_MAX:
+                # partner far from our TX frequency: the partner answers on its own
+                # frequency, so decode around it only. (The span over both was so
+                # wide that the digi service skipped the fast partner pass, and every
+                # reply came only with the full pass - after our TX had started.)
+                lo, hi = df - 150, df + 150
             return int(max(100, lo)), int(min(3500, hi))
         return int(self.digi.config["low_hz"]), int(self.digi.config["high_hz"])
 
-    async def set_auto(self, on: bool, tx_hz: Optional[float] = None) -> dict:
-        self.auto_answer = on
+    def _auto_hz(self, d: dict) -> float:
+        """TX frequency for a QSO started by Auto Answer or Auto Hunt: the
+        partner's own frequency while AF (adopt frequency) is on, else the TX box."""
+        if self.adopt_freq and d.get("df"):
+            return clamp_tx_hz(d["df"])
+        return self.auto_tx_hz
+
+    def _set_common(self, tx_hz: Optional[float], adopt: Optional[bool]) -> None:
         if tx_hz:
             self.auto_tx_hz = clamp_tx_hz(tx_hz)
+        if adopt is not None:
+            self.adopt_freq = adopt
+
+    async def set_auto(self, on: bool, tx_hz: Optional[float] = None, adopt: Optional[bool] = None) -> dict:
+        self.auto_answer = on
+        self._set_common(tx_hz, adopt)
         return await self.publish()
 
-    async def set_hunt(self, on: bool, tx_hz: Optional[float] = None) -> dict:
+    async def set_hunt(self, on: bool, tx_hz: Optional[float] = None, adopt: Optional[bool] = None) -> dict:
+        if on and not self.hunt:                     # switching on starts the clock; already on keeps it
+            self.hunt_until = math.inf if not self.hunt_minutes else time.time() + self.hunt_minutes * 60
+        elif not on:
+            self.hunt_until = 0.0
         self.hunt = on
-        self.hunt_until = (math.inf if not self.hunt_minutes else time.time() + self.hunt_minutes * 60) if on else 0.0
-        if tx_hz:
-            self.auto_tx_hz = clamp_tx_hz(tx_hz)
+        self._set_common(tx_hz, adopt)
         return await self.publish()
 
     async def clear_hunt_blocked(self) -> dict:
@@ -228,7 +253,8 @@ class Sequencer:
         return max(cands, key=lambda d: (not d["worked"].get("dxcc"),
                                          not d["worked"].get("dxcc_band"), d.get("snr", -99)))
 
-    async def on_decodes(self, decodes: list[dict], t0: float, mode: str, early: bool) -> None:
+    async def on_decodes(self, decodes: list[dict], t0: float, mode: str, early: bool,
+                         partner: bool = False) -> None:
         if not self.kind and self.auto_answer and not early and t0 not in self.digi.tx_periods:
             callers = [d for d in decodes if (d.get("to") or "").upper() == self.me
                        and d.get("kind") in ("grid", "report", "rreport") and d.get("from")
@@ -237,7 +263,7 @@ class Sequencer:
                 d = max(callers, key=lambda x: x["snr"])                 # strongest caller
                 log.info("auto answer: %s (%s)", d["from"], d["msg"])
                 try:
-                    await self.answer(d, self.auto_tx_hz)
+                    await self.answer(d, self._auto_hz(d))
                 except RuntimeError as exc:
                     log.warning("auto answer %s: %s", d["from"], exc)
                 return
@@ -251,7 +277,7 @@ class Sequencer:
                 if d:
                     log.info("hunt: calling %s (%s)", d["from"], d["msg"])
                     try:
-                        await self.answer(d, self.auto_tx_hz)
+                        await self.answer(d, self._auto_hz(d))
                         self.session["hunt"] = True
                         await self.publish()
                     except RuntimeError as exc:
@@ -284,7 +310,11 @@ class Sequencer:
         # A partial pass (early / partner) only settles the period when it
         # found the partner (or a caller); otherwise the full pass decides —
         # an early "nothing" must not make us repeat the old message.
-        if early and not relevant:
+        # The partner pass (partner=True) searched the partner's range on the
+        # complete slice: nothing from them there settles the period as well -
+        # we repeat at once instead of waiting for the full pass (1.5-2.5 s, so
+        # every repeat went out ~1.9 s late). The 13.4 s early pass does not.
+        if early and not relevant and not (partner and self.session):
             await self.publish()
             return
         self._seen[t0] = True
@@ -336,6 +366,11 @@ class Sequencer:
                     except asyncio.TimeoutError:
                         break
                 msg = self._next_message()
+                # when the next message was chosen, and whether the partner's
+                # period had been decoded by then (a late decision = late TX start)
+                log.info("TX decision %+.2f s into the period, partner period %s: %s",
+                         time.time() - t0, "decoded" if self._seen.get(prev) else "NOT decoded (deadline)",
+                         msg or "-")
                 if msg is None:
                     await self._finish_round()
                     continue
@@ -346,18 +381,9 @@ class Sequencer:
                     self._log_tx(msg, t0, {"start_offset": offset})
                     await self.publish()
 
+                sent_step = self.step       # the step this message belongs to
                 res = await self.tx.send_ft(msg, self.mode, self.tx_hz, t0, on_air=on_air)
-                if res.get("sent"):
-                    if self.step == "cq":
-                        self.cq_count += 1
-                    else:
-                        self.tries += 1
-                    if self.step in ("rr73", "73"):
-                        # closing message sent: QSO complete. "done" sends nothing
-                        # more — unless the partner repeats the R-report (missed
-                        # our RR73), which puts the step back to "rr73".
-                        self._complete()
-                        self.step = "done"
+                self._after_send(sent_step, res)
                 await self.publish()
                 if self.step == "cq" and self.cq_count >= CQ_MAX:
                     log.info("CQ limit (%d) reached", CQ_MAX)
@@ -381,6 +407,29 @@ class Sequencer:
             self.kind = None
         finally:
             await self.publish()
+
+    def _after_send(self, sent_step: Optional[str], res: dict) -> None:
+        """Book a transmission: tries / CQ count, and the QSO's end after the
+        closing message - judged by the step the message belonged to."""
+        if res.get("sent") and self.step != sent_step:
+            # The partner's reply was decoded while this (older) message
+            # was on the air, and the step moved on: what we sent is not
+            # the new step's message - it goes out next period. Counting
+            # it as sent once ended a QSO without our 73 (RR73 came in
+            # during a repeated R-report, the loop took that as "73 sent").
+            log.info("reply arrived during TX (%s -> %s): next message next period",
+                     sent_step, self.step)
+        elif res.get("sent"):
+            if self.step == "cq":
+                self.cq_count += 1
+            else:
+                self.tries += 1
+            if self.step in ("rr73", "73"):
+                # closing message sent: QSO complete. "done" sends nothing
+                # more — unless the partner repeats the R-report (missed
+                # our RR73), which puts the step back to "rr73".
+                self._complete()
+                self.step = "done"
 
     async def _finish_round(self) -> None:
         """Session over: CQ goes on calling, Answer stops."""
@@ -479,8 +528,9 @@ class Sequencer:
 
     async def _autolog(self, s: dict, q: dict) -> None:
         try:
+            # auto-log goes to Wavelog only; the QRZ.com logbook by hand (LOG QRZ)
             r = await asyncio.to_thread(self.logbook.log_qso, q, station_callsign=self.me,
-                                        my_grid=self.settings.my_grid, automatic=True)
+                                        my_grid=self.settings.my_grid, automatic=True, to=("wavelog",))
             s["logged"] = bool(r.get("ok"))
             s["log_message"] = r.get("message")
         except LogError as exc:
@@ -499,7 +549,7 @@ class Sequencer:
                 "last_tx": self.last_tx, "session": view(self.session) if self.session else None,
                 "sessions": [view(s) for s in list(self.sessions)[:20]],
                 "auto_log": self.logbook.auto_log, "auto_answer": self.auto_answer,
-                "hunt": self.hunt,
+                "hunt": self.hunt, "adopt_freq": self.adopt_freq,
                 "hunt_left_s": (None if math.isinf(self.hunt_until) else max(0, round(self.hunt_until - time.time())))
                 if self.hunt else 0,                       # None: no switch-off
                 "hunt_blocked": sorted(self.hunt_blocked)}

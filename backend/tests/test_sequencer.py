@@ -123,7 +123,7 @@ def test_auto_answer_takes_the_strongest_caller_when_idle():
     decs = [_d("DJ0SH IK4RVY JN54", snr=-15), _d("DJ0SH SP3ABC JO82", snr=-4), _d("CQ DL1XYZ JO40", snr=5)]
     asyncio.run(s.on_decodes(decs, 15.0, "FT8", False))
     assert started == []                                  # switch off: nothing happens
-    asyncio.run(s.set_auto(True, 1750))
+    asyncio.run(s.set_auto(True, 1750, adopt=False))       # AF off: on the TX box
     asyncio.run(s.on_decodes(decs, 15.0, "FT8", True))    # early/partial pass: ignored
     assert started == []
     asyncio.run(s.on_decodes(decs, 15.0, "FT8", False))
@@ -240,3 +240,70 @@ def test_answer_marks_the_partners_period_as_evaluated():
     s._run = lambda: None                                   # no loop in the test
     asyncio.run(s.answer(_d("CQ SP2DDD JO93", t0=30.0), 1500))
     assert s._seen.get(30.0) is True                        # TX in the next period starts at once
+
+
+def test_rr73_during_our_repeated_r_report_still_gets_our_73():
+    """The EU7FBB case: RR73 decoded while our repeated R+07 was on the air -
+    the R+07 must not count as the closing message; 73 goes out next."""
+    s = _seq()
+    s.session = s._new_session(_d("CQ EU7FBB KO43", t0=0.0))
+    s.step, s.tries = "rreport", 2
+    sent_step = s.step                                     # R+07 goes on the air ...
+    s._advance(_d("DJ0SH EU7FBB RR73", t0=30.0))           # ... RR73 decoded meanwhile
+    assert s.step == "73"
+    s._after_send(sent_step, {"sent": True})
+    assert s.step == "73" and s.session["state"] == "running"   # not closed: 73 still to send
+    assert s._next_message() == "EU7FBB DJ0SH 73"
+    s._after_send("73", {"sent": True})                    # next period: our 73
+    assert s.step == "done"
+
+
+def test_early_range_narrows_to_the_partner_when_far_from_our_tx():
+    s = _seq()
+    s.session = s._new_session(_d("CQ M0DPK IO80", df=607))
+    s.tx_hz = 1950.0
+    assert s.early_range() == (457, 757)                  # partner only: the fast pass can run
+    s.tx_hz = 900.0
+    assert s.early_range() == (457, 1050)                 # close: both, as before
+
+
+def test_auto_answer_and_hunt_adopt_the_partners_frequency():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    started = []
+    async def fake_answer(d, hz):
+        started.append((d["from"], hz))
+        s.session = s._new_session(d)
+    s.answer = fake_answer
+    asyncio.run(s.set_hunt(True, 1950, adopt=True))
+    asyncio.run(s.on_decodes([_d("CQ M0DPK IO80", df=607, worked=_w())], 15.0, "FT8", False))
+    assert started[-1] == ("M0DPK", 607.0)                # AF on: on M0DPK's frequency
+    s.session, s.kind = None, None
+    until = s.hunt_until
+    asyncio.run(s.set_hunt(True, adopt=False))            # AF switched off while hunting
+    assert s.hunt_until == until                          # the switch-off clock is kept
+    asyncio.run(s.on_decodes([_d("CQ OK1CCC JO70", df=700, worked=_w())], 30.0, "FT8", False))
+    assert started[-1] == ("OK1CCC", 1950.0)              # AF off: the TX box
+
+
+def test_an_empty_partner_pass_settles_the_period():
+    s = _seq()
+    s.session = s._new_session(_d("CQ EA5GY IM98", df=2209))
+    s.step = "call"
+    asyncio.run(s.on_decodes([], 30.0, "FT8", True))                  # 13.4 s early pass: no
+    assert not s._seen.get(30.0)
+    asyncio.run(s.on_decodes([], 30.0, "FT8", True, partner=True))    # partner pass, nothing from them
+    assert s._seen.get(30.0) is True                                  # repeat at once
+
+
+def test_halt_endpoint_switches_hunt_off(monkeypatch):
+    # what /api/tx/halt does with the sequencer: Hunt off, then halt
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    async def no_stop(): return {}
+    s.tx.stop = no_stop
+    asyncio.run(s.set_hunt(True))
+    async def halt_like_endpoint():
+        if s.hunt:
+            await s.set_hunt(False)
+        await s.halt()
+    asyncio.run(halt_like_endpoint())
+    assert s.hunt is False and s.hunt_until == 0.0

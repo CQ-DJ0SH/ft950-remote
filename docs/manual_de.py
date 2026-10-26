@@ -253,8 +253,10 @@ DE = [
           "Empfangene Meldungen zeigen SNR, Zeitversatz, Frequenz, Text und DXCC, "
           "farblich nach Worked-before markiert."),
     ("ul", [
-        "Klick auf eine Dekodierung legt das Empfangsfenster dorthin (bei AF wandert "
-        "auch TX mit); Doppelklick antwortet der Station — in Received und in My "
+        "Klick auf eine Dekodierung legt das Empfangsfenster dorthin (bei AF — "
+        "Frequenz übernehmen — wandert auch TX mit; Auto Answer und Auto Hunt "
+        "antworten dann auf der Frequenz der Gegenstation, und die TX-Box folgt, "
+        "solange ihr QSO läuft); Doppelklick antwortet der Station — in Received und in My "
         "Messages. Ein Doppelklick in den ersten etwa 1,7 s der eigenen "
         "Sendeperiode sendet noch in dieser Periode (sofortiger Start, die "
         "Gegenstation sieht ein leicht positives DT); später geht es in der "
@@ -264,8 +266,8 @@ DE = [
         "Session Messages.",
         "Eine fehlgeschlagene Session zeigt in der Liste nur error; den Grund "
         "bringt ein Toast (beim Auftreten und beim Klick auf die Zeile) und der Tooltip.",
-        "Eine markierte Session (Klick auf die Zeile) öffnet mit QRZ die Seite der "
-        "Station auf QRZ.com und mit Map eine Weltkarte: Standort nach Locator (ohne "
+        "Eine markierte Session (Klick auf die Zeile) öffnet mit QRZ Visit die Seite der "
+        "Station auf QRZ.com und mit Map Display eine Weltkarte: Standort nach Locator (ohne "
         "Locator die Mitte des DXCC-Gebiets), Großkreis, Entfernung und Richtung ab "
         "dem eigenen Locator. Beide öffnen ein Popup-Fenster.",
         "CQ ruft CQ; Auto Answer: Im Ruhezustand wird eine Station, die Sie "
@@ -275,19 +277,25 @@ DE = [
         "CQ DX/NA/…; neues DXCC zuerst, dann das stärkste Signal) und wartet, bis "
         "das QSO zu Ende ist. Eine Station, die nie antwortet, wird in Received "
         "Messages durchgestrichen und nicht wieder angerufen (die Liste übersteht "
-        "Neustarts). Eingeschaltet zeigt der Knopf Hunt und die Restminuten (∞: "
-        "keine Abschaltung). Er ruft nur an, solange ein Browser das DIGI-Feld "
+        "Neustarts). Eingeschaltet ist der Knopf rot und zeigt Hunt und die "
+        "Restzeit als m:ss (∞: keine Abschaltung). Er ruft nur an, solange ein Browser das DIGI-Feld "
         "zeigt. Wen er anruft, das Mindest-SNR, die Abschaltzeit (Standard 180 min, "
         "0 = nie) und die Liste stehen unter Settings ▸ FT8.",
         "Die Ablaufsteuerung folgt WSJT-X: Anruf, Rapport, R-Rapport, RR73, 73; "
         "mit Auto-log im Kopf der Sessions (Standard an) wird jedes fertige QSO "
-        "automatisch geloggt, sonst landet es im Logformular. Statt RR73 kann sie RRR "
+        "automatisch nach Wavelog geloggt (ins QRZ.com-Logbuch von Hand mit LOG "
+        "QRZ.COM), sonst landet es im Logformular. Kommt eine Antwort, während unsere "
+        "ältere Nachricht noch gesendet wird, geht die passende Antwort in der "
+        "nächsten Periode hinaus — das QSO endet nicht vor unserem eigenen 73. Statt RR73 kann sie RRR "
         "senden (Settings ▸ FT8).",
         "Der Schieberegler mit dem Lautsprecher stellt den DIGI-Empfangspegel auf "
         "dem Pi ein (die Anzeige dazu, Ziel −40 … −20 dBFS, steht in der Fußzeile "
         "neben der Frequenz), der mit der Antenne daneben den FT8/FT4-Sendepegel (wie "
         "FT8 TX DRIVE in Settings ▸ Audio); TUNE sendet einen Dauerton. Halt TRX rechts in der Titelzeile "
-        "ist nur bei einer FT8/FT4-Sendung oder während einer Sequenz aktiv (sonst abgedunkelt) und bricht sofort ab.",
+        "ist bei einer FT8/FT4-Sendung, während einer Sequenz oder bei laufendem Auto "
+        "Hunt aktiv (sonst abgedunkelt); er bricht sofort ab und schaltet Auto Hunt "
+        "aus. NTP in der Leiste ist eine LED: grün bei synchroner Uhr, rot ohne "
+        "(dann wird nicht dekodiert).",
     ]),
     ("h2", "Bandbedingungen (VOACAP)"),
     ("p", "Unten rechts im Feld zeigen eine Sonne oder ein Mond und fünf Felder — "
@@ -347,13 +355,18 @@ DE = [
 
     ("h1", "12  Logbuch"),
     ("p", "Das Feld LOG loggt in Wavelog (API-Schlüssel und Stationsprofil) und "
-          "wahlweise ins QRZ.com-Logbuch; QRZ LOOKUP füllt Name, QTH und Locator aus. "
+          "ins QRZ.com-Logbuch — jeweils mit eigenem Knopf neben dem Rufzeichen: LOG "
+          "WAVELOG und LOG QRZ.COM (das Formular bleibt stehen, so kann ein QSO in "
+          "beide; ein ✓ zeigt, wohin es ging). QRZ LOOKUP füllt Name, QTH und Locator "
+          "aus; NEW STATION / WORKED steht in der Titelzeile. "
           "Der Worked-before-Index wird aus Wavelog geladen und färbt die FT8-Liste. "
           "Unter Settings ▸ Log stehen die Zugänge — die Schlüssel verlassen den Pi nie."),
     ("p", "In der Titelzeile LEDs wie in der Titelleiste der Seite: WAVELOG und QRZ "
           "grün, wenn eingerichtet, AUTO grün, solange fertige QSOs automatisch "
-          "geloggt werden. LOG QSO ist nur umrandet, solange das Formular leer ist, "
-          "und gefüllt, sobald ein Rufzeichen darin steht — dann gibt es etwas zu loggen."),
+          "geloggt werden (nach Wavelog). Die LOG-Knöpfe sind nur umrandet, solange das "
+          "Formular leer ist, und gefüllt, sobald ein Rufzeichen darin steht — dann "
+          "gibt es etwas zu loggen. Recent QSOs: QRZ Visit und Map Display für die "
+          "markierte Zeile."),
 
     ("h1", "13  Einstellungen"),
     ("img", "manual/set-general.png", 120),

@@ -231,7 +231,9 @@ EN = [
           "measured run time. Received messages list SNR, time offset, "
           "frequency, message and DXCC, with worked-before colouring."),
     ("ul", [
-        "Click a decode to put the RX window there (AF also moves TX); "
+        "Click a decode to put the RX window there (AF — adopt frequency — also "
+        "moves TX; Auto Answer and Auto Hunt then answer on the partner's "
+        "frequency, and the TX box follows while their QSO runs); "
         "double-click answers the station — in Received and in My Messages. "
         "A double-click within the first ~1.7 s of your own TX period still "
         "transmits in that period (start at once, the partner sees a slightly "
@@ -241,8 +243,8 @@ EN = [
         "Messages included.",
         "A failed session shows just error in the list; the reason comes as a "
         "toast (when it happens and on a click on the row) and as the tooltip.",
-        "With a session marked (click its row), QRZ opens the station's QRZ.com "
-        "page and Map a world map: position from the locator (without one, the "
+        "With a session marked (click its row), QRZ Visit opens the station's QRZ.com "
+        "page and Map Display a world map: position from the locator (without one, the "
         "centre of the DXCC entity), great circle, distance and bearing from your "
         "locator. Both open a popup window.",
         "CQ calls CQ; Auto Answer: while idle, a station calling you is answered "
@@ -251,20 +253,25 @@ EN = [
         "full decode pass it calls the best new CQ (a plain CQ, not CQ DX/NA/…; new "
         "DXCC first, then the strongest) and waits for the QSO to end. A station "
         "that never answers is struck through in Received Messages and not called "
-        "again (the list survives restarts). While on, the button shows Hunt and "
-        "the minutes left (∞: no switch-off). It calls only while a browser shows "
+        "again (the list survives restarts). While on, the button is red and shows "
+        "Hunt and the time left as m:ss (∞: no switch-off). It calls only while a browser shows "
         "the DIGI panel. Whom it calls, the minimum SNR, the switch-off time "
         "(default 180 min, 0 = never) and the no-reply list are in Settings ▸ FT8.",
         "The sequencer follows WSJT-X: call, report, R-report, RR73, 73; it can "
         "log automatically: Auto-log in the Sessions header (default on) logs every "
-        "completed QSO, otherwise it is offered in the log form. It can send RRR instead of RR73 "
+        "completed QSO to Wavelog (the QRZ.com logbook by hand, LOG QRZ.COM), "
+        "otherwise it is offered in the log form. A reply that comes in while our "
+        "older message is still on the air is answered next period — the QSO is not "
+        "closed before our own 73. It can send RRR instead of RR73 "
         "(Settings ▸ FT8).",
         "The slider with the speaker sets the DIGI RX level on the Pi (the meter "
         "for it, target −40 … −20 dBFS, is in the footer next to the dial "
         "frequency), the one with "
         "the antenna next to it the FT8/FT4 TX drive (as FT8 TX DRIVE in Settings ▸ Audio); TUNE sends "
-        "a steady tone. Halt TRX, right in the title bar, is active only during "
-        "an FT8/FT4 transmission or a sequence (dimmed otherwise) and stops at once.",
+        "a steady tone. Halt TRX, right in the title bar, is active during an "
+        "FT8/FT4 transmission, a sequence or while Auto Hunt is on (dimmed "
+        "otherwise); it stops at once and switches Auto Hunt off. NTP in the strip "
+        "is an LED: green with the clock synchronised, red without (no decoding).",
     ]),
     ("h2", "Band conditions (VOACAP)"),
     ("p", "At the bottom right of the panel a sun or a moon and five chips — "
@@ -321,13 +328,16 @@ EN = [
 
     ("h1", "12  Log"),
     ("p", "The LOG panel logs to Wavelog (API key and station profile) and "
-          "optionally to the QRZ.com logbook; QRZ LOOKUP fills name, QTH and "
-          "locator. The worked-before index is downloaded from Wavelog and colours "
+          "the QRZ.com logbook — each with its own button beside the callsign: LOG "
+          "WAVELOG and LOG QRZ.COM (the form stays, so a QSO can go to both; a ✓ "
+          "marks where it went). QRZ LOOKUP fills name, QTH and "
+          "locator; NEW STATION / WORKED shows in the title bar. The worked-before index is downloaded from Wavelog and colours "
           "the FT8 list. Settings ▸ Log holds the accounts — the keys never leave the Pi."),
     ("p", "In the title bar, LEDs as in the page's own title bar: WAVELOG and QRZ "
           "green when set up, AUTO green while completed QSOs are logged "
-          "automatically. LOG QSO is only outlined while the form is empty and "
-          "filled once a callsign is in it — then there is something to log."),
+          "automatically (to Wavelog). The LOG buttons are only outlined while the "
+          "form is empty and filled once a callsign is in it — then there is "
+          "something to log. Recent QSOs: QRZ Visit and Map Display for the marked row."),
 
     ("h1", "13  Settings"),
     ("img", "manual/set-general.png", 120),

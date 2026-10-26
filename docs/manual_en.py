@@ -262,7 +262,10 @@ EN = [
         "completed QSO to Wavelog (the QRZ.com logbook by hand, LOG QRZ.COM), "
         "otherwise it is offered in the log form. A reply that comes in while our "
         "older message is still on the air is answered next period — the QSO is not "
-        "closed before our own 73. It can send RRR instead of RR73 "
+        "closed before our own 73. While a QSO runs, a narrow decode around the "
+        "partner (FT8 ±200 Hz, FT4 ±300 Hz — FT4 needs the wider margin) has their "
+        "reply within ~0.1 s of the period end, so the next message usually starts "
+        "0.5–1 s into our period; without a reply there it repeats at once. It can send RRR instead of RR73 "
         "(Settings ▸ FT8).",
         "The slider with the speaker sets the DIGI RX level on the Pi (the meter "
         "for it, target −40 … −20 dBFS, is in the footer next to the dial "

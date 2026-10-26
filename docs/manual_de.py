@@ -286,7 +286,11 @@ DE = [
         "automatisch nach Wavelog geloggt (ins QRZ.com-Logbuch von Hand mit LOG "
         "QRZ.COM), sonst landet es im Logformular. Kommt eine Antwort, während unsere "
         "ältere Nachricht noch gesendet wird, geht die passende Antwort in der "
-        "nächsten Periode hinaus — das QSO endet nicht vor unserem eigenen 73. Statt RR73 kann sie RRR "
+        "nächsten Periode hinaus — das QSO endet nicht vor unserem eigenen 73. "
+        "Während eines QSOs liefert eine schmale Dekodierung um die Gegenstation "
+        "(FT8 ±200 Hz, FT4 ±300 Hz — FT4 braucht den breiteren Rand) ihre Antwort "
+        "etwa 0,1 s nach Periodenende, die nächste Nachricht startet meist 0,5–1 s "
+        "nach Beginn unserer Periode; ohne Antwort dort wird sofort wiederholt. Statt RR73 kann sie RRR "
         "senden (Settings ▸ FT8).",
         "Der Schieberegler mit dem Lautsprecher stellt den DIGI-Empfangspegel auf "
         "dem Pi ein (die Anzeige dazu, Ziel −40 … −20 dBFS, steht in der Fußzeile "

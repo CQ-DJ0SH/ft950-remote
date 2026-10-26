@@ -1593,3 +1593,31 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .am-tick{stroke-width:1.8}
 .am-tick.minor{stroke-width:1.1}
 .am-lbl{filter:none}
+/* analog meter face a little lighter; clearly lighter in the light theme */
+#am-face stop:nth-child(1){stop-color:#1a1f27}
+#am-face stop:nth-child(2){stop-color:#0f1318}
+#am-face stop:nth-child(3){stop-color:#080a0d}
+:root[data-theme="light"] #am-face stop:nth-child(1){stop-color:#3a4554}
+:root[data-theme="light"] #am-face stop:nth-child(2){stop-color:#2a333f}
+:root[data-theme="light"] #am-face stop:nth-child(3){stop-color:#1d242d}
+/* "WSJT-X" centred in the DIGI title bar */
+.digi > .panel-head{position:relative}
+.digi-brand{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); pointer-events:none;
+  font:600 15px var(--font-disp); letter-spacing:.3em; color:var(--accent); opacity:.85; white-space:nowrap}
+/* WSJT-X as a small nameplate (as the FT 950 · REMOTE plate): Neuropol in the DIGI green */
+.digi-brand{display:flex; align-items:center; padding:6px 34px; opacity:1; letter-spacing:0;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--edge); border-radius:10px;
+  box-shadow:inset 0 1px 0 #ffffff18, inset 0 -1px 1px #00000075, inset 0 0 0 1px #00000045, 0 2px 0 #0000002e}
+.digi-brand .db-txt{font:400 22px/1 'Neuropol',var(--font-disp); letter-spacing:.16em; color:var(--accent);
+  text-shadow:0 0 12px color-mix(in srgb,var(--accent) 45%,transparent)}
+.digi-brand .screw{width:13px; height:13px}
+.digi-brand .screw-l{left:9px} .digi-brand .screw-r{right:9px}
+/* WSJT-X plate: higher in the title bar; the letter-spacing after the last letter
+   taken off, so the lettering sits optically in the middle */
+.digi-brand{top:calc(50% - 3px)}
+.digi-brand .db-txt{margin-right:-.16em}
+/* collapsed panels all the same height: one head height for every panel (its tallest
+   controls: VFO and LOG, 33 px), and HackRF's extra bottom room (for its axis) only when open */
+.panel-head{min-height:33px}
+#hackrf.collapsed{padding-bottom:12px}
+.lcd .vfo-b{border-top:2px solid color-mix(in srgb, var(--lb) 40%, transparent)}   /* the divider 2 px, dimmed */

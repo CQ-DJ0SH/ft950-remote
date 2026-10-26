@@ -437,7 +437,20 @@ function renderFreq(hz) {
     html += `<span class="dg s8${lead ? " lead" : ""}" data-w="${10 ** (7 - i)}">${lead ? "!" : s[i]}</span>`;
   }
   freqEl.innerHTML = html;
+  if (!alignVfoBLine.done) { alignVfoBLine.done = true; requestAnimationFrame(alignVfoBLine); }   // first real digits
 }
+
+// The divider over VFO-B starts under the first digit of VFO A: the big frequency is
+// wider than its column and overhangs on the left, so VFO-B (which carries the line)
+// reaches out by the same amount. Measured again whenever the column resizes.
+function alignVfoBLine() {
+  const col = freqEl.closest(".lcd-freq"), d = freqEl.querySelector(".dg"), vb = col?.querySelector(".vfo-b");
+  if (!d || !vb) return;
+  const c = col.getBoundingClientRect(), scale = c.width / col.offsetWidth || 1;   // .console zoom
+  vb.style.marginLeft = Math.min(0, (d.getBoundingClientRect().left - c.left) / scale) + "px";
+}
+new ResizeObserver(alignVfoBLine).observe(freqEl.closest(".lcd-freq"));
+document.fonts?.ready.then(alignVfoBLine);
 
 function tuneLive(hz) {
   hz = Math.max(30000, Math.min(56000000, Math.round(hz)));

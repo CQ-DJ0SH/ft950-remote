@@ -255,7 +255,10 @@ DE = [
     ("ul", [
         "Klick auf eine Dekodierung legt das Empfangsfenster dorthin (bei AF wandert "
         "auch TX mit); Doppelklick antwortet der Station — in Received und in My "
-        "Messages.",
+        "Messages. Ein Doppelklick in den ersten etwa 1,7 s der eigenen "
+        "Sendeperiode sendet noch in dieser Periode (sofortiger Start, die "
+        "Gegenstation sieht ein leicht positives DT); später geht es in der "
+        "nächsten hinaus.",
         "Die Filter über Received Messages zeigen alles, nur CQ, nur RR73 (samt RRR) "
         "oder nur 73. follow hält in jeder Liste die neueste Zeile im Blick, auch in "
         "Session Messages.",

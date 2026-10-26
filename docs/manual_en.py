@@ -232,7 +232,10 @@ EN = [
           "frequency, message and DXCC, with worked-before colouring."),
     ("ul", [
         "Click a decode to put the RX window there (AF also moves TX); "
-        "double-click answers the station — in Received and in My Messages.",
+        "double-click answers the station — in Received and in My Messages. "
+        "A double-click within the first ~1.7 s of your own TX period still "
+        "transmits in that period (start at once, the partner sees a slightly "
+        "positive DT); later it goes out in the next one.",
         "The filters above Received Messages show all, CQ only, RR73 (with RRR) "
         "only or 73 only. follow keeps the newest row of each list in view, Session "
         "Messages included.",

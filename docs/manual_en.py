@@ -350,6 +350,8 @@ EN = [
         "Changes show at once and are kept with SAVE.",
         "Pi Hardware: load, temperature, memory, disk and a 24 h graph.",
     ]),
+    ("img", "manual/set-ft8.png", 120),
+    ("img", "manual/set-appearance.png", 120),
     ("p", "Every tab ends with the same bar: CLOSE, plus SAVE on General, FT8, Log and Appearance. "
           "On Audio changes apply at once, on Memories each row has its own WRITE, "
           "Pi Hardware is read only."),

@@ -378,6 +378,8 @@ DE = [
         "Pi Hardware: Last, Temperatur, Arbeitsspeicher, Datenträger und ein "
         "24-h-Verlauf.",
     ]),
+    ("img", "manual/set-ft8.png", 120),
+    ("img", "manual/set-appearance.png", 120),
     ("p", "Jeder Reiter endet mit derselben Leiste: CLOSE, bei General, FT8, Log "
           "und Appearance dazu SAVE. Unter Audio wirken Änderungen sofort, unter Memories hat jede "
           "Zeile ihr eigenes WRITE, Pi Hardware ist nur zur Ansicht."),

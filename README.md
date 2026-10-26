@@ -189,8 +189,9 @@ are only 1.4× one.
 Settings ▸ FT8 ▸ Decoder offers `jt9` (Debian), `jt9-fast` and `jt9-33`
 (MTft8: the full pass runs as one process with three threads over the whole
 band instead of the band split; it sets its own depth). The two local builds
-are compiled on the Pi from the WSJT-X sources (GPL-3.0) and are not part of
-this repository; a missing one falls back to `jt9`.
+are compiled on the Pi from the WSJT-X sources (GPL-3.0): the Rust code,
+the patches and `build.sh` are in [`decoder/`](decoder/README.md); a missing
+build falls back to `jt9`.
 
 ## Documents
 

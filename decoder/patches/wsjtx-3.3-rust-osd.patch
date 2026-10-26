@@ -1,0 +1,29 @@
+--- a/lib/ft8var/osd174_91var.f90
++++ b/lib/ft8var/osd174_91var.f90
+@@ -1,4 +1,4 @@
+-subroutine osd174_91var(llr,apmask,ndeep,message77,cw,nhardmin,dmin,nthr, &
++subroutine osd174_91var_f(llr,apmask,ndeep,message77,cw,nhardmin,dmin,nthr, &
+      progress_generation)
+ !
+ ! An ordered-statistics decoder for the (174,91) code.
+@@ -293,7 +293,7 @@
+ if(nbadcrc.eq.1) nhardmin=-nhardmin
+ 
+ return
+-end subroutine osd174_91var
++end subroutine osd174_91var_f
+ 
+ subroutine mrbencode91var(me,codeword,g2,N,K)
+ integer*1 me(K),codeword(N),g2(N,K)
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -956,6 +956,9 @@
+ if (WSJT_BUILD_FORTRAN_OPENMP)
+   wsjt_link_fortran_openmp (jt9)
+   target_link_libraries (jt9 wsjt_cxx)
++  if (OSD_RS_LIB)   # Rust osd174_91var (jt9-fast): after the Fortran archive, which it calls back into
++    target_link_libraries (jt9 ${OSD_RS_LIB} wsjt_fort_omp pthread dl m)
++  endif ()
+   if (WIN32)
+     set_property (TARGET jt9 APPEND_STRING PROPERTY
+       LINK_FLAGS " -Wl,--stack,16777216")

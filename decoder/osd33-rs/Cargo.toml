@@ -1,0 +1,16 @@
+[package]
+name = "osd174var"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "Bit-packed drop-in for WSJT-X 3.3 MTft8 osd174_91var"
+
+[lib]
+crate-type = ["staticlib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = 1

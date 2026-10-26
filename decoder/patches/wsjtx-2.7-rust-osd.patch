@@ -1,0 +1,28 @@
+--- a/lib/ft8/osd174_91.f90
++++ b/lib/ft8/osd174_91.f90
+@@ -1,4 +1,4 @@
+-subroutine osd174_91(llr,k,apmask,ndeep,message91,cw,nhardmin,dmin)
++subroutine osd174_91_f(llr,k,apmask,ndeep,message91,cw,nhardmin,dmin)
+ !
+ ! An ordered-statistics decoder for the (174,91) code.
+ ! Message payload is 77 bits. Any or all of a 14-bit CRC can be
+@@ -290,7 +290,7 @@
+    if(nbadcrc.ne.0) nhardmin=-nhardmin
+ 
+    return
+-end subroutine osd174_91
++end subroutine osd174_91_f
+ 
+ subroutine mrbencode91(me,codeword,g2,N,K)
+    integer*1 me(K),codeword(N),g2(N,K)
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1482,7 +1482,7 @@
+       LINK_FLAGS -Wl,--stack,16777216
+       )
+   endif ()
+-  target_link_libraries (jt9 wsjt_fort_omp wsjt_cxx fort_qt)
++  target_link_libraries (jt9 wsjt_fort_omp wsjt_cxx fort_qt ${OSD_RS_LIB} wsjt_fort_omp pthread dl m)
+ else (${OPENMP_FOUND} OR APPLE)
+   target_link_libraries (jt9 wsjt_fort wsjt_cxx fort_qt)
+ endif (${OPENMP_FOUND} OR APPLE)

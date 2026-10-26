@@ -377,13 +377,15 @@ const pkv = (v) => (peakOn ? v : null);
 function txVals(po, swr, alc, id) {
   const w = poWatts(po), r = swrOf(swr);
   // fixed digit counts with leading zeros, so the unit behind never jumps
-  lcdVal("v-id", idAmps(id).toFixed(1).padStart(4, "0"), "A");
-  lcdVal("v-po", String(Math.round(w)).padStart(3, "0"), "W");
-  lcdVal("v-alc", String(Math.round(alc / 255 * 100)).padStart(3, "0"), "%");
+  // no leading zeros: the empty places are DSEG's blank digit "!" (only the dimmed 8
+  // shows), so the number keeps its place and the unit does not jump
+  lcdVal("v-id", idAmps(id).toFixed(1).padStart(4, "!"), "A");
+  lcdVal("v-po", String(Math.round(w)).padStart(3, "!"), "W");
+  lcdVal("v-alc", String(Math.round(alc / 255 * 100)).padStart(3, "!"), "%");
   // "≥" always takes its place (hidden below 5:1) for the same reason
   $("v-swr").innerHTML = `<small class="u"${r >= 4.95 ? "" : ' style="visibility:hidden"'}>≥</small>${seg8(Math.min(r, 5).toFixed(1))}<small class="u uu">:1</small>`;   // ratio as the unit, like W / % / A / dB
 }
-const afTxt = (db) => "-" + String(Math.min(99, Math.round(Math.max(0, -db)))).padStart(2, "0");   // −02 dB
+const afTxt = (db) => ("-" + Math.min(99, Math.round(Math.max(0, -db)))).padStart(3, "!");   // " -2" dB, the sign beside the digit
 const afRaw = (db) => Math.max(0, Math.min(255, (db + 60) / 60 * 255));
 
 // DSP bar graphs (CONTOUR · NOTCH · WIDTH · SHIFT) as on the LCD: 21 segments
@@ -1034,8 +1036,9 @@ function applyDigiStatus(s) {
   if (s.config?.depth != null) { digiDepthCfg = String(s.config.depth); segSet($("digi-depth"), digiDepthCfg); }
   if (s.depth && s.depth[digiMode]) showAutoDepth(s.depth[digiMode]);
   if (s.clock_synced !== undefined) {
-    $("l-ntp").classList.add("on");                  // green synced, red not
-    $("l-ntp").classList.toggle("bad", !s.clock_synced);
+    // LED as CAT / USB AUDIO: green synced, red not
+    $("l-ntp").classList.toggle("online", !!s.clock_synced);
+    $("l-ntp").classList.toggle("fault", !s.clock_synced);
   }
   placeBoxes();
 }
@@ -1077,15 +1080,26 @@ $("sess-autolog").onclick = async () => {
 $("seq-answer").onclick = async () => {
   const on = !$("seq-answer").classList.contains("on");
   try {
-    renderSeq(await api("/api/seq/auto", { on, tx_hz: boxes.tx }));
+    renderSeq(await api("/api/seq/auto", { on, tx_hz: boxes.tx, adopt: afOn() }));
     toast(on ? "Auto answer on — stations calling you are answered automatically" : "Auto answer off");
   } catch { /* toast */ }
 };
+let huntEnd = null;                             // when Hunt switches itself off (ms), null: never / off
+function huntLabel(on = seqState?.hunt) {
+  let t = "∞";
+  if (huntEnd != null) {
+    const left = Math.max(0, Math.round((huntEnd - Date.now()) / 1000));
+    t = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+  }
+  const html = on ? `Hunt<small class="hunt-left">${t}</small>` : "Auto Hunt";
+  if ($("seq-hunt").innerHTML !== html) $("seq-hunt").innerHTML = html;
+}
+setInterval(() => { if (seqState?.hunt) huntLabel(true); }, 1000);
 // Hunt = auto-clicker for new stations' CQs (settings: Settings ▸ FT8 ▸ Hunt)
 $("seq-hunt").onclick = async () => {
   const on = !$("seq-hunt").classList.contains("on");
   try {
-    const s = await api("/api/seq/hunt", { on, tx_hz: boxes.tx });
+    const s = await api("/api/seq/hunt", { on, tx_hz: boxes.tx, adopt: afOn() });
     renderSeq(s);
     toast(!on ? "Auto Hunt off" : s.hunt_left_s == null ? "Auto Hunt on (no switch-off) — new stations' CQs are called automatically"
       : `Auto Hunt on for ${Math.ceil(s.hunt_left_s / 60)} min — new stations' CQs are called automatically`);
@@ -1099,12 +1113,15 @@ $("seq-cq").onclick = async () => {
 const STATE_CLS = { "done": "sess-ok", "running": "sess-run" };
 function renderSeq(s) {
   seqState = s;
+  const follow = s.kind && s.kind !== "cq" && s.tx_hz ? s.tx_hz : null;   // a QSO on its own frequency
+  if (follow !== seqTxHz) { seqTxHz = follow; placeBoxes(); }
   $("seq-cq").classList.toggle("on", s.kind === "cq");
   $("seq-answer").classList.toggle("on", !!s.auto_answer);
   $("seq-hunt").classList.toggle("on", !!s.hunt);
-  // off: "Auto Hunt"; on: "Hunt" and the time left (∞: no switch-off)
-  $("seq-hunt").innerHTML = !s.hunt ? "Auto Hunt"
-    : `Hunt<small class="hunt-left">${s.hunt_left_s == null ? "∞" : Math.ceil(s.hunt_left_s / 60) + "′"}</small>`;
+  // off: "Auto Hunt"; on: "Hunt" and the time left as m:ss, counted down here
+  // every second (∞: no switch-off)
+  huntEnd = s.hunt && s.hunt_left_s != null ? Date.now() + s.hunt_left_s * 1000 : null;
+  huntLabel(s.hunt);
   const hb = new Set(s.hunt_blocked || []);
   if (hb.size !== huntBlocked.size || [...hb].some((c) => !huntBlocked.has(c))) {
     huntBlocked = hb;
@@ -1204,7 +1221,7 @@ let txState = { active: null };
 // Halt TRX (DIGI title bar): fixed place, dimmed — active only for FT8/FT4
 // (an FT transmission or a running sequence)
 function showHalt() {
-  $("halt").disabled = !(txState?.active === "ft" || seqState?.kind);
+  $("halt").disabled = !(txState?.active === "ft" || seqState?.kind || seqState?.hunt);   // Hunt too: Halt stops it
 }
 function renderTx(s) {
   txState = s;
@@ -1230,9 +1247,25 @@ $("tune").onclick = async () => {
   const on = txState.active !== "tune";
   try { renderTx(await api("/api/tx/tune", { on, hz: boxes.tx })); if (on) watchTx(); } catch { /* toast */ }
 };
-$("halt").onclick = async () => { try { renderTx(await api("/api/tx/halt", {})); } catch { /* toast */ } };
+$("halt").onclick = async () => {
+  const hunting = !!seqState?.hunt;
+  try {
+    renderTx(await api("/api/tx/halt", {}));
+    renderSeq(await api("/api/seq"));                 // Hunt off shows at once
+    if (hunting) toast("Halted — Auto Hunt switched off");
+  } catch { /* toast */ }
+};
 $("af").classList.toggle("on", store.get("af", true));
-$("af").onclick = () => { const on = !$("af").classList.contains("on"); $("af").classList.toggle("on", on); store.set("af", on); };
+// AF (adopt frequency): clicking a station moves the TX window to it, and Auto
+// Answer / Auto Hunt (in the backend) answer on the partner's frequency
+const afOn = () => $("af").classList.contains("on");
+$("af").onclick = () => {
+  const on = !afOn();
+  $("af").classList.toggle("on", on);
+  store.set("af", on);
+  if (seqState?.auto_answer) api("/api/seq/auto", { on: true, adopt: on }).then(renderSeq).catch(() => {});
+  if (seqState?.hunt) api("/api/seq/hunt", { on: true, adopt: on }).then(renderSeq).catch(() => {});
+};
 (function txLevel() {
   // two sliders, one value: FT8 TX DRIVE in Settings ▸ Audio and the DIGI strip
   const ids = ["tx-level", "dg-tx-level"]; let timer;
@@ -1368,18 +1401,23 @@ function setBox(which, hz) {
   placeBoxes();
   if (which === "tx" && seqState?.auto_answer) {            // auto answer replies on the TX box
     clearTimeout(setBox.t);
-    setBox.t = setTimeout(() => api("/api/seq/auto", { on: true, tx_hz: boxes.tx }).catch(() => {}), 400);
+    setBox.t = setTimeout(() => api("/api/seq/auto", { on: true, tx_hz: boxes.tx, adopt: afOn() }).catch(() => {}), 400);
   }
 }
+// While a QSO runs, the TX box shows the frequency the sequencer really uses (AF:
+// the partner's, set by Auto Hunt / Auto Answer in the backend); afterwards it goes
+// back to the frequency you set. Your setting itself is not changed.
+let seqTxHz = null;
 function placeBoxes() {
   const bw = SIGNAL_BW[digiMode] || 50;
+  const at = { tx: seqTxHz ?? boxes.tx, rx: boxes.rx };
   for (const which of ["tx", "rx"]) {
     const el = $("box-" + which);
     el.style.display = "block";
-    el.style.left = ((boxes[which] - F0) / (F1 - F0) * 100) + "%";
+    el.style.left = ((at[which] - F0) / (F1 - F0) * 100) + "%";
     el.style.width = (bw / (F1 - F0) * 100) + "%";
   }
-  $("f-tx").textContent = boxes.tx;
+  $("f-tx").textContent = Math.round(at.tx);
 }
 const hzAt = (e) => {
   const r = $("wf-wrap").getBoundingClientRect();
@@ -2208,26 +2246,42 @@ $("q-call").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.prev
 $("qso-form").onsubmit = (e) => e.preventDefault();
 $("q-clear").onclick = () => { $("qso-form").reset(); showWorked(null); };
 // LOG QSO is lit (filled) only when there is something to log: a callsign in the form
-function logReady() { $("q-log").classList.toggle("ready", !!$("q-call").value.trim()); }
+// LOG WL / LOG QRZ: lit (filled) when there is a callsign to log; ✓ once logged to
+// that target (the form stays, so the same QSO can go to the other one as well)
+const LOG_BTNS = ["q-log-wl", "q-log-qrz"];
+function logReady() {
+  const has = !!$("q-call").value.trim();
+  for (const id of LOG_BTNS) {
+    $(id).classList.toggle("ready", has);
+    if (!has || $(id).dataset.doneFor !== $("q-call").value.trim().toUpperCase()) {
+      $(id).classList.remove("done"); delete $(id).dataset.doneFor;
+    }
+  }
+}
 $("q-call").addEventListener("input", logReady);
 $("qso-form").addEventListener("reset", () => setTimeout(logReady));
 logReady();
-$("q-log").onclick = async () => {
+async function logTo(btn) {
   if (!$("q-call").value.trim()) { toast("Enter a callsign", true); $("q-call").focus(); return; }
+  const to = btn.dataset.to, where = to === "qrz" ? "the QRZ.com logbook" : "Wavelog";
   const body = {
     call: $("q-call").value.trim(), gridsquare: $("q-grid").value.trim(),
     rst_sent: $("q-sent").value.trim(), rst_rcvd: $("q-rcvd").value.trim(),
     name: $("q-name").value.trim(), qth: $("q-qth").value.trim(),
     country: $("q-country").value.trim(), comment: $("q-comment").value.trim(),
-    tx_offset_hz: boxes.tx,
+    tx_offset_hz: boxes.tx, to: [to],
   };
+  btn.disabled = true;
   try {
     const r = await api("/api/log/qso", body);
-    toast(r.ok ? `${r.entry.call} logged to Wavelog.` : `${r.entry.call} saved locally — Wavelog: ${r.message}`, !r.ok);
-    $("qso-form").reset(); showWorked(null);
+    const ok = to === "qrz" ? r.qrz?.ok : r.ok;
+    const msg = to === "qrz" ? (r.qrz?.message || "no QRZ logbook key (Settings ▸ Log)") : r.message;
+    toast(ok ? `${r.entry.call} logged to ${where}.` : `${r.entry.call} saved locally — ${where}: ${msg}`, !ok);
+    if (ok) { btn.classList.add("done"); btn.dataset.doneFor = r.entry.call.toUpperCase(); }
     loadRecent(); loadLogStatus();
-  } catch { /* toast */ }
-};
+  } catch { /* toast */ } finally { btn.disabled = false; }
+}
+for (const id of LOG_BTNS) $(id).onclick = () => logTo($(id));
 let selRecent = null;                       // ts of the marked recent QSO
 async function loadRecent() {
   let list;
@@ -2236,7 +2290,7 @@ async function loadRecent() {
     <td>${esc(e.ts.slice(11, 16))}</td><td class="msg">${esc(e.call)}</td><td>${esc(e.band)}</td>
     <td>${esc(e.mode)}</td><td>${esc(e.rst_sent)}</td><td>${esc(e.rst_rcvd)}</td><td>${esc(e.name)}</td>
     <td class="dx">${esc(e.country)}</td>
-    <td class="${e.wavelog ? "ok" : "bad"}" title="${esc(e.message)}${e.auto ? " (Auto-Log)" : ""}">${e.wavelog ? "✓" : "✗"}${e.auto ? " A" : ""}</td>
+    <td class="${e.wavelog == null ? "" : e.wavelog ? "ok" : "bad"}" title="${esc(e.message)}${e.auto ? " (Auto-Log)" : ""}">${e.wavelog == null ? "—" : e.wavelog ? "✓" : "✗"}${e.auto ? " A" : ""}</td>
     <td class="${e.qrz == null ? "" : e.qrz ? "ok" : "bad"}" title="${esc(e.qrz_message || "no QRZ logbook key")}">${e.qrz == null ? "—" : e.qrz ? "✓" : "✗"}</td>
     <td><button class="del" data-ts="${esc(e.ts)}" title="Remove from the local list (not from Wavelog)">✕</button></td></tr>`).join("");
   for (const b of $("recent-body").querySelectorAll(".del")) {
@@ -3836,3 +3890,6 @@ function revertAppearance() {
 }
 applyPanels();
 applyAccents();
+// at load, once everything is defined: the PO/SWR/ALC/ID digit places with their
+// dimmed 8s (the HTML has plain text until the first write)
+txVals(0, 0, 0, 0);

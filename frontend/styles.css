@@ -25,10 +25,10 @@
   color-scheme:dark;
 }
 :root[data-theme="light"]{
-  --ink:#c4ccd4; --ink-2:#dfe5ea; --panel:#eef2f6; --panel-2:#ffffff;
+  --ink:#c4ccd4; --ink-2:#dfe5ea; --panel:#dde4ea; --panel-2:#e9eef2;   /* panels a step darker (were white) */
   --edge:#c5cfd8; --edge-hi:#a4b4c1;
   --text:#1b2731; --text-dim:#5a6976;
-  --ctrl-bg:#e9eef3; --field-bg:#ffffff; --sw-edge:#7d8a95;
+  --ctrl-bg:#f1f4f7; --field-bg:#ffffff; --sw-edge:#7d8a95;     /* controls stay lighter than the panel */
   --amber:#b86a00; --amber-glow:#e08a00; --cyan:#0c7b71; --cyan-glow:#0fa597; --ok:#1f9d57;
   --row-cq:#bfe8c9; --row-me:#36b862; --row-me-ink:#ffffff;
   --row-cq-worked:#f3c6c1; --row-cq-worked-ink:#4a0b06;
@@ -1700,9 +1700,43 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 /* log panel: WAVELOG / QRZ / AUTO as LED + text, like CAT / USB AUDIO in the title bar */
 .logp .panel-head .stat{margin-right:0; gap:7px}
 .logp .panel-head .stat .stat-label{font-size:10px}
-/* QRZ LOOKUP / LOG QSO the size of the other panel buttons (CW SEND); LOG QSO only
-   outlined until a callsign is in the form, filled when there is something to log */
-.panel-head .log-btn{padding:6px 13px; font-size:12px; line-height:20px; border-radius:7px}
 .log-btn.primary:not(.ready){background:var(--ctrl-bg); color:var(--accent); border-color:var(--accent); font-weight:600}
 /* QRZ LOOKUP as a normal panel button (text and edge as SYNC); LOG QSO stays the one in colour */
 .log-btn.ghost{color:var(--text); border-color:var(--sw-edge)}
+/* light theme: amber text on the light panel was hard to read - dark text, the amber stays on the edge */
+:root[data-theme="light"] .btn.accent{color:var(--text)}
+@media (hover:hover){:root[data-theme="light"] .btn.accent:hover:not(:disabled){color:var(--accent)}}
+/* Log form: the callsign field a callsign's width, QRZ LOOKUP and LOG QSO beside it
+   (as tall as the field); the worked-before badge moved to the panel's title bar */
+.qf-row{align-items:flex-end}
+.qf-call{flex:0 1 175px}
+.qf-row .log-btn{padding:0 14px; height:41px; font-size:12px; border-radius:7px}
+
+.logp .panel-head .q-worked{margin-left:4px}
+.logp .panel-head .q-worked:empty{display:none}
+/* LOG QSO: outlined until a callsign is in the form, filled when there is something to log */
+/* a log button that has logged this callsign: a check mark after the label */
+.log-btn.done::after{content:" ✓"}
+/* Log form: fields stand out - visible edge, a touch lighter inside, labels brighter */
+.qso-form input{border-color:var(--sw-edge); background:color-mix(in srgb, var(--field-bg) 88%, var(--text) 6%)}
+.qso-form label{color:color-mix(in srgb, var(--text) 80%, var(--text-dim))}
+:root[data-theme="light"] .qso-form input{background:var(--field-bg)}
+.qf-row .qf-call{flex:0 0 175px; width:175px}
+.qf-row .qf-call input{width:100%}
+.qf-row .log-btn{white-space:nowrap; flex:none}
+/* callsign row in the two columns of the fields below: callsign + QRZ LOOKUP left,
+   the two LOG buttons centred over the Locator field */
+.qf-row{display:grid; grid-template-columns:1fr 1fr; column-gap:12px; align-items:end}
+.qf-row .qf-left{display:flex; align-items:flex-end; gap:10px; min-width:0}
+.qf-row .qf-logs{display:flex; justify-content:center; align-items:flex-end; gap:9px}
+/* WSJT-X plate and its lettering larger */
+.digi-brand{padding:7px 40px}
+.digi-brand .db-txt{font-size:28px}
+.digi-brand .db-ver{font-size:13px; margin-left:12px}
+.digi-brand .screw{width:15px; height:15px}
+.digi-brand .screw-l{left:11px} .digi-brand .screw-r{right:11px}
+#seq-hunt.on{background:#7a1712; border-color:var(--tx); color:#fff; box-shadow:none}   /* Auto Hunt on: red with white text, as Halt TRX - it transmits on its own */
+#tune{min-width:7.6em; text-align:center; font-variant-numeric:tabular-nums}   /* "TUNE" and "TUNE 10s" one width: the strip does not move */
+/* DIGI strip: NTP as LED + text, like the title bar's CAT / USB AUDIO */
+#l-ntp{margin-right:4px; gap:6px}
+#l-ntp .stat-label{font-size:10px}

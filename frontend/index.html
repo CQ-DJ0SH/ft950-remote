@@ -121,10 +121,10 @@
           <div class="cb" style="--n:4"><span class="cl">AGC</span><span class="cvs" id="pv-agc"><span class="cv" data-v="A" title="AUTO">A</span><span class="cv" data-v="F" title="FAST">F</span><span class="cv" data-v="M" title="MID">M</span><span class="cv" data-v="S" title="SLOW">S</span></span></div>
         </div>
         <div class="lcd-txm" id="tx-meters">
-          <span>PO</span><div class="lbar" id="m-po"></div><b id="v-po">000<small class="u uu">W</small></b>
+          <span>PO</span><div class="lbar" id="m-po"></div><b id="v-po">!!0<small class="u uu">W</small></b>
           <span>SWR</span><div class="lbar" id="m-swr"></div><b id="v-swr"><small class="u" style="visibility:hidden">≥</small>1.0<small class="u uu">:1</small></b>
-          <span>ALC</span><div class="lbar" id="m-alc"></div><b id="v-alc">000<small class="u uu">%</small></b>
-          <span>ID</span><div class="lbar" id="m-id"></div><b id="v-id">00.0<small class="u uu">A</small></b>
+          <span>ALC</span><div class="lbar" id="m-alc"></div><b id="v-alc">!!0<small class="u uu">%</small></b>
+          <span>ID</span><div class="lbar" id="m-id"></div><b id="v-id">!0.0<small class="u uu">A</small></b>
           <span title="Transmit audio: the microphone (after gain/AGC) on voice, the tone drive on FT8/FT4 and TUNE">AF</span><div class="lbar" id="m-af"></div><b id="v-af">−∞<small class="u uu">dB</small></b>
           <span class="pk-box" aria-hidden="true"></span><span class="pk-led" id="pk-led" title="PEAK HOLD: the bars and values show the highest readings of the last transmission, until the next TX starts"><i></i>PEAK HOLD</span>
         </div>
@@ -351,7 +351,7 @@
       <span class="panel-stat" id="digi-head-stat"></span>
       <span class="spacer"></span>
       <span class="chip seq-tx" id="seq-tx" title="Next sequencer transmission">TX —</span>
-      <button class="btn sm halt" id="halt" disabled title="Stop transmitting immediately (PTT off) and stop the sequencer — active during an FT8/FT4 transmission or while a sequence runs">Halt TRX</button>
+      <button class="btn sm halt" id="halt" disabled title="Stop transmitting immediately (PTT off), stop the sequencer and switch Auto Hunt off — active during an FT8/FT4 transmission, while a sequence runs or while Auto Hunt is on">Halt TRX</button>
       <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
     </div>
     <div class="digi-body">
@@ -389,7 +389,7 @@
             </div>
           </div>
           <div class="pane">
-            <div class="pane-head"><h3>Sessions</h3><span class="spacer"></span><button class="btn sm toggle" id="sess-autolog" title="Auto-log: a QSO the sequencer completes goes into the log (Wavelog / QRZ.com, Settings ▸ Log) without a click. Off: it is offered in the log form instead.">Auto-log</button><button class="btn sm" id="sess-qrz" disabled title="Look up the marked session's call on QRZ.com (popup)">QRZ</button><button class="btn sm" id="sess-map" disabled title="Show the marked session's station on a world map (popup): locator, or the DXCC entity centre without one">Map</button><label class="chk" title="Keep the newest session (bottom row) in view"><input type="checkbox" id="sess-follow" checked> follow</label><button class="btn sm" id="sess-clear" title="Clear the session list (a QSO in progress stays)">✕</button></div>
+            <div class="pane-head"><h3>Sessions</h3><span class="spacer"></span><button class="btn sm toggle" id="sess-autolog" title="Auto-log: a QSO the sequencer completes goes into the log (Wavelog / QRZ.com, Settings ▸ Log) without a click. Off: it is offered in the log form instead.">Auto-log</button><button class="btn sm" id="sess-qrz" disabled title="Look up the marked session's call on QRZ.com (popup)">QRZ Visit</button><button class="btn sm" id="sess-map" disabled title="Show the marked session's station on a world map (popup): locator, or the DXCC entity centre without one">Map Display</button><label class="chk" title="Keep the newest session (bottom row) in view"><input type="checkbox" id="sess-follow" checked> follow</label><button class="btn sm" id="sess-clear" title="Clear the session list (a QSO in progress stays)">✕</button></div>
             <div class="tbl short">
               <table class="msgs">
                 <thead><tr><th>Call</th><th>Time</th><th>Duration</th><th class="n">Freq</th><th>Band</th><th class="n">Tries</th><th>State</th><th>DXCC</th></tr></thead>
@@ -416,7 +416,7 @@
         <button class="btn sm toggle" id="seq-cq" title="Call CQ (auto-sequencer): CQ · report · RR73 · log">CQ</button>
         <button class="btn sm toggle" id="seq-answer" title="Auto answer: while no QSO runs, a station calling you (locator, report or R-report to your call) is answered automatically on the TX frequency — the strongest if several call. Double-click a row to answer a station by hand.">Auto Answer</button>
         <button class="btn sm toggle" id="seq-hunt" title="Hunt: while no QSO runs, new stations calling CQ are called automatically on the TX frequency, one after the other — each QSO is waited for. A station that never answers is struck through and not called again. Switches itself off after the time set in Settings ▸ FT8 ▸ Hunt, and only calls while this panel is open.">Auto Hunt</button>
-        <button class="btn sm toggle" id="af" title="Adopt Frequency of caller: clicking a station also moves the TX window to its frequency">AF</button>
+        <button class="btn sm toggle" id="af" title="Adopt Frequency: clicking a station also moves the TX window to its frequency, and Auto Answer / Auto Hunt answer on the partner's frequency">AF</button>
         <label class="txlvl" title="DIGI RX level: software gain on the Pi, −20 … +20 dB, for the FT8/FT4 decoder, the waterfall and the meter on the right only (browser audio and the radio's own level are not changed) — aim for −40 … −20 dBFS. Double-click: 0 dB."><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg><input type="range" id="rx-level" min="-20" max="20" step="1" value="0"><b id="rx-level-val">—</b></label>
         <button class="btn sm tune" id="tune" title="Steady tone on the TX frequency (max. 10 s) — for tuner and ALC/power adjustment">TUNE</button>
         <label class="txlvl" title="FT8/FT4 TX drive: audio level into the radio's DATA input, 0 … 100 % (same value as Settings ▸ Audio ▸ FT8 TX DRIVE). Set it with TUNE: full power, ALC barely moving."><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"></path><path d="M8.5 7.5a5 5 0 0 1 7 0"></path><path d="M5.5 4.5a9 9 0 0 1 13 0"></path><circle cx="12" cy="10" r="1.5"></circle></svg><input type="range" id="dg-tx-level" min="0" max="100" step="1"><b id="dg-tx-level-val">—</b></label>
@@ -426,7 +426,7 @@
         <div class="seg" id="digi-depth" title="jt9 decode depth: D1 fast, D2 normal (default), D3 deep (subtraction + a-priori, slowest). AUTO picks the depth from the measured run time."></div>
         <span class="chip" id="dec-n" title="Decodes in the last cycle">0</span>
         <span class="lamps">
-          <span class="lamp" id="l-ntp" title="System clock synchronised via NTP — no decoding without sync">NTP</span>
+          <span class="stat" id="l-ntp" title="System clock synchronised via NTP — no decoding without sync"><span class="led"></span><span class="stat-label">NTP</span></span>
           <span class="lamp" id="l-ptt" title="Transmitter active">PTT</span>
           <span class="lamp" id="l-ovl" title="Codec overload (peak > −1 dBFS)">OVL</span>
         </span>
@@ -567,19 +567,22 @@
       <span class="stat" id="l-qrz" title="QRZ.com lookup configured"><span class="led"></span><span class="stat-label">QRZ</span></span>
       <span class="stat" id="l-auto" title="Auto-log: completed QSOs of the auto-sequencer are logged without a click"><span class="led"></span><span class="stat-label">AUTO</span></span>
       <span class="panel-stat" id="log-stat"></span>
+      <span class="q-worked" id="q-worked"></span>
       <span class="spacer"></span>
-      <button class="btn sm" id="log-sync" title="Reload the log from Wavelog — marks worked stations red">⟳ SYNC</button>
-      <div class="log-head-right">
-        <button type="button" id="q-lookup" class="log-btn ghost" title="Look up name, locator, QTH on QRZ.com (Enter in the callsign field)">QRZ LOOKUP</button>
-        <button type="button" id="q-log" class="log-btn primary" title="Log the QSO to Wavelog and the QRZ.com logbook">LOG QSO</button>
-      </div>
+      <button class="btn sm" id="log-sync" title="Reload the log from Wavelog — marks worked stations red">⟳ SYNC LOG</button>
       <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
     </div>
     <div class="log-grid">
       <form class="qso-form" id="qso-form" autocomplete="off">
         <div class="qf-row">
-          <label class="qf-call">Callsign<input id="q-call" maxlength="16" spellcheck="false" autocapitalize="characters"></label>
-          <span class="q-worked" id="q-worked"></span>
+          <div class="qf-left">
+            <label class="qf-call">Callsign<input id="q-call" maxlength="16" spellcheck="false" autocapitalize="characters"></label>
+            <button type="button" id="q-lookup" class="log-btn ghost" title="Look up name, locator, QTH on QRZ.com (Enter in the callsign field)">QRZ LOOKUP</button>
+          </div>
+          <div class="qf-logs">
+            <button type="button" id="q-log-wl" class="log-btn primary" data-to="wavelog" title="Log the QSO to Wavelog (auto-log goes there too)">LOG WAVELOG</button>
+            <button type="button" id="q-log-qrz" class="log-btn primary" data-to="qrz" title="Log the QSO to the QRZ.com logbook (needs the logbook API key, Settings ▸ Log)">LOG QRZ.COM</button>
+          </div>
         </div>
         <div class="qf-grid">
           <label>Name<input id="q-name"></label>
@@ -596,7 +599,7 @@
         </div>
       </form>
       <div class="pane recent-pane">
-        <div class="pane-head"><h3>Recent QSOs</h3><span class="panel-stat" id="worked-stat"></span><span class="spacer"></span><button class="btn sm" id="recent-qrz" disabled title="Look up the marked QSO's call on QRZ.com (popup)">QRZ</button><button class="btn sm" id="recent-map" disabled title="Show the marked QSO's station on a world map (popup)">Map</button></div>
+        <div class="pane-head"><h3>Recent QSOs</h3><span class="panel-stat" id="worked-stat"></span><span class="spacer"></span><button class="btn sm" id="recent-qrz" disabled title="Look up the marked QSO's call on QRZ.com (popup)">QRZ Visit</button><button class="btn sm" id="recent-map" disabled title="Show the marked QSO's station on a world map (popup)">Map Display</button></div>
         <div class="tbl mid">
           <table class="msgs">
             <thead><tr><th>UTC</th><th>Call</th><th>Band</th><th>Mode</th><th>S</th><th>R</th><th>Name</th><th>Country</th><th title="Wavelog">WL</th><th title="QRZ.com logbook">QRZ</th><th></th></tr></thead>

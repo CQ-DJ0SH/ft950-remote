@@ -154,3 +154,70 @@ def test_repeated_rrr_after_our_73_is_answered_again():
     s.tries = 99                                          # partner never hears us: no endless loop
     asyncio.run(s.on_decodes([_d("DJ0SH OH6IH RR73", t0=120.0)], 120.0, "FT8", True))
     assert s.step == "done"
+
+
+def _w(call_band=False, call=False, dxcc=True, dxcc_band=True):
+    return {"call_band": call_band, "call": call, "dxcc": dxcc, "dxcc_band": dxcc_band}
+
+
+def test_hunt_picks_new_plain_cq_and_skips_blocked_directed_worked():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    decs = [_d("CQ DL1AAA JO40", snr=5, worked=_w(call_band=True)),        # worked on this band
+            _d("CQ DX ON4BBB JO20", snr=4, worked=_w()),                   # directed CQ
+            _d("CQ OK1CCC JO70", snr=-5, worked=_w()),
+            _d("CQ SP2DDD JO93", snr=0, worked=_w()),                      # strongest new one
+            _d("CQ G4EEE IO91", snr=9, worked=None),                       # no worked-before info
+            _d("CQ K1FFF FN42", snr=-28, worked=_w(dxcc=False))]           # new DXCC, but too weak
+    assert s.hunt_pick(decs)["from"] == "SP2DDD"
+    s.hunt_min_snr = -30
+    assert s.hunt_pick(decs)["from"] == "K1FFF"                            # a new DXCC goes first
+    s.hunt_blocked["K1FFF"] = 1.0
+    assert s.hunt_pick(decs)["from"] == "SP2DDD"
+    s.hunt_target = "dxcc"
+    assert s.hunt_pick(decs) is None                                       # only new DXCC wanted
+
+
+def test_hunt_calls_when_idle_and_blocks_a_station_that_never_answers():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    blocked = []
+    s.on_hunt_block = lambda b: blocked.append(dict(b))
+    started = []
+    async def fake_answer(d, hz):
+        started.append(d["from"])
+        s.session = s._new_session(d)
+    s.answer = fake_answer
+    decs = [_d("CQ SP2DDD JO93", snr=0, worked=_w())]
+    asyncio.run(s.on_decodes(decs, 15.0, "FT8", False))
+    assert started == []                                                   # Hunt off
+    asyncio.run(s.set_hunt(True, 1600))
+    assert s.auto_tx_hz == 1600.0 and s.status()["hunt"]
+    asyncio.run(s.on_decodes(decs, 15.0, "FT8", True))                     # early pass: no
+    assert started == []
+    asyncio.run(s.on_decodes(decs, 15.0, "FT8", False))
+    assert started == ["SP2DDD"] and s.session["hunt"]
+    # the QSO ran out of tries without one answer: blocked, never called again
+    s.session["state"] = "no reply"
+    s._hunt_block(s.session["call"])
+    assert "SP2DDD" in s.hunt_blocked and blocked and "SP2DDD" in s.status()["hunt_blocked"]
+    s.session, s.kind = None, None
+    assert s.hunt_pick(decs) is None
+    asyncio.run(s.clear_hunt_blocked())
+    assert s.hunt_blocked == {} and blocked[-1] == {}
+
+
+def test_hunt_switches_itself_off():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    asyncio.run(s.set_hunt(True))
+    s.hunt_until = 0.0                                                     # time is up
+    asyncio.run(s.on_decodes([_d("CQ SP2DDD JO93", worked=_w())], 15.0, "FT8", False))
+    assert s.hunt is False and s.session is None
+
+
+def test_hunt_without_switch_off():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    assert s.hunt_minutes == 180
+    s.hunt_minutes = 0
+    asyncio.run(s.set_hunt(True))
+    assert s.status()["hunt_left_s"] is None
+    asyncio.run(s.on_decodes([], 15.0, "FT8", False))
+    assert s.hunt is True

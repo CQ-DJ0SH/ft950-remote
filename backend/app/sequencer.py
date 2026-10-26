@@ -36,6 +36,10 @@ log = logging.getLogger("ft950.seq")
 MAX_TRIES = 5
 CQ_MAX = 40
 WAIT_MARGIN = 0.45          # stop waiting for decodes this long before the latest start
+# Hunt (the DIGI strip's auto-clicker): switches itself off after this long, and
+# only calls while a browser shows the DIGI panel - an operator at the station.
+HUNT_MAX_S = 180 * 60       # default; Settings ▸ FT8 ▸ Hunt, 0 = no switch-off
+HUNT_BLOCK_MAX = 1000       # calls kept on the no-reply list
 
 
 def report(snr: int) -> str:
@@ -63,6 +67,18 @@ class Sequencer:
         self.auto_tx_hz: float = 1500.0
         self.tx_hz = 1500.0
         self.last_tx: Optional[dict] = None
+        # Hunt: while idle, call a new station's CQ (not worked on this band),
+        # wait for the QSO to end; a station that never answered goes on the
+        # blocked list and is not called again (persisted by main.py).
+        self.hunt = False
+        self.hunt_until = 0.0
+        self.hunt_blocked: dict[str, float] = {}          # call -> when it was blocked
+        self.on_hunt_block = None                         # callback(dict) to persist the list
+        # Settings ▸ FT8 ▸ Hunt
+        self.hunt_target = "band"       # band: not worked on this band | call: never worked |
+                                        # dxcc: DXCC never worked | dxcc_band: DXCC new on this band
+        self.hunt_min_snr = -24         # weaker CQs are passed over
+        self.hunt_minutes = HUNT_MAX_S // 60   # 0: Hunt never switches itself off
         self._seen: dict[float, bool] = {}       # period t0 → decodes processed
         self._event = asyncio.Event()
         self._task: Optional[asyncio.Task] = None
@@ -148,6 +164,54 @@ class Sequencer:
             self.auto_tx_hz = clamp_tx_hz(tx_hz)
         return await self.publish()
 
+    async def set_hunt(self, on: bool, tx_hz: Optional[float] = None) -> dict:
+        self.hunt = on
+        self.hunt_until = (math.inf if not self.hunt_minutes else time.time() + self.hunt_minutes * 60) if on else 0.0
+        if tx_hz:
+            self.auto_tx_hz = clamp_tx_hz(tx_hz)
+        return await self.publish()
+
+    async def clear_hunt_blocked(self) -> dict:
+        self.hunt_blocked.clear()
+        if self.on_hunt_block:
+            self.on_hunt_block(self.hunt_blocked)
+        return await self.publish()
+
+    def _hunt_block(self, call: str) -> None:
+        self.hunt_blocked[call] = time.time()
+        while len(self.hunt_blocked) > HUNT_BLOCK_MAX:              # oldest out
+            del self.hunt_blocked[min(self.hunt_blocked, key=self.hunt_blocked.get)]
+        log.info("hunt: %s did not answer - not called again", call)
+        if self.on_hunt_block:
+            self.on_hunt_block(self.hunt_blocked)
+
+    def hunt_pick(self, decodes: list[dict]) -> Optional[dict]:
+        """The station Hunt calls next: a plain CQ (a directed one - CQ DX, CQ NA
+        ... - may not mean us) from a call not worked on this band, not blocked,
+        not already in a session today. A new DXCC first, then a DXCC new on
+        this band, then the strongest. None without the worked-before index."""
+        busy = {s["call"] for s in self.sessions if s["state"] in ("running", "done")}
+        cands = []
+        for d in decodes:
+            call = (d.get("from") or "").upper()
+            w = d.get("worked")
+            if d.get("kind") != "CQ" or not call or call.startswith("<") or call == self.me:
+                continue
+            tok = d.get("msg", "").upper().split()
+            if len(tok) < 2 or tok[1].strip("<>") != call:                    # directed CQ
+                continue
+            if call in self.hunt_blocked or call in busy or not w:
+                continue
+            new = {"band": not w.get("call_band"), "call": not w.get("call"),
+                   "dxcc": not w.get("dxcc"), "dxcc_band": not w.get("dxcc_band")}.get(self.hunt_target, False)
+            if not new or d.get("snr", -99) < self.hunt_min_snr:
+                continue
+            cands.append(d)
+        if not cands:
+            return None
+        return max(cands, key=lambda d: (not d["worked"].get("dxcc"),
+                                         not d["worked"].get("dxcc_band"), d.get("snr", -99)))
+
     async def on_decodes(self, decodes: list[dict], t0: float, mode: str, early: bool) -> None:
         if not self.kind and self.auto_answer and not early and t0 not in self.digi.tx_periods:
             callers = [d for d in decodes if (d.get("to") or "").upper() == self.me
@@ -161,6 +225,22 @@ class Sequencer:
                 except RuntimeError as exc:
                     log.warning("auto answer %s: %s", d["from"], exc)
                 return
+        if not self.kind and self.hunt and not early and t0 not in self.digi.tx_periods:
+            if time.time() > self.hunt_until:
+                self.hunt = False
+                log.info("hunt: %d min over, off", self.hunt_minutes)
+                await self.publish()
+            elif getattr(self.manager, "count", 1) and mode == self.digi.current_mode():
+                d = self.hunt_pick(decodes)
+                if d:
+                    log.info("hunt: calling %s (%s)", d["from"], d["msg"])
+                    try:
+                        await self.answer(d, self.auto_tx_hz)
+                        self.session["hunt"] = True
+                        await self.publish()
+                    except RuntimeError as exc:
+                        log.warning("hunt %s: %s", d["from"], exc)
+                    return
         if not self.kind or mode != self.mode or t0 in self.digi.tx_periods:
             return
         mine = [d for d in decodes if (d.get("to") or "").upper() == self.me]
@@ -170,6 +250,7 @@ class Sequencer:
             for d in mine:
                 if (d.get("from") or "").upper() == them:
                     relevant = True
+                    self.session["answered"] = True
                     if not self._known(d):
                         self._log_rx(d)
                         self._advance(d)
@@ -267,6 +348,8 @@ class Sequencer:
                     self.kind = None
                 elif self.step not in ("cq", "done") and self.tries >= MAX_TRIES:
                     self.session["state"] = "no reply"
+                    if self.session.get("hunt") and not self.session.get("answered"):
+                        self._hunt_block(self.session["call"])
                     await self._finish_round()
         except asyncio.CancelledError:
             raise
@@ -394,7 +477,11 @@ class Sequencer:
                 "cq_count": self.cq_count, "next": self._next_message() if self.kind else None,
                 "last_tx": self.last_tx, "session": view(self.session) if self.session else None,
                 "sessions": [view(s) for s in list(self.sessions)[:20]],
-                "auto_log": self.logbook.auto_log, "auto_answer": self.auto_answer}
+                "auto_log": self.logbook.auto_log, "auto_answer": self.auto_answer,
+                "hunt": self.hunt,
+                "hunt_left_s": (None if math.isinf(self.hunt_until) else max(0, round(self.hunt_until - time.time())))
+                if self.hunt else 0,                       # None: no switch-off
+                "hunt_blocked": sorted(self.hunt_blocked)}
 
     async def publish(self) -> dict:
         st = self.status()

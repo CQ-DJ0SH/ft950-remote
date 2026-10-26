@@ -126,7 +126,7 @@
           <span>ALC</span><div class="lbar" id="m-alc"></div><b id="v-alc">000<small class="u uu">%</small></b>
           <span>ID</span><div class="lbar" id="m-id"></div><b id="v-id">00.0<small class="u uu">A</small></b>
           <span title="Transmit audio: the microphone (after gain/AGC) on voice, the tone drive on FT8/FT4 and TUNE">AF</span><div class="lbar" id="m-af"></div><b id="v-af">−∞<small class="u uu">dB</small></b>
-          <span class="pk-box" aria-hidden="true"></span><span class="pk-led" id="pk-led" title="PEAK: the bars and values show the highest readings of the last transmission, until the next TX starts"><i></i>PEAK</span>
+          <span class="pk-box" aria-hidden="true"></span><span class="pk-led" id="pk-led" title="PEAK HOLD: the bars and values show the highest readings of the last transmission, until the next TX starts"><i></i>PEAK HOLD</span>
         </div>
         <div class="dsp">
           <div class="dsp-tags"><span class="ind blue-o">DSP</span><span class="ind blue-o" id="ind-dnr">DNR</span><span class="ind blue-o" id="ind-dnf">DNF</span></div>
@@ -414,7 +414,8 @@
       <div class="strip">
         <div class="seg" id="digi-mode"></div>
         <button class="btn sm toggle" id="seq-cq" title="Call CQ (auto-sequencer): CQ · report · RR73 · log">CQ</button>
-        <button class="btn sm toggle" id="seq-answer" title="Auto answer: while no QSO runs, a station calling you (locator, report or R-report to your call) is answered automatically on the TX frequency — the strongest if several call. Double-click a row to answer a station by hand.">Answer</button>
+        <button class="btn sm toggle" id="seq-answer" title="Auto answer: while no QSO runs, a station calling you (locator, report or R-report to your call) is answered automatically on the TX frequency — the strongest if several call. Double-click a row to answer a station by hand.">Auto Answer</button>
+        <button class="btn sm toggle" id="seq-hunt" title="Hunt: while no QSO runs, new stations calling CQ are called automatically on the TX frequency, one after the other — each QSO is waited for. A station that never answers is struck through and not called again. Switches itself off after the time set in Settings ▸ FT8 ▸ Hunt, and only calls while this panel is open.">Auto Hunt</button>
         <button class="btn sm toggle" id="af" title="Adopt Frequency of caller: clicking a station also moves the TX window to its frequency">AF</button>
         <label class="txlvl" title="DIGI RX level: software gain on the Pi, −20 … +20 dB, for the FT8/FT4 decoder, the waterfall and the meter on the right only (browser audio and the radio's own level are not changed) — aim for −40 … −20 dBFS. Double-click: 0 dB."><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg><input type="range" id="rx-level" min="-20" max="20" step="1" value="0"><b id="rx-level-val">—</b></label>
         <button class="btn sm tune" id="tune" title="Steady tone on the TX frequency (max. 10 s) — for tuner and ALC/power adjustment">TUNE</button>
@@ -671,6 +672,7 @@
     <section class="tab-pane" data-pane="ft8">
       <span class="logo-label">DECODING</span>
       <div class="form-grid">
+        <label class="span-2" title="The FT8/FT4 decoder program. jt9 is WSJT-X's own from the Debian package; jt9-fast is the same WSJT-X 2.7 decoder built for the Pi 5 with the OSD stage in Rust — bit-identical decodes in about half the time. jt9-33 is WSJT-X 3.3 (beta) with its multithreaded FT8 decoder MTft8 and a Rust OSD: about 6 % more decodes, one process with 3 threads over the whole band, ready about 2.4 s after the period. Decoders not installed on this Pi are greyed out. Takes effect from the next period.">Decoder<select id="set-decoder"></select></label>
         <label class="span-2" title="Same switch as D1/D2/D3/AUTO in the FT8 panel. Default 2; AUTO adapts the depth to the measured run time.">Decode depth<select id="set-depth">
           <option value="AUTO">AUTO (adaptive)</option><option value="1">1 — fast</option>
           <option value="2">2 — normal</option><option value="3">3 — deep</option></select></label>
@@ -681,6 +683,19 @@
       <div class="form-grid">
         <label class="span-2" title="The 4th message of a QSO after the partner's R-report, as WSJT-X's &quot;RR73&quot; box: RR73 lets the partner finish without another round, RRR asks for their 73. Only the text changes.">Closing message<select id="set-closing">
           <option value="RR73">RR73 (default)</option><option value="RRR">RRR</option></select></label>
+      </div>
+      <span class="logo-label sec">HUNT (AUTO-CALL NEW STATIONS)</span>
+      <div class="form-grid">
+        <label class="span-2" title="Which CQ callers Hunt calls. Needs the log index (Settings ▸ Log): without it nothing is called.">Call<select id="set-hunt-target">
+          <option value="band">stations not worked on this band</option><option value="call">stations never worked</option>
+          <option value="dxcc_band">DXCC entities new on this band</option><option value="dxcc">DXCC entities never worked</option></select></label>
+        <label title="Weaker CQs are passed over">Minimum SNR (dB)<input type="number" id="set-hunt-snr" min="-30" max="20" step="1"></label>
+        <label title="Hunt switches itself off after this time; 0 = never (it stays on until you switch it off, and still calls only while the DIGI panel is open in a browser)">Switch off after (min, 0 = never)<input type="number" id="set-hunt-min" min="0" max="1440" step="5"></label>
+      </div>
+      <div class="hunt-blocked-box">
+        <span class="hb-head">No reply — not called again: <b id="hunt-blocked-n">0</b></span>
+        <button type="button" class="mini-btn" id="hunt-unblock" title="Empty the list: these stations may be called again">Clear list</button>
+        <div class="hb-list" id="hunt-blocked-list"></div>
       </div>
       <span class="logo-label sec">COLOURS (RECEIVED / MY MESSAGES)</span>
       <div class="color-grid" id="color-grid"></div>
@@ -810,6 +825,12 @@
         <span class="logo-label">Console panels</span>
         <div class="panel-list" id="panel-list"></div>
         <p class="pane-hint">A hidden panel keeps its live data and comes back complete — a view setting, not a switch-off. The exception is the HackRF: hiding it stops the sweep. VFO, PTT and Audio always stay — the radio is worked from them.</p>
+      </div>
+      <div class="mixer-field">
+        <span class="logo-label">LCD</span>
+        <div class="panel-list">
+          <label class="switch-label panel-tile" title="PO · SWR · ALC · ID · AF: the highest reading of a transmission stays marked, and after it the values show these peaks (PEAK HOLD) until the next TX"><span class="panel-row-txt">Peak hold (PO · SWR · ALC · ID · AF)</span><input type="checkbox" class="switch" id="peak-hold"></label>
+        </div>
       </div>
       <div class="mixer-field">
         <span class="logo-label">Panel accent colours</span>

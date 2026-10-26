@@ -29,7 +29,7 @@ from .voice import RadioRxTrack, VoiceHub, consume_mic, force_opus_mono
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from .audio import AudioCapture
 from .config import APP_VERSION, settings
-from .digi import MODES as DIGI_MODES, DigiService
+from .digi import DECODERS as DIGI_DECODERS, MODES as DIGI_MODES, DigiService, decoder_available, decoder_config
 from .ft950 import (AGC_SET, ATT, BANDS, MODES, PREAMP, ROOF_SET, WIDTHS,
                     FT950Error, width_column)
 from .models import (zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
@@ -71,7 +71,8 @@ cw_manager = ConnectionManager()
 digi = DigiService(capture, digi_manager, lambda: service.status,
                    settings.digi_work_dir, settings.digi_keep_slices,
                    settings.digi_data_dir)
-digi.config.update(my_call=settings.my_call, my_grid=settings.my_grid)
+digi.config.update(my_call=settings.my_call, my_grid=settings.my_grid,
+                   **decoder_config(_rt.get("digi_decoder") or "jt9"))
 for _k in ("depth", "low_hz", "high_hz"):
     if _rt.get("digi_" + _k) is not None:
         digi.config[_k] = _rt["digi_" + _k]
@@ -90,6 +91,14 @@ tx = Transmitter(service, lambda: settings.audio_device,
                  level=(_rt.get("tx_level", 50) or 0) / 100, hub=hub)
 sequencer = Sequencer(digi, tx, logbook, digi_manager, settings)
 sequencer.closing = _rt.get("ft_closing") or "RR73"
+sequencer.hunt_blocked = dict(_rt.get("hunt_blocked") or {})
+for _k in ("hunt_target", "hunt_min_snr", "hunt_minutes"):
+    if _rt.get(_k) is not None:
+        setattr(sequencer, _k, _rt[_k])
+def _save_hunt_blocked(blocked: dict) -> None:
+    _rt["hunt_blocked"] = dict(blocked)
+    runtime.save({"hunt_blocked": _rt["hunt_blocked"]})
+sequencer.on_hunt_block = _save_hunt_blocked
 power = ShellySwitch()
 power.configure(_rt.get("shelly_host", ""), _rt.get("shelly_channel", 0),
                 _rt.get("shelly_user", ""), _rt.get("shelly_password", ""))
@@ -593,7 +602,15 @@ async def get_settings() -> dict:
             "serial_bauds": [4800, 9600, 19200, 38400],
             "digi_depth": digi.config["depth"], "digi_low_hz": digi.config["low_hz"],
             "digi_high_hz": digi.config["high_hz"],
-            "ft_closing": sequencer.closing, "digi_colors": _rt.get("digi_colors") or {},
+            "digi_decoder": _rt.get("digi_decoder") or "jt9",
+            "digi_decoder_path": digi.config["jt9"],          # what actually runs (fallback: jt9)
+            "digi_decoders": [{"id": d["id"], "label": d["label"], "available": decoder_available(d),
+                               "mt": bool(d.get("mt"))}
+                              for d in DIGI_DECODERS],
+            "ft_closing": sequencer.closing,
+            "hunt_target": sequencer.hunt_target, "hunt_min_snr": sequencer.hunt_min_snr,
+            "hunt_minutes": sequencer.hunt_minutes,
+            "hunt_blocked": sorted(sequencer.hunt_blocked.items(), key=lambda kv: -kv[1]), "digi_colors": _rt.get("digi_colors") or {},
             "cert": _cert_info(), "ca_available": CA_CERT.is_file(),
             "hackrf_url": _rt.get("hackrf_url") or HACKRF_DEFAULT,
             "shelly_host": power.host, "shelly_channel": power.channel, "shelly_user": power.user,
@@ -614,10 +631,20 @@ async def save_settings(req: SettingsReq) -> dict:
     if "my_grid" in upd:                     # canonical: JO62qk
         g = upd["my_grid"]
         upd["my_grid"] = g[:4].upper() + g[4:].lower()
+    if "digi_decoder" in upd:
+        d = next((x for x in DIGI_DECODERS if x["id"] == upd["digi_decoder"]), None)
+        if not d or not decoder_available(d):
+            raise HTTPException(400, f"Decoder {upd['digi_decoder']} is not installed")
+        _rt["digi_decoder"] = upd["digi_decoder"]
+        digi.config.update(decoder_config(upd["digi_decoder"]))   # from the next period on
     if "digi_colors" in upd:                 # merge: "" resets one colour to the theme
         cols = {**(_rt.get("digi_colors") or {}), **upd["digi_colors"]}
         upd["digi_colors"] = _rt["digi_colors"] = {k: v for k, v in cols.items() if v}
     runtime.save(upd)
+    for k in ("hunt_target", "hunt_min_snr", "hunt_minutes"):
+        if k in upd:
+            _rt[k] = upd[k]
+            setattr(sequencer, k, upd[k])
     if "ft_closing" in upd:
         _rt["ft_closing"] = sequencer.closing = upd["ft_closing"]
     if "hackrf_url" in upd:
@@ -1026,6 +1053,18 @@ async def seq_sessions_clear() -> dict:
 async def seq_auto(req: SeqAutoReq) -> dict:
     """Auto answer on/off (the DIGI strip's Answer switch)."""
     return await sequencer.set_auto(req.on, req.tx_hz)
+
+
+@app.post("/api/seq/hunt")
+async def seq_hunt(req: SeqAutoReq) -> dict:
+    """Hunt on/off (the DIGI strip's auto-clicker): calls new stations' CQs."""
+    return await sequencer.set_hunt(req.on, req.tx_hz)
+
+
+@app.post("/api/seq/hunt/clear")
+async def seq_hunt_clear() -> dict:
+    """Empty Hunt's no-reply list."""
+    return await sequencer.clear_hunt_blocked()
 
 
 @app.post("/api/seq/halt")

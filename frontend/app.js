@@ -370,6 +370,10 @@ function txBar(id, raw, peakRaw = null) {
 // SWR only counts with some power out (keying edges read nonsense at zero PO).
 const PK_SWR_MIN_PO = 13;                     // raw ≈ 5 % of the PO scale
 const pk = { tx: false, held: false, po: 0, swr: 0, alc: 0, id: 0, af: null };
+// Settings ▸ Appearance can switch peak hold off: then no held segment, no PEAK HOLD,
+// and the bars drop to zero after a transmission (the last values stay readable)
+let peakOn = store.get("peakHold", true);
+const pkv = (v) => (peakOn ? v : null);
 function txVals(po, swr, alc, id) {
   const w = poWatts(po), r = swrOf(swr);
   // fixed digit counts with leading zeros, so the unit behind never jumps
@@ -797,16 +801,16 @@ function renderRadio(s) {
   $("tx-meters").classList.toggle("on", !!m);
   $("tx-read").classList.toggle("on", !!m);
   if (s.tx && !pk.tx) Object.assign(pk, { held: false, po: 0, swr: 0, alc: 0, id: 0, af: null });   // new TX: reset
-  if (!s.tx && pk.tx) pk.held = true;
+  if (!s.tx && pk.tx) pk.held = peakOn;
   pk.tx = !!s.tx;
   if (m) {
     const id = m.id ?? 0;
     pk.po = Math.max(pk.po, m.po); pk.alc = Math.max(pk.alc, m.alc); pk.id = Math.max(pk.id, id);
     if (m.po >= PK_SWR_MIN_PO) pk.swr = Math.max(pk.swr, m.swr);
-    txBar("m-po", m.po, pk.po);
-    txBar("m-alc", m.alc, pk.alc);
-    txBar("m-swr", m.swr, pk.swr);
-    txBar("m-id", id, pk.id);
+    txBar("m-po", m.po, pkv(pk.po));
+    txBar("m-alc", m.alc, pkv(pk.alc));
+    txBar("m-swr", m.swr, pkv(pk.swr));
+    txBar("m-id", id, pkv(pk.id));
     txVals(m.po, m.swr, m.alc, id);
   } else if (!s.tx && pk.held) {               // receive: the peaks of the last TX
     txBar("m-po", pk.po, pk.po); txBar("m-alc", pk.alc, pk.alc); txBar("m-swr", pk.swr, pk.swr); txBar("m-id", pk.id, pk.id);   // up to the peak (dimmed by CSS)
@@ -814,7 +818,8 @@ function renderRadio(s) {
   } else if (!s.tx) {
     for (const id of ["m-po", "m-alc", "m-swr", "m-id"]) txBar(id, 0);
   }
-  $("tx-meters").classList.toggle("peak", !s.tx && pk.held);   // red value boxes + PEAK
+  $("tx-meters").classList.toggle("peak", !s.tx && pk.held);   // value box + PEAK HOLD
+  $("tx-meters").classList.toggle("no-peak", !peakOn);
   if (!s.tx) showTxAf({});                     // AF too, also when no level stream is open
 
   if (s.other) {                                   // slow tier present
@@ -884,12 +889,14 @@ const isMine = (d) => !!myCall && (d.to === myCall || d.from === myCall);
 const newDx = (d) => (d.worked && d.dxcc && !d.worked.dxcc ? '<span class="newdx" title="DXCC entity never worked">NEW</span>' : "");
 
 const doneCalls = new Set();                  // stations of finished sessions: red from then on
+let huntBlocked = new Set();                   // Hunt's no-reply list: struck through
 const partnerOf = (d) => ((d.from || "").toUpperCase() === myCall ? d.to : d.from || "").toUpperCase();
 function rowClass(d) {
   const c = [];
   if (doneCalls.has(partnerOf(d))) c.push("qso-done");
   else if (isMine(d)) c.push("me");
   else if (d.kind === "CQ") c.push("cq", ...(d.worked?.call_band ? ["worked"] : []));
+  if (huntBlocked.has((d.from || "").toUpperCase()) && !isMine(d)) c.push("hunt-blocked");
   if (d.worked?.call && !isMine(d)) c.push("worked-call");
   if (d.kind === "RR73" || d.kind === "73") c.push("end");
   if (d.ap) c.push("ap");
@@ -910,6 +917,7 @@ function appendRx(d) {
   const first = d.period_utc !== lastCycleShown;
   lastCycleShown = d.period_utc;
   tr.className = [...rowClass(d), first ? "cycle-start" : ""].join(" ").trim();
+  if (d.from && !isMine(d)) tr.dataset.from = d.from.toUpperCase();    // Hunt marks it later
   tr.innerHTML = `<td>${first ? fmtT(d.period_utc) : ""}</td><td class="n">${d.snr}</td>` +
     `<td class="n">${d.dt >= 0 ? "+" : ""}${d.dt.toFixed(1)}</td><td class="n">${d.df}</td>` +
     `<td class="msg">${esc(d.msg)}</td><td class="dx">${esc(d.dxcc || "")}${newDx(d)}</td>`;
@@ -1067,6 +1075,16 @@ $("seq-answer").onclick = async () => {
     toast(on ? "Auto answer on — stations calling you are answered automatically" : "Auto answer off");
   } catch { /* toast */ }
 };
+// Hunt = auto-clicker for new stations' CQs (settings: Settings ▸ FT8 ▸ Hunt)
+$("seq-hunt").onclick = async () => {
+  const on = !$("seq-hunt").classList.contains("on");
+  try {
+    const s = await api("/api/seq/hunt", { on, tx_hz: boxes.tx });
+    renderSeq(s);
+    toast(!on ? "Auto Hunt off" : s.hunt_left_s == null ? "Auto Hunt on (no switch-off) — new stations' CQs are called automatically"
+      : `Auto Hunt on for ${Math.ceil(s.hunt_left_s / 60)} min — new stations' CQs are called automatically`);
+  } catch { /* toast */ }
+};
 $("seq-cq").onclick = async () => {
   try {
     renderSeq(seqState?.kind === "cq" ? await api("/api/seq/halt", {}) : await api("/api/seq/cq", { tx_hz: boxes.tx }));
@@ -1077,6 +1095,16 @@ function renderSeq(s) {
   seqState = s;
   $("seq-cq").classList.toggle("on", s.kind === "cq");
   $("seq-answer").classList.toggle("on", !!s.auto_answer);
+  $("seq-hunt").classList.toggle("on", !!s.hunt);
+  // off: "Auto Hunt"; on: "Hunt" and the time left (∞: no switch-off)
+  $("seq-hunt").innerHTML = !s.hunt ? "Auto Hunt"
+    : `Hunt<small class="hunt-left">${s.hunt_left_s == null ? "∞" : Math.ceil(s.hunt_left_s / 60) + "′"}</small>`;
+  const hb = new Set(s.hunt_blocked || []);
+  if (hb.size !== huntBlocked.size || [...hb].some((c) => !huntBlocked.has(c))) {
+    huntBlocked = hb;
+    for (const tr of document.querySelectorAll("#rx-body tr[data-from]"))
+      tr.classList.toggle("hunt-blocked", huntBlocked.has(tr.dataset.from));
+  }
   showHalt();
   $("sess-autolog").classList.toggle("on", !!s.auto_log);
   const chip = $("seq-tx");
@@ -1524,13 +1552,43 @@ function renderColorGrid() {
     grid.appendChild(row);
   }
 }
+// MTft8 (WSJT-X 3.3) ignores the decode depth: the select is greyed out while it is chosen
+let ft8Decoders = [];
+function depthForDecoder() {
+  const mt = ft8Decoders.find((d) => d.id === $("set-decoder").value)?.mt;
+  $("set-depth").disabled = !!mt;
+  $("set-depth").title = mt ? "MTft8 sets its own depth — this applies to FT4 and to the other decoders" : "";
+}
+$("set-decoder").onchange = depthForDecoder;
+function renderHuntBlocked(list) {             // [[call, unix time], …], newest first
+  $("hunt-blocked-n").textContent = list.length;
+  $("hunt-blocked-list").innerHTML = list.length ? list.map(([c, t]) =>
+    `<span title="blocked ${new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC">${esc(c)}</span>`).join("") : "—";
+  $("hunt-unblock").disabled = !list.length;
+}
+$("hunt-unblock").onclick = async () => {
+  try {
+    renderSeq(await api("/api/seq/hunt/clear", {}));
+    renderHuntBlocked([]);
+    toast("Hunt list cleared — these stations may be called again");
+  } catch { /* toast */ }
+};
 async function loadFt8() {
   const s = await api("/api/settings").catch(() => null);
   if (!s) return;
   $("set-depth").value = String(s.digi_depth);
+  $("set-decoder").innerHTML = (s.digi_decoders || []).map((d) =>
+    `<option value="${esc(d.id)}"${d.available ? "" : " disabled"}>${esc(d.label)}${d.available ? "" : " — not installed"}</option>`).join("");
+  $("set-decoder").value = s.digi_decoder || "jt9";
+  ft8Decoders = s.digi_decoders || [];
+  depthForDecoder();
   $("set-low").value = s.digi_low_hz;
   $("set-high").value = s.digi_high_hz;
   $("set-closing").value = s.ft_closing || "RR73";
+  $("set-hunt-target").value = s.hunt_target || "band";
+  $("set-hunt-snr").value = s.hunt_min_snr ?? -24;
+  $("set-hunt-min").value = s.hunt_minutes ?? 180;
+  renderHuntBlocked(s.hunt_blocked || []);
   digiColors = s.digi_colors || {};
   colorDraft = {};
   applyColors(digiColors);
@@ -1547,9 +1605,13 @@ $("ft8-save").onclick = async () => {
   try {
     const s = await api("/api/settings", {
       digi_depth: depth === "AUTO" ? "AUTO" : +depth,
+      digi_decoder: $("set-decoder").value || undefined,
       digi_low_hz: +$("set-low").value,
       digi_high_hz: +$("set-high").value,
       ft_closing: $("set-closing").value,
+      hunt_target: $("set-hunt-target").value,
+      hunt_min_snr: Math.round(+$("set-hunt-snr").value),
+      hunt_minutes: Math.max(0, Math.min(1440, Math.round(+$("set-hunt-min").value) || 0)),   // 0 = never
       digi_colors: cols,
     });
     digiColors = s.digi_colors || {};
@@ -2978,9 +3040,9 @@ function showTxAf(m) {
   }
   const db = m.ptt === "voice" ? m.tx
     : txState?.level ? 20 * Math.log10(0.98 * txState.level / 100) : null;   // FT8/TUNE tone drive
-  if (db == null || db < -90) { txBar("m-af", 0, pk.af == null ? null : afRaw(pk.af)); return; }
+  if (db == null || db < -90) { txBar("m-af", 0, pk.af == null ? null : pkv(afRaw(pk.af))); return; }
   if (pk.tx) pk.af = Math.max(pk.af ?? -120, db);
-  txBar("m-af", afRaw(db), pk.af == null ? null : afRaw(pk.af));
+  txBar("m-af", afRaw(db), pk.af == null ? null : pkv(afRaw(pk.af)));
   lcdVal("v-af", afTxt(db), "dB");
 }
 function onLevels(m) {
@@ -3652,6 +3714,7 @@ function accentNow(el) {                        // the accent in effect, as #rrg
   return ctx.fillStyle.startsWith("#") ? ctx.fillStyle : "#000000";
 }
 function renderAppearance() {
+  $("peak-hold").checked = peakOn;
   const box = $("panel-list");
   box.textContent = "";
   for (const p of PANELS) {
@@ -3708,9 +3771,15 @@ $("accents-reset").onclick = () => {
   renderAppearance();
   toast("Accent colours back to the theme's");
 };
+$("peak-hold").onchange = (e) => {
+  peakOn = e.target.checked;
+  if (!peakOn) pk.held = false;                 // a held display goes at once
+  $("tx-meters").classList.toggle("no-peak", !peakOn);
+};
 $("appearance-save").onclick = () => {
   store.set("panelsOff", [...panelsOff]);
   store.set("accents", accents);
+  store.set("peakHold", peakOn);
   toast("Appearance saved");
 };
 // closing Settings without SAVE drops the preview: back to the saved panels and colours
@@ -3719,6 +3788,8 @@ function revertAppearance() {
   panelsOff = new Set(savedPanels());
   accents = store.get("accents", {});
   applyAccents();
+  peakOn = store.get("peakHold", true);
+  $("tx-meters").classList.toggle("no-peak", !peakOn);
   for (const p of PANELS) if (was.has(p.key) !== panelsOff.has(p.key)) setPanelHidden(p.key, panelsOff.has(p.key));
 }
 applyPanels();

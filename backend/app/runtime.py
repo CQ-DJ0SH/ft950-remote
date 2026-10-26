@@ -16,7 +16,7 @@ log = logging.getLogger("ft950")
 
 FILE = Path(__file__).resolve().parents[1] / "runtime.json"
 KEYS = {"my_call", "my_grid", "serial_port", "audio_device",
-        "digi_depth", "digi_low_hz", "digi_high_hz", "ft_closing", "digi_colors", "tx_level", "serial_baud", "codec_playback",
+        "digi_depth", "digi_decoder", "digi_low_hz", "digi_high_hz", "ft_closing", "digi_colors", "tx_level", "serial_baud", "codec_playback",
         "rx_gain", "tx_gain", "rx_buffer_ms", "tx_buffer_ms", "ptt_tail_ms", "roger", "tx_auto_gain", "rx_level_db", "tx_comp", "tx_preemph", "hackrf_url",
         "shelly_host", "shelly_channel", "shelly_user", "shelly_password",
         "auto_power_off", "auto_power_off_s",
@@ -24,7 +24,8 @@ KEYS = {"my_call", "my_grid", "serial_port", "audio_device",
         "wavelog_url", "wavelog_key", "wavelog_station_id",
         "qrz_username", "qrz_password", "qrz_api_key", "auto_log", "qrz_before_log",
         "mem_labels",                    # {"4": "FT8 20m"}: memory key names (radio has no CAT tag)
-        "mem_extra"}                     # {"7": {"split": true, "vfo_b_hz": 29540000}}: not in a radio memory
+        "mem_extra",
+        "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes"}                  # {"K1ABC": 1761480000.0}: Hunt's no-reply list                     # {"7": {"split": true, "vfo_b_hz": 29540000}}: not in a radio memory
 
 
 def load() -> dict:

@@ -1463,12 +1463,12 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .msgs tr.qso-done td.dx{color:inherit}
 /* PO/SWR/ALC/ID/AF peak hold: after TX one red box (as PWR) around the five values,
    "● PEAK" beside it, the bars filled up to the peak, slightly dimmed, the peak segment bright */
-.lcd-txm{grid-template-columns:38px 1fr 74px 56px}
+.lcd-txm{grid-template-columns:38px 1fr 74px 84px}
 .lcd-txm b{text-align:right; padding:0 6px}
 .lcd-txm{position:relative}
 /* absolutely positioned over the value column (74 px), left of PEAK (56 px + 10 px gap);
    in flow it would take cells and push the five values into new rows */
-.lcd-txm .pk-box{position:absolute; top:-4px; bottom:-4px; right:66px; width:74px; border:1.5px solid transparent;
+.lcd-txm .pk-box{position:absolute; top:-4px; bottom:-4px; right:94px; width:74px; border:1.5px solid transparent;
   border-radius:4px; pointer-events:none; transition:border-color .15s}
 .lcd-txm.peak .pk-box{border-color:var(--lr)}
 .lcd-txm .pk-led{grid-column:4; grid-row:1 / span 5; align-self:end; margin-bottom:-4px;   /* bottom edge level with the box (-4px) */
@@ -1640,3 +1640,16 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 #settings .mixer-field{margin-top:16px}
 /* Settings ▸ Memories: the column heads stay put while the channel list scrolls */
 .mem-row.mem-head{position:sticky; top:0; z-index:2; background:var(--panel-2)}
+/* peak hold switched off (Settings ▸ Appearance): no PEAK HOLD label */
+.lcd-txm.no-peak .pk-led{visibility:hidden}
+/* Hunt: stations that never answered, struck through; the list in Settings ▸ FT8 */
+.msgs tr.hunt-blocked td.msg{text-decoration:line-through; opacity:.55}
+.hunt-blocked-box{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:10px 0 4px; max-width:640px}
+.hunt-blocked-box .hb-head{font-size:12px; color:var(--text-dim)}
+.hunt-blocked-box .hb-list{flex-basis:100%; display:flex; flex-wrap:wrap; gap:4px 10px; font:12px var(--font-mono);
+  max-height:84px; overflow:auto; color:var(--text-dim)}
+/* Hunt button: one width for "Hunt", "Hunt 179′" and "Hunt ∞" - the strip does not jump */
+#seq-hunt{text-align:center; font-variant-numeric:tabular-nums}
+#seq-hunt .hunt-left{font-size:.82em; margin-left:.4em; opacity:.85}
+/* Auto Answer and Auto Hunt the same width (Auto Answer's own), in every state */
+#seq-answer, #seq-hunt{min-width:9.2em; text-align:center}

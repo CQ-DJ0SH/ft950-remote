@@ -77,9 +77,13 @@ class SettingsReq(BaseModel):
     serial_port: str | None = None
     serial_baud: Literal[4800, 9600, 19200, 38400] | None = None   # radio menu 026
     digi_depth: Literal["AUTO", 1, 2, 3] | None = None
+    digi_decoder: Literal["jt9", "jt9-fast", "jt9-33mt"] | None = None     # an id of digi.DECODERS
     digi_low_hz: int | None = Field(default=None, ge=0, le=3000)
     digi_high_hz: int | None = Field(default=None, ge=500, le=5000)
     ft_closing: Literal["RR73", "RRR"] | None = None     # sequencer's 4th message (WSJT-X "RR73" box)
+    hunt_target: Literal["band", "call", "dxcc", "dxcc_band"] | None = None   # whom Hunt calls
+    hunt_min_snr: int | None = Field(default=None, ge=-30, le=20)
+    hunt_minutes: int | None = Field(default=None, ge=0, le=1440)      # Hunt switches itself off; 0 = never
     digi_colors: DigiColors | None = None
     hackrf_url: str | None = Field(default=None, pattern=r"^$|^https?://[A-Za-z0-9.\-]+(:\d+)?/?$")
     # radio power via Shelly (title-bar switch); password "" = keep the stored one

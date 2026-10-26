@@ -125,3 +125,40 @@ def test_anchor_ignores_jitter():
 def test_parse_two_trailing_markers():
     d = parse_jt9("153700 -23  0.5 2028 ~  CQ LA8ENA JO48           ? a2\n")
     assert d[0]["msg"] == "CQ LA8ENA JO48" and d[0]["ap"] == "? a2"
+
+
+
+def test_decoder_choice_falls_back(monkeypatch, tmp_path):
+    from app import digi
+    exe = tmp_path / "jt9-fast"
+    exe.write_text("#!/bin/sh\n")
+    exe.chmod(0o755)
+    monkeypatch.setattr(digi, "DECODERS", [{"id": "jt9", "path": "jt9", "label": ""},
+                                           {"id": "jt9-fast", "path": str(exe), "label": ""}])
+    assert digi.digi_jt9_path("jt9-fast") == str(exe)
+    assert digi.digi_jt9_path("jt9") == "jt9"
+    assert digi.digi_jt9_path("nonsense") == "jt9"          # unknown id: never a path from outside
+    exe.unlink()
+    assert digi.digi_jt9_path("jt9-fast") == "jt9"          # a missing build must not stop decoding
+
+
+def test_mt_decoder_runs_one_threaded_full_pass(monkeypatch, tmp_path):
+    import asyncio
+    from app import digi
+    svc = digi.DigiService.__new__(digi.DigiService)
+    svc.config = {"low_hz": 200, "high_hz": 3000, "my_call": "", "my_grid": "",
+                  "jt9": "/x/jt9-33", "jt9_mt": True}
+    svc._last_df = {}
+    calls = []
+
+    async def fake(mode, wav, depth, rng=None, sub="", threads=0):
+        calls.append((mode, rng, sub, threads))
+        return ""
+    monkeypatch.setattr(svc, "_jt9", fake)
+    asyncio.run(svc._jt9_parallel("FT8", tmp_path / "a.wav", 2))
+    assert calls == [("FT8", None, "", digi.PARTS)]           # one process, PARTS threads, whole band
+    calls.clear()
+    svc.config["jt9_mt"] = False
+    (tmp_path / "a.wav").write_bytes(b"")
+    asyncio.run(svc._jt9_parallel("FT8", tmp_path / "a.wav", 2))
+    assert len(calls) == digi.PARTS and all(c[3] == 0 for c in calls)   # band split, no threads

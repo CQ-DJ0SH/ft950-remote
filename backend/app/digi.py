@@ -182,6 +182,42 @@ def auto_mode(dial_hz: Optional[int]) -> str:
     return "FT8"
 
 
+# Decoders to choose from in Settings ▸ FT8. A fixed list - the browser picks an
+# id, never a path. "jt9" is WSJT-X's own (Debian package, from PATH); the others
+# are local builds and are offered only where they are installed.
+DECODERS = [
+    {"id": "jt9", "path": "jt9",
+     "label": "jt9 · WSJT-X 2.7 (Debian package)"},
+    {"id": "jt9-fast", "path": "/usr/local/bin/jt9-fast",
+     "label": "jt9-fast · WSJT-X 2.7 built for the Pi 5, Rust OSD — same decodes, about twice as fast"},
+    # MTft8 ("mt"): FT8's full pass is one process with threads over the whole
+    # band instead of the band split over PARTS processes; it ignores the depth.
+    {"id": "jt9-33mt", "path": "/usr/local/bin/jt9-33", "mt": True,
+     "label": "jt9-33 · WSJT-X 3.3 beta, multithreaded MTft8 + Rust OSD — about 6 % more decodes, ~2.4 s"},
+]
+
+
+def decoder_available(d: dict) -> bool:
+    p = d["path"]
+    return "/" not in p or (os.path.isfile(p) and os.access(p, os.X_OK))
+
+
+def decoder_config(decoder_id: str) -> dict:
+    """jt9 path and threading for a decoder id, as DigiService.config keys;
+    plain "jt9" if the id is unknown or its build is missing (a missing local
+    build must not stop decoding)."""
+    d = next((x for x in DECODERS if x["id"] == decoder_id), None)
+    if d and decoder_available(d):
+        return {"jt9": d["path"], "jt9_mt": bool(d.get("mt"))}
+    if decoder_id and decoder_id != "jt9":
+        log.warning("Decoder %s not available, using jt9", decoder_id)
+    return {"jt9": "jt9", "jt9_mt": False}
+
+
+def digi_jt9_path(decoder_id: str) -> str:
+    return decoder_config(decoder_id)["jt9"]
+
+
 class DigiService:
     def __init__(self, capture: AudioCapture, manager: ConnectionManager,
                  radio_status: Callable[[], dict], work_dir: str,
@@ -211,7 +247,7 @@ class DigiService:
         # Fixed depth 2 by default (switchable in the FT8 panel: 1/2/3/AUTO).
         self.config = {"enabled": True, "mode": "AUTO", "depth": 2,
                        "low_hz": 200, "high_hz": 3000,
-                       "my_call": "", "my_grid": ""}
+                       "my_call": "", "my_grid": "", "jt9": "jt9", "jt9_mt": False}
         self.decodes: deque[dict] = deque(maxlen=500)
         self.cycles: deque[dict] = deque(maxlen=40)    # per-cycle stats
         self._busy = False
@@ -435,6 +471,9 @@ class DigiService:
     async def _jt9_parallel(self, mode: str, wav: Path, depth: int) -> str:
         """The full pass, split over PARTS cores. Each part gets its own
         working dir (jt9 writes scratch files next to the WAV and in -a)."""
+        if self.config.get("jt9_mt") and mode == "FT8":
+            # MTft8: one process, PARTS threads, the whole band
+            return await self._jt9(mode, wav, depth, threads=PARTS)
         rngs = split_band(self.config["low_hz"], self.config["high_hz"],
                           last_df=self._last_df.get(mode))
         if len(rngs) == 1:
@@ -455,7 +494,8 @@ class DigiService:
         return "".join(outs)
 
     async def _jt9(self, mode: str, wav: Path, depth: int,
-                   rng: Optional[tuple[int, int]] = None, sub: str = "") -> str:
+                   rng: Optional[tuple[int, int]] = None, sub: str = "",
+                   threads: int = 0) -> str:
         c = self.config
         lo, hi = rng or (c["low_hz"], c["high_hz"])
         data = self.data / mode / sub if sub else self.data / mode
@@ -463,7 +503,7 @@ class DigiService:
         # Lower priority than the web server: the full pass of the partner's
         # period runs on three cores exactly while our own transmission has
         # to be keyed on time (at nice -5 it starved the TX timing).
-        cmd = ["nice", "-n", "5", "jt9", MODES[mode]["flag"],
+        cmd = ["nice", "-n", "5", c.get("jt9") or "jt9", MODES[mode]["flag"],
                "-p", MODES[mode]["tr"], "-d", str(depth),
                "-L", str(lo), "-H", str(hi),
                "-a", str(data), "-t", str(wav.parent)]
@@ -471,6 +511,8 @@ class DigiService:
             cmd += ["-c", c["my_call"]]
         if c["my_grid"]:
             cmd += ["-G", c["my_grid"][:4]]     # messages carry 4-char grids
+        if threads:
+            cmd += ["-M", "-N", str(threads)]    # WSJT-X 3.3 MTft8
         proc = await asyncio.create_subprocess_exec(
             *cmd, str(wav), cwd=str(wav.parent),
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)

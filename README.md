@@ -40,11 +40,14 @@ decoding, plus voice operation over WebRTC.
     is kept (pre-roll)
 - **DIGI (FT8/FT4)**:
   - decoding with WSJT-X's own decoder `jt9` (adaptive depth, early and
-    partner passes, the passband split over three CPU cores)
+    partner passes, the passband split over three CPU cores); the decoder is
+    chosen in Settings ▸ FT8 — see [FT8 decoder performance](#ft8-decoder-performance-pi-5)
   - received / my messages / sessions tables with DXCC and worked-before flags
   - waterfall with TX/RX markers, DIGI RX level on the Pi
   - a WSJT-X style QSO sequencer (CQ, answer, reports, RR73/73) with
-    auto-answer; FT8/FT4 waveform generation for transmit
+    Auto Answer and **Auto Hunt** (calls new stations' CQs one after the
+    other; a station that never answers is not called again; switches itself
+    off, default 180 min); FT8/FT4 waveform generation for transmit
   - **HF band conditions** under the waterfall, as iDigi shows them:
     80-40 · 30-20 · 17-15 · 12-10 · 6m in green / yellow / red, computed by
     real **VOACAP** for your own locator; the sun/moon shows day or night at
@@ -135,6 +138,59 @@ below.
 - Without `voacapl`, or without a locator in Settings ▸ General, the strip is
   simply not shown. Its working tree `backend/itshfbc/` and the cached
   sunspot number `backend/propagation.json` are gitignored.
+
+## FT8 decoder performance (Pi 5)
+
+Measured on the station's Raspberry Pi 5 (Cortex-A76, 2.4 GHz) with 20
+recorded 15 s periods from 40 m (FT8, 200–3000 Hz, one `jt9` process per
+period, CPU time per period). Profile of WSJT-X 2.7's `jt9` at depth 2:
+**47 %** of the time in the ordered-statistics decoder (OSD, `osd174_91`),
+28 % in signal subtraction, 5 % in the sync search. At depth 3 the OSD share
+is 56 %.
+
+| Decoder | Messages | CPU / period, D2 | D3 |
+|---|---|---|---|
+| WSJT-X 2.7 `jt9`, Debian package (`-O2`) | 366 (D3: 378) | 2.01 s | 4.20 s |
+| same source, `-O3 -mcpu=cortex-a76` | identical | 1.40 s | 2.74 s |
+| + OSD rewritten in Rust (bit-packed) — **jt9-fast** | identical | **1.04 s** | **1.82 s** |
+
+The Rust OSD is a bit-for-bit port: every float sum is taken over the same
+terms in the same order, sorting and CRC are WSJT-X's own routines. Checked
+three ways: identical decode lines on the 20 periods; a check mode that runs
+the Fortran OSD beside it on every call (32,044 calls, 0 mismatches); and a
+shadow run against the live band (depth 2: 277 periods, 8,074 decodes, 168,518
+OSD calls compared, 0 mismatches; depth 3: 70 periods, 2,197 decodes). All
+decodes were the same, with the same SNR, DT and frequency; in one depth-2
+period two lines came out in a different order. That comes from the
+`-O3 -mcpu=cortex-a76` build (the Fortran OSD built the same way orders them
+alike), not from the Rust OSD; it only changes the order of two rows in the
+list. In the service the full pass is split over three processes, so
+jt9-fast's depth 2 should be ready roughly 0.4 s after the period (estimate)
+— and depth 3 now costs less than depth 2 did with the Debian build.
+
+WSJT-X **3.3** (beta4, `release/3.3`) adds **MTft8**, a multithreaded FT8
+decoder (`jt9 -M -N <threads>`) with its own OSD (`osd174_91var`, mostly at
+depths 3–5: second pre-processing rule, order 2). It finds more stations, but
+costs more:
+
+| Decoder (D2 setting) | Messages | CPU / period | Ready after |
+|---|---|---|---|
+| 3.3, classic decoder | 366 | 2.35 s | 2.4 s |
+| 3.3 MTft8, 4 threads, Fortran OSD | 387 (+31 / −10 vs 2.7) | 8.1 s | 3.8 s |
+| 3.3 MTft8, 4 threads, Rust OSD — **jt9-33** | 387, identical | 5.0 s | **2.4 s** |
+| 3.3 MTft8, 1 thread, Rust OSD | 387 | 3.4 s | 3.4 s |
+
+Its OSD port is bit-exact too (87,359 calls with 1 and 4 threads, 0
+mismatches); the Fortran clears a 2 MB hash table on every call, the port
+stamps entries with an epoch instead. With the Rust OSD the remaining MTft8
+profile is BP decoder 18 %, OSD 17 %, sync 11 %, a8 search 8 %; four threads
+are only 1.4× one.
+
+Settings ▸ FT8 ▸ Decoder offers `jt9` (Debian), `jt9-fast` and `jt9-33`
+(MTft8: the full pass runs as one process with three threads over the whole
+band instead of the band split; it sets its own depth). The two local builds
+are compiled on the Pi from the WSJT-X sources (GPL-3.0) and are not part of
+this repository; a missing one falls back to `jt9`.
 
 ## Documents
 

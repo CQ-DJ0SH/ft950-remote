@@ -156,8 +156,9 @@ DE = [
           "Mikrofonpegel und bei FT8/TUNE die Tonansteuerung (aus FT8 TX DRIVE "
           "berechnet, nicht gemessen). Spitzenwerte: beim Senden markiert ein "
           "stehendes Segment den höchsten Wert jeder Anzeige; nach der Durchgabe "
-          "zeigen Balken und Werte diese Spitzen — die Werte in einem roten Kasten, "
-          "daneben leuchtet PEAK — bis zum nächsten Senden. SWR zählt nur mit etwas "
+          "zeigen Balken und Werte diese Spitzen — die Werte in einem grünen Kasten, "
+          "daneben leuchtet PEAK HOLD — bis zum nächsten Senden (abschaltbar unter "
+          "Settings ▸ Appearance). SWR zählt nur mit etwas "
           "Ausgangsleistung. Die Werte haben feste Stellenzahlen (SWR als 1.5:1), "
           "damit nichts springt. Die Nadel bewegt sich wie bei einem "
           "Drehspulinstrument: gedämpft, sie steigt in etwa 0,35 s an und fällt "
@@ -242,7 +243,8 @@ DE = [
     ("h1", "9  DIGI — FT8 / FT4"),
     ("img", "manual/digi.png", 174),
     ("p", "DECODE in der Titelzeile des Felds schaltet die Dekodierung ein und aus "
-          "(wie beim CW-Skimmer). Dekodiert wird in jeder Periode mit jt9 aus WSJT-X. Der Durchlassbereich "
+          "(wie beim CW-Skimmer). Dekodiert wird in jeder Periode mit jt9 aus WSJT-X — oder mit einem "
+          "schnelleren Build aus Settings ▸ FT8 ▸ Decoder (siehe unten). Der Durchlassbereich "
           "wird auf drei Kerne verteilt. Die Tiefe wählen D1/D2/D3/AUTO in der "
           "Leiste: D2 (Standard) bringt die Dekodierungen auf dem Pi 5 etwa 1,5–2 s "
           "nach Periodenende, D3 findet ein paar schwache Signale mehr und braucht "
@@ -262,8 +264,17 @@ DE = [
         "Station auf QRZ.com und mit Map eine Weltkarte: Standort nach Locator (ohne "
         "Locator die Mitte des DXCC-Gebiets), Großkreis, Entfernung und Richtung ab "
         "dem eigenen Locator. Beide öffnen ein Popup-Fenster.",
-        "CQ ruft CQ; Answer ist der Schalter für automatisches Antworten: Im "
-        "Ruhezustand wird eine Station, die Sie anruft, automatisch beantwortet.",
+        "CQ ruft CQ; Auto Answer: Im Ruhezustand wird eine Station, die Sie "
+        "anruft, automatisch beantwortet.",
+        "Auto Hunt ruft neue Stationen selbst an: Läuft kein QSO, nimmt er nach "
+        "jedem vollen Dekodierdurchlauf den besten neuen CQ (ein normaler CQ, kein "
+        "CQ DX/NA/…; neues DXCC zuerst, dann das stärkste Signal) und wartet, bis "
+        "das QSO zu Ende ist. Eine Station, die nie antwortet, wird in Received "
+        "Messages durchgestrichen und nicht wieder angerufen (die Liste übersteht "
+        "Neustarts). Eingeschaltet zeigt der Knopf Hunt und die Restminuten (∞: "
+        "keine Abschaltung). Er ruft nur an, solange ein Browser das DIGI-Feld "
+        "zeigt. Wen er anruft, das Mindest-SNR, die Abschaltzeit (Standard 180 min, "
+        "0 = nie) und die Liste stehen unter Settings ▸ FT8.",
         "Die Ablaufsteuerung folgt WSJT-X: Anruf, Rapport, R-Rapport, RR73, 73; "
         "mit Auto-log im Kopf der Sessions (Standard an) wird jedes fertige QSO "
         "automatisch geloggt, sonst landet es im Logformular. Statt RR73 kann sie RRR "
@@ -341,18 +352,30 @@ DE = [
     ("ul", [
         "General: Rufzeichen, Locator, CAT-Port und Baudrate, Shelly und "
         "automatische Abschaltung, HackRF-Quelle, Logo, Root-CA.",
-        "FT8: Dekodiertiefe (wie D1/D2/D3/AUTO im Feld) und -bereich, Abschluss "
-        "RR73 oder RRR, die Farben der Meldungslisten (CQ, CQ schon gearbeitet, an "
-        "mich, eigene Sendungen, NEW) mit Vorschau und Zurücksetzen.",
+        "FT8: der Decoder — jt9 (WSJT-X 2.7, Debian-Paket), jt9-fast (derselbe "
+        "Decoder, für den Pi 5 gebaut, OSD in Rust: identische Dekodierungen, etwa "
+        "doppelt so schnell) oder jt9-33 (WSJT-X 3.3 Beta, Multithread-Decoder "
+        "MTft8 mit Rust-OSD: etwa 6 % mehr Dekodierungen, etwa 2,4 s nach "
+        "Periodenende fertig; wählt seine Tiefe selbst). Nicht installierte Builds "
+        "sind ausgegraut. Dann Dekodiertiefe (wie D1/D2/D3/AUTO im Feld) und "
+        "-bereich, Abschluss RR73 oder RRR, Auto Hunt (wen anrufen: auf diesem "
+        "Band nicht gearbeitet, nie gearbeitet, DXCC neu auf diesem Band, DXCC nie "
+        "gearbeitet; Mindest-SNR; Abschaltzeit, 0 = nie; die Liste ohne Antwort "
+        "mit Clear list) und die Farben der Meldungslisten mit Vorschau und "
+        "Zurücksetzen.",
         "Audio: Aufnahmegerät, Codec-Pegel, FT8-Sendeansteuerung, die Audiomenüs des "
         "FT-950, Sprachaufbereitung beim Senden, WebRTC-Puffer.",
         "Log: Wavelog und QRZ.com.",
         "Memories: die 32 Speichertasten mit CTCSS, Split und VFO B.",
+        "Appearance (pro Browser): die Felder DIGI, CW, HackRF und Log ausblenden "
+        "(VFO, PTT und Audio bleiben immer; ein ausgeblendetes HackRF stoppt den "
+        "Sweep), eine Akzentfarbe pro Feld mit Reset, und Peak Hold der LCD-Anzeigen "
+        "ein/aus. Änderungen wirken sofort und bleiben mit SAVE.",
         "Pi Hardware: Last, Temperatur, Arbeitsspeicher, Datenträger und ein "
         "24-h-Verlauf.",
     ]),
-    ("p", "Jeder Reiter endet mit derselben Leiste: CLOSE, bei General und Log dazu "
-          "SAVE. Unter Audio wirken Änderungen sofort, unter Memories hat jede "
+    ("p", "Jeder Reiter endet mit derselben Leiste: CLOSE, bei General, FT8, Log "
+          "und Appearance dazu SAVE. Unter Audio wirken Änderungen sofort, unter Memories hat jede "
           "Zeile ihr eigenes WRITE, Pi Hardware ist nur zur Ansicht."),
 
     ("h1", "14  Fernein- und -ausschalten"),

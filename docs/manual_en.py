@@ -143,7 +143,8 @@ EN = [
           "the tone drive on FT8/TUNE (computed from FT8 TX DRIVE, not measured). "
           "Peak hold: while transmitting a held segment marks each meter's highest "
           "reading; after the transmission the bars and values show these peaks — "
-          "the values in a red box, PEAK lit beside it — until the next TX starts. "
+          "the values in a green box, PEAK HOLD lit beside it — until the next TX "
+          "starts (switchable in Settings ▸ Appearance). "
           "SWR counts only with some power out. Values keep a fixed number of "
           "digits (SWR as 1.5:1), so nothing jumps. "
           "The needle moves like a moving-coil meter: damped, rising in about "
@@ -221,7 +222,8 @@ EN = [
     ("h1", "9  DIGI — FT8 / FT4"),
     ("img", "manual/digi.png", 174),
     ("p", "DECODE in the panel's title bar switches decoding on and off (as in "
-          "the CW skimmer). Decoding runs every period with WSJT-X's jt9. The passband is split "
+          "the CW skimmer). Decoding runs every period with WSJT-X's jt9 — or a "
+          "faster build chosen in Settings ▸ FT8 ▸ Decoder (see below). The passband is split "
           "over three cores. D1/D2/D3/AUTO in the strip pick the depth: D2 "
           "(default) puts the decodes on screen about 1.5–2 s after the period on a "
           "Pi 5, D3 finds a few more weak signals in about 3 s, AUTO follows the "
@@ -239,8 +241,16 @@ EN = [
         "page and Map a world map: position from the locator (without one, the "
         "centre of the DXCC entity), great circle, distance and bearing from your "
         "locator. Both open a popup window.",
-        "CQ calls CQ; Answer is the auto-answer switch: while idle, a station "
-        "calling you is answered automatically.",
+        "CQ calls CQ; Auto Answer: while idle, a station calling you is answered "
+        "automatically.",
+        "Auto Hunt calls new stations by itself: while no QSO runs, after every "
+        "full decode pass it calls the best new CQ (a plain CQ, not CQ DX/NA/…; new "
+        "DXCC first, then the strongest) and waits for the QSO to end. A station "
+        "that never answers is struck through in Received Messages and not called "
+        "again (the list survives restarts). While on, the button shows Hunt and "
+        "the minutes left (∞: no switch-off). It calls only while a browser shows "
+        "the DIGI panel. Whom it calls, the minimum SNR, the switch-off time "
+        "(default 180 min, 0 = never) and the no-reply list are in Settings ▸ FT8.",
         "The sequencer follows WSJT-X: call, report, R-report, RR73, 73; it can "
         "log automatically: Auto-log in the Sessions header (default on) logs every "
         "completed QSO, otherwise it is offered in the log form. It can send RRR instead of RR73 "
@@ -316,16 +326,27 @@ EN = [
     ("ul", [
         "General: callsign, locator, CAT port and baud rate, Shelly and auto "
         "power-off, HackRF source, logo, root CA.",
-        "FT8: decode depth (as D1/D2/D3/AUTO in the panel) and range, closing "
-        "message RR73 or RRR, the colours of the message lists (CQ, CQ worked "
-        "before, to me, own transmissions, NEW) with preview and reset.",
+        "FT8: the decoder — jt9 (WSJT-X 2.7, Debian package), jt9-fast (the same "
+        "decoder built for the Pi 5 with its OSD stage in Rust: identical decodes, "
+        "about twice as fast) or jt9-33 (WSJT-X 3.3 beta, multithreaded MTft8 with "
+        "a Rust OSD: about 6 % more decodes, ready about 2.4 s after the period; "
+        "it sets its own depth). Builds not installed are greyed out. Then decode "
+        "depth (as D1/D2/D3/AUTO in the panel) and range, closing message RR73 or "
+        "RRR, Auto Hunt (whom to call: not worked on this band, never worked, DXCC "
+        "new on this band, DXCC never worked; minimum SNR; switch-off time, 0 = "
+        "never; the no-reply list with Clear list), and the colours of the message "
+        "lists with preview and reset.",
         "Audio: capture device, codec level, FT8 TX drive, the FT-950 audio menus, "
         "voice TX processing, WebRTC buffers.",
         "Log: Wavelog and QRZ.com.",
         "Memories: the 32 memory keys with CTCSS, split and VFO B.",
+        "Appearance (per browser): hide the DIGI, CW, HackRF and Log panels (VFO, "
+        "PTT and Audio always stay; hiding the HackRF stops its sweep), an accent "
+        "colour per panel with Reset, and peak hold of the LCD meters on/off. "
+        "Changes show at once and are kept with SAVE.",
         "Pi Hardware: load, temperature, memory, disk and a 24 h graph.",
     ]),
-    ("p", "Every tab ends with the same bar: CLOSE, plus SAVE on General and Log. "
+    ("p", "Every tab ends with the same bar: CLOSE, plus SAVE on General, FT8, Log and Appearance. "
           "On Audio changes apply at once, on Memories each row has its own WRITE, "
           "Pi Hardware is read only."),
 

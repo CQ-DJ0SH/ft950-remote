@@ -162,3 +162,25 @@ def test_mt_decoder_runs_one_threaded_full_pass(monkeypatch, tmp_path):
     (tmp_path / "a.wav").write_bytes(b"")
     asyncio.run(svc._jt9_parallel("FT8", tmp_path / "a.wav", 2))
     assert len(calls) == digi.PARTS and all(c[3] == 0 for c in calls)   # band split, no threads
+
+
+def test_a_late_slice_is_waited_for_not_dropped():
+    import asyncio
+    import numpy as np
+    from app import digi
+
+    class Cap:
+        running = True
+        calls = 0
+        def extract(self, t, n):
+            Cap.calls += 1
+            return None if Cap.calls < 4 else np.zeros(10)       # complete after ~0.15 s
+    svc = digi.DigiService.__new__(digi.DigiService)
+    svc.capture = Cap()
+    assert asyncio.run(svc._slice("FT8", 15.0, 15)) is not None
+
+    class Gone(Cap):
+        def extract(self, t, n):
+            return None                                           # never arrives
+    svc.capture = Gone()
+    assert asyncio.run(svc._slice("FT8", 15.0, 15)) is None       # gives up after SLICE_WAIT

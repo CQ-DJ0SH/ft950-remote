@@ -86,6 +86,7 @@ def dedupe(decodes: list[dict]) -> list[dict]:
             out.append(d)
     return sorted(out, key=lambda d: d["df"])
 CONTEXT = 0.25          # seconds of audio on each side, cropped after resampling
+SLICE_WAIT = 1.5        # wait this long for a slice the capture has not finished yet
 # Early pass while a QSO runs: depth 1 on the audio up to just after the
 # nominal end of a signal (start 0.5 s + 12.64 s / 5.04 s). Measured on the
 # Pi 4, busy 20 m band: full band 2.0-3.1 s (≈80 % of the decodes), ±150 Hz
@@ -346,7 +347,11 @@ class DigiService:
         if "skipped" in stat:
             self._record(stat, [])
             return
-        x = self.capture.extract(t0 - CONTEXT, period + 2 * CONTEXT)
+        # The capture thread can run a little behind the clock (measured while
+        # a browser had audio open: the Opus path adds work, and the slice was
+        # not complete 0.1 s after the period - whole periods were dropped as
+        # "no audio"). Wait up to SLICE_WAIT for the last samples instead.
+        x = await self._slice(mode, t0, period)
         if x is not None and self.capture.gain_db:
             x = apply_gain(x, self.capture.gain_db)
         if x is None:
@@ -426,6 +431,19 @@ class DigiService:
                 await self.on_decodes(decodes, t0, mode, True)
         except Exception as exc:  # noqa: BLE001
             log.warning("early decode %s failed: %s", mode, exc)
+
+    async def _slice(self, mode: str, t0: float, period: float) -> Optional[np.ndarray]:
+        """The period's audio with CONTEXT on each side; waits up to SLICE_WAIT
+        while the capture has not got the last samples yet."""
+        x = self.capture.extract(t0 - CONTEXT, period + 2 * CONTEXT)
+        waited = 0.0
+        while x is None and waited < SLICE_WAIT and self.capture.running:
+            await asyncio.sleep(0.05)
+            waited += 0.05
+            x = self.capture.extract(t0 - CONTEXT, period + 2 * CONTEXT)
+        if x is not None and waited:
+            log.info("%s slice complete %.2f s late (capture behind the clock)", mode, waited)
+        return x
 
     def _write_slice(self, mode: str, t0: float, x48: np.ndarray, sub: str = ""):
         period = MODES[mode]["period"]

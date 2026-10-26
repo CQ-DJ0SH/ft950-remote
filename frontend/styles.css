@@ -905,7 +905,6 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
   font:700 10px var(--font-ui); letter-spacing:.06em; color:var(--lr); opacity:.13; transition:opacity .15s}
 .tx-read.on{opacity:1; box-shadow:0 0 10px -2px var(--lr)}
 .tx-read b{font:italic 400 17px "DSEG7-Classic",var(--font-mono); color:#ffd2c8; min-width:2.2em; text-align:right}
-.tx-read b.warn{color:#ff6a4a}
 .tx-read span + span{margin-left:4px}
 .lcd-txm b{font:italic 400 15px "DSEG7-Classic",var(--font-mono); color:var(--lb); text-align:right}
 .head-sep{width:1px; height:18px; background:var(--line,#ffffff22); margin:0 4px}
@@ -1530,63 +1529,67 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .tune-scale .ts-t.major{height:12px; opacity:.95}
 .tune-scale .ts-t.zero{height:18px; width:1.5px; margin-left:-.75px; opacity:1}
 .tune-scale::before{opacity:.55}
-/* VFO-B row: the S-meter readout on the left, VFO-B on the right - the divider
-   only over VFO-B (its own border-top), so it is shorter */
-.lcd .vfo-b-row{display:flex; align-items:flex-end; justify-content:space-between; gap:16px}
-.lcd .sm-read{font:italic 800 17px var(--font-ui); letter-spacing:.06em; color:var(--lb); white-space:nowrap;
-  text-shadow:0 0 6px var(--lb-glow); padding-bottom:1px}
-.lcd .vfo-b-row .vfo-b{flex:0 1 auto}
-/* S-meter readout: larger, centred in the free space left of VFO-B */
-.lcd .vfo-b-row{align-items:center}
-.lcd .sm-read{flex:1 1 auto; text-align:center; font-size:24px; padding:0}
-/* S-meter readout in the LCD font */
-.lcd .sm-read{font:italic 400 24px "DSEG7-Classic",var(--font-mono); letter-spacing:.02em}
-.lcd .sm-read .u{font:italic 800 14px var(--font-ui); margin:0 3px; letter-spacing:.06em}
-.lcd .sm-read{position:relative; top:-10px}   /* a little above the VFO-B line */
-/* S readout slots: the over-S9 part has a fixed width (room for "+60") */
-.lcd .sm-read .s-over{display:inline-block; min-width:2.5em; text-align:left}
-/* S readout: S + digit centred; the over-S9 part hangs to the right of it */
-.lcd .sm-read{font-size:32px}
-.lcd .sm-read .u{font-size:18px}
-.lcd .sm-read .s-core{position:relative; display:inline-block}
-.lcd .sm-read .s-over{position:absolute; left:100%; bottom:0; min-width:0; white-space:nowrap}
-.lcd .sm-read{text-align:left; padding-left:6px}   /* further left: from the left edge, not centred */
-/* S readout: the over-S9 part smaller; hidden on transmit */
-.lcd .sm-read .s-over{font-size:20px}
-.lcd .sm-read .s-over .u{font-size:13px; margin:0 2px}
-.lcd .sm-read.tx > *{visibility:hidden}   /* transmit: the box stays, its content goes */
-.lcd .sm-read .s-over .u{font-size:18px; position:relative; top:-4px}   /* the + larger and raised */
-.lcd .sm-read .s-over{color:var(--lr); text-shadow:0 0 6px #ef4b3c66}   /* over S9 in the LCD red */
-.lcd .sm-read .s-core > .u:first-child{color:var(--lg); text-shadow:0 0 6px #7fd36a66}   /* the S in the LCD green */
-/* S readout in a box (as the clarifier's): its own width, the over-S9 slot kept inside it,
-   so the frame never changes size */
-.lcd .sm-read{flex:0 0 auto; margin-right:auto; padding:1px 10px 3px; border:1.5px solid var(--lb); border-radius:6px; margin-left:6px}
-.lcd .sm-read .s-core{padding-right:54px}
-.lcd .sm-read .s-over{left:auto; right:0; width:50px}
-/* S box centred in the free space; the over-S9 part (and its slot) smaller */
-.lcd .sm-read{margin-left:auto; margin-right:auto}
-.lcd .sm-read .s-over{font-size:16px; width:40px}
-.lcd .sm-read .s-over .u{font-size:15px; top:-3px}
-.lcd .sm-read .s-core{padding-right:43px}
-/* over S9: "+ 20 40 60" always shown, unused values dimmed, the current one lit */
-.lcd .sm-read .s-over{font-size:13px; width:84px}
-.lcd .sm-read .s-core{padding-right:88px}
-.lcd .sm-read .s-over .u{font-size:14px; top:-2px; margin:0 1px 0 0; opacity:.2}
-.lcd .sm-read .s-over.on .u{opacity:1}
-.lcd .sm-read .s-over .o{margin-left:4px; opacity:.2; text-shadow:none}
-.lcd .sm-read .s-over .o.on{opacity:1; text-shadow:0 0 6px #ef4b3c66}
-.lcd .sm-read .s-over{text-shadow:none}
-/* over S9: one 2-digit 7-segment field, unlit segments dimmed ("88" ghost behind the value) */
-.lcd .sm-read .s-over{font-size:16px; width:44px}
-.lcd .sm-read .s-core{padding-right:47px}
-.lcd .sm-read .s-dd{position:relative; display:inline-block}
-.lcd .sm-read .s-dd .gh{opacity:.12; text-shadow:none}
-.lcd .sm-read .s-dd .v{position:absolute; right:0; top:0; text-shadow:0 0 6px #ef4b3c66}
-/* over-S9 field larger again */
-.lcd .sm-read .s-over{font-size:22px; width:58px}
-.lcd .sm-read .s-over .u{font-size:18px; top:-4px}
-.lcd .sm-read .s-core{padding-right:61px}
 .lcd .freq-b{opacity:1; text-shadow:0 0 10px var(--lb-glow), 0 0 26px #1e8fe066}   /* as bright as VFO A */
-.lcd .sm-read{padding-top:5px}   /* more room above the digits */
 .tx-read b{color:var(--lg); text-shadow:0 0 6px #7fd36a66}   /* the PWR value in the LCD green */
 #lamp-tx{font-size:15px; padding:5px 12px; letter-spacing:.1em}   /* the TX lamp larger */
+/* VFO-B right under the VFO A frequency, a divider between them; the clarifier row
+   below at the foot of the column */
+.lcd .vfo-b{border-top:1px solid color-mix(in srgb, var(--lb) 40%, transparent); padding-top:8px; margin-top:-2px}
+.lcd-freq{justify-content:flex-start}          /* VFO-B follows VFO A directly ... */
+.lcd .lf-bottom{margin-top:auto}               /* ... and the clarifier sits at the bottom */
+/* 7-segment ghosts: a dimmed "8" behind every digit place (behind the lit digit) */
+.s8{position:relative; z-index:0}
+.s8::before{content:"8"; position:absolute; left:0; top:0; z-index:-1; opacity:.12; text-shadow:none; pointer-events:none}
+.lcd .freq .dg.lead{opacity:1}                 /* the blank leading place: only its ghost shows */
+/* both frequencies a little lower */
+.lcd .freq-line{margin-top:24px}
+.lcd .vfo-b{margin-top:10px}
+/* ghost and digit in the same line box (inline-block), so the 8 sits exactly on the
+   digit whatever the line height (the clarifier's dropped otherwise) */
+.s8{display:inline-block}
+.s8::before{top:0; bottom:0; line-height:inherit}
+/* unlit bar segments (PO/SWR/ALC/ID/AF and CONTOUR/NOTCH/WIDTH/SHIFT) as dimmed full
+   segments instead of dots, like the unlit segments on the FT-950's LCD */
+.lbar i:not(.on):not(.pk), :root[data-theme="light"] .lbar i:not(.on):not(.pk){background:var(--lb); opacity:.16}
+.lbar i.hot:not(.on):not(.pk), :root[data-theme="light"] .lbar i.hot:not(.on):not(.pk){background:var(--lr); opacity:.2}
+.dbars i:not(.on), :root[data-theme="light"] .dbars i:not(.on){background:var(--lg); opacity:.16}
+/* digital S meter under VFO-B: scale above, segment bar blue to S9 and red above */
+.lcd .dsm{margin-top:14px; padding:0 2px}
+.lcd .dsm-scale{position:relative; height:13px; margin:0 6px 3px; font:italic 800 10px var(--font-ui); color:var(--lb)}
+.lcd .dsm-scale span{position:absolute; bottom:0; transform:translateX(-50%); white-space:nowrap}
+.lcd .dsm-scale span.hot{color:var(--lr)}
+.lcd .dsm-scale .dsm-s{left:-6px; transform:none; font-size:11px}
+.lcd .dsm-bar{display:grid; grid-template-columns:repeat(40,1fr); gap:2px; height:10px; margin:0 6px}
+.lcd .dsm-bar i{background:var(--lb); opacity:.16; border-radius:1px}
+.lcd .dsm-bar i.hot{background:var(--lr); opacity:.2}
+.lcd .dsm-bar i.on{opacity:1; box-shadow:0 0 5px var(--lb-glow)}
+.lcd .dsm-bar i.hot.on{box-shadow:0 0 5px var(--lr)}
+.lcd .lf-bottom .tune-scale{margin-right:44px}   /* the clarifier scale a little to the left */
+/* 7-segment ghosts a little darker; digital S-meter scale larger */
+.s8::before{opacity:.07}
+.lcd .dsm-scale{height:16px; font-size:13px}
+.lcd .dsm-scale .dsm-s{font-size:14px; left:-8px}
+/* PWR box as the clarifier box: blue frame, blue label, green value - fixed colours, as
+   on a real LCD; height and corners as the TX lamp / clarifier box */
+.tx-read{border-color:var(--lb); color:var(--lb); border-radius:6px; box-shadow:none; opacity:1;
+  height:25px; box-sizing:border-box; line-height:1; align-items:center; padding:0 10px; transition:border-color .15s, box-shadow .15s}
+.tx-read b{line-height:1}
+.tx-read.on{border-color:var(--lb); box-shadow:none}   /* an LCD cannot change colour: same frame on TX (the TX lamp shows it) */
+.tx-read{color:var(--lr)}   /* PWR / W in the LCD red (the value stays green) */
+/* PWR box larger */
+.tx-read{height:31px; font-size:14px; padding:0 12px; gap:7px}
+.tx-read b{font-size:23px}
+/* keep BUSY · modes · TX · PWR on one line */
+.lcd .lf-top{flex-wrap:nowrap; gap:8px}
+.tx-read{height:29px; font-size:13px; padding:0 9px; gap:5px; letter-spacing:.12em; flex:none}
+.tx-read b{font-size:21px; min-width:0}
+/* analog meter as the FT-950's: black face, thinner white lines, steel-blue bands */
+#am-face stop:nth-child(1), :root[data-theme="light"] #am-face stop:nth-child(1){stop-color:#0b0d11}
+#am-face stop:nth-child(2), :root[data-theme="light"] #am-face stop:nth-child(2){stop-color:#050608}
+#am-face stop:nth-child(3), :root[data-theme="light"] #am-face stop:nth-child(3){stop-color:#020203}
+.ameter{--am-w:#eef2fa; --am-b:#8fa8dc}
+.am-arc{stroke-width:2.2; filter:none}
+.am-arc.blue{stroke-width:5.5}
+.am-tick{stroke-width:1.8}
+.am-tick.minor{stroke-width:1.1}
+.am-lbl{filter:none}

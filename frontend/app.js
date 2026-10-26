@@ -249,50 +249,56 @@ const amPt = (f, r) => {
     const [x, y] = amPt(f - 0.02, r);
     el("text", { x: x - 4, y, class: cls }, text);
   };
-  // S scale: white to S9, thick blue band above
-  const s9 = 130 / 255;
-  arc(0, s9, 290, "am-arc");
+  // Scales after the FT-950's own meter: white lines and figures on black, a steel-blue
+  // band above S9 (and a short one at the start of the S scale) and for ALC.
+  // S scale
+  const s9 = 130 / 255, s1 = 12 / 255;
+  arc(0, s1, 290, "am-arc blue");
+  arc(s1, s9, 290, "am-arc");
   arc(s9, 1, 290, "am-arc blue");
   for (let k = 1; k < 24; k++) tick(k / 24, 290, 295, "am-tick minor");
   for (const [raw, label] of S_POINTS) {
     const f = raw / 255;
-    tick(f, 290, 300, "am-tick" + (raw > 130 ? " blue" : ""));
-    lbl(f, 312, label.replace("S1", "1"), "am-lbl big" + (raw > 130 ? " blue" : ""));
+    tick(f, 290, 300);
+    lbl(f, 312, label.replace("S1", "1"), raw > 130 ? "am-lbl" : "am-lbl big");
   }
-  lbl(-0.05, 312, "S", "am-lbl big blue");
-  lbl(1.08, 300, "dB", "am-lbl blue");
-  // PO (W)
+  lbl(-0.06, 316, "S", "am-lbl big");
+  lbl(1.08, 304, "dB");
+  // PO (W): 0 … 150
   arc(0, 1, 278, "am-arc");
   for (let k = 1; k < 30; k++) tick(k / 30, 278, 273, "am-tick minor");
-  for (const w of [5, 10, 25, 50, 100]) { const f = rawFrac(PO_CAL, w); tick(f, 278, 270); lbl(f, 261, w); }
-  lbl(1.03, 274, "W", "am-lbl big");
+  for (const w of [10, 50, 100, 150]) { const f = rawFrac(PO_CAL, w); tick(f, 278, 270); lbl(f, 261, w); }
+  lbl(0.005, 263, "0");
+  lbl(1.1, 263, "W", "am-lbl big");
   side(0, 278, "PO");
-  // COMP (dB)
-  arc(0.08, 0.98, 236, "am-arc");
-  for (let k = 1; k < 18; k++) tick(0.08 + k * 0.05, 236, 240, "am-tick minor");
-  for (const [f, d] of [[0.38, "5"], [0.68, "10"], [0.95, "15"]]) { tick(f, 236, 244); lbl(f, 250, d); }
-  lbl(1.06, 234, "dB");
-  side(0.08, 236, "COMP");
-  // ID (A)
-  arc(0.12, 0.96, 214, "am-arc");
-  for (const [f, a] of [[0.33, "5"], [0.62, "10"], [0.9, "15"]]) { tick(f, 214, 207); lbl(f, 200, a); }
+  // COMP (dB): 0 · 10 · 20
+  arc(0.06, 0.94, 236, "am-arc");
+  for (let k = 1; k < 20; k++) tick(0.06 + k * 0.041, 236, 240, "am-tick minor");
+  for (const [f, d] of [[0.06, "0"], [0.47, "10"], [0.88, "20"]]) { tick(f, 236, 244); lbl(f, 251, d); }
+  lbl(1.02, 234, "dB");
+  side(0.06, 236, "COMP");
+  // ID (A): 0 · 5 · 10 · 15
+  arc(0.02, 0.96, 214, "am-arc");
+  for (const [f, a] of [[0.02, "0"], [0.33, "5"], [0.62, "10"], [0.9, "15"]]) { tick(f, 214, 207); lbl(f, 200, a); }
   lbl(1.04, 212, "A", "am-lbl big");
-  side(0.12, 214, "ID");
-  // SWR
-  arc(0.14, 0.94, 176, "am-arc");
-  for (const [f, v] of [[0.14, ""], ...[1.5, 2, 3].map((x) => [Math.max(0.2, rawFrac(SWR_CAL, x)), String(x)]), [1, "∞"]]) {
-    tick(f, 176, 182); if (v) lbl(f, 188, v);
+  side(0.02, 214, "ID");
+  // SWR: 1 · 1.5 · 2 · 3 · 5 · ∞
+  arc(0.14, 1, 176, "am-arc");
+  for (const [f, v] of [[0.14, "1"], ...[1.5, 2, 3, 5].map((x) => [Math.max(0.2, rawFrac(SWR_CAL, x)), String(x)]), [1.03, "∞"]]) {
+    if (f <= 1) tick(f, 176, 182);
+    lbl(f, 189, v);
   }
   side(0.14, 176, "SWR");
-  // ALC (blue zone) and VDD
+  // ALC (blue zone) and VDD with its 13.8 V mark
   arc(0.16, 0.52, 158, "am-arc blue");
   arc(0.52, 0.92, 158, "am-arc");
+  tick(0.76, 158, 163); lbl(0.76, 168, "13.8", "am-lbl small");
   lbl(0.96, 156, "V", "am-lbl big");
   {                                  // "VDD" right after the V, upright (as on the FT-950)
     const [vx, vy] = amPt(0.96, 156);
     el("text", { x: vx + 19, y: vy + 3, class: "am-lbl small" }, "VDD");
   }
-  side(0.16, 158, "ALC", "am-side blue");
+  side(0.16, 158, "ALC");
 })();
 const amNeedle = $("am-needle");
 // Needle ballistics like a moving-coil meter: critically damped (no overshoot),
@@ -311,18 +317,20 @@ function needleStep(t) {
   }
   needle.raf = requestAnimationFrame(needleStep);
 }
+// digital S meter under VFO-B: 40 segments over the meter's raw 0 … 255, blue to S9
+// (raw 130), red above; the scale marks sit where the needle's S points are
+const DSM_N = 40, DSM_S9 = 130;
+$("dsm-bar").innerHTML = Array.from({ length: DSM_N }, (_, i) =>
+  `<i${(i + 0.5) / DSM_N * 255 > DSM_S9 ? ' class="hot"' : ""}></i>`).join("");
+$("dsm-scale").innerHTML = `<span class="dsm-s">S</span>` + S_POINTS.map(([raw, l]) =>
+  `<span class="${raw > DSM_S9 ? "hot" : ""}" style="left:${raw / 255 * 100}%">${l.replace("S1", "1")}</span>`).join("");
+function dsmSet(raw) {
+  const lit = Math.round(raw / 255 * DSM_N);
+  [...$("dsm-bar").children].forEach((seg, i) => seg.classList.toggle("on", i < lit));
+}
 function meterSet(raw, label) {
   needle.target = raw / 255;
   if (!needle.raf) needle.raf = requestAnimationFrame(needleStep);
-  // readout under the frequency, left of VFO-B: digits in the 7-segment font, letters and
-  // "+" small in the UI font (DSEG7 has no real S or +)
-  // S readout: "S9" fixed, then "+" and one 2-digit 7-segment field for 20/40/60 -
-  // its unlit segments show dimmed ("88" behind), so S and the digit never move
-  const sm = /^S(\d)(?:\+(\d+))?$/.exec(label);
-  if (!sm && /^PO/.test(label)) return;          // transmit: the box stays as it is, its content hidden by CSS
-  $("sm-read").innerHTML = sm
-    ? `<span class="s-core"><small class="u">S</small>${sm[1]}<span class="s-over${sm[2] ? " on" : ""}"><small class="u">+</small><span class="s-dd"><span class="gh">88</span><span class="v">${sm[2] || ""}</span></span></span></span>`
-    : esc(label).replace(/[^0-9.\-]+/g, (t) => `<small class="u">${t.trim()}</small>`);
 }
 
 // number in the 7-segment font, unit in the UI font (DSEG7 has no real W, A or %)
@@ -330,8 +338,11 @@ function meterSet(raw, label) {
 // long ones every 500 Hz, the longest at 0
 $("tune-mark").insertAdjacentHTML("beforebegin", Array.from({ length: 21 }, (_, i) =>
   `<b class="ts-t${i === 10 ? " zero" : i % 5 === 0 ? " major" : ""}" style="left:${5 + i * 4.5}%"></b>`).join(""));
+// every digit place of a 7-segment readout gets a dimmed "8" behind it (unlit segments,
+// as on the FT-950's LCD); "!" is DSEG's blank digit, "-" takes a digit place too
+function seg8(str) { return String(str).replace(/[0-9!\-]/g, (d) => `<span class="s8">${d}</span>`); }
 function lcdVal(id, num, unit, prefix = "") {
-  $(id).innerHTML = (prefix ? `<small class="u">${prefix}</small>` : "") + esc(String(num)) +
+  $(id).innerHTML = (prefix ? `<small class="u">${prefix}</small>` : "") + seg8(esc(String(num))) +
     (unit ? `<small class="u uu">${unit}</small>` : "");
 }
 
@@ -366,7 +377,7 @@ function txVals(po, swr, alc, id) {
   lcdVal("v-po", String(Math.round(w)).padStart(3, "0"), "W");
   lcdVal("v-alc", String(Math.round(alc / 255 * 100)).padStart(3, "0"), "%");
   // "≥" always takes its place (hidden below 5:1) for the same reason
-  $("v-swr").innerHTML = `<small class="u"${r >= 4.95 ? "" : ' style="visibility:hidden"'}>≥</small>${Math.min(r, 5).toFixed(1)}<small class="u uu">:1</small>`;   // ratio as the unit, like W / % / A / dB
+  $("v-swr").innerHTML = `<small class="u"${r >= 4.95 ? "" : ' style="visibility:hidden"'}>≥</small>${seg8(Math.min(r, 5).toFixed(1))}<small class="u uu">:1</small>`;   // ratio as the unit, like W / % / A / dB
 }
 const afTxt = (db) => "-" + String(Math.min(99, Math.round(Math.max(0, -db)))).padStart(2, "0");   // −02 dB
 const afRaw = (db) => Math.max(0, Math.min(255, (db + 60) / 60 * 255));
@@ -423,7 +434,7 @@ function renderFreq(hz) {
   for (let i = 0; i < 8; i++) {
     if (i === 2 || i === 5) html += '<span class="sep">.</span>';
     const lead = i === 0 && hz < 10e6;
-    html += `<span class="dg${lead ? " lead" : ""}" data-w="${10 ** (7 - i)}">${lead ? "!" : s[i]}</span>`;
+    html += `<span class="dg s8${lead ? " lead" : ""}" data-w="${10 ** (7 - i)}">${lead ? "!" : s[i]}</span>`;
   }
   freqEl.innerHTML = html;
 }
@@ -753,7 +764,7 @@ function renderRadio(s) {
   if (Date.now() - (touched.get("hq-clar") || 0) > 2000) $("hq-clar").classList.toggle("on", !!v.rx_clar);
   $("clar-lbl").textContent = v.tx_clar && !v.rx_clar ? "TX" : v.tx_clar ? "R/T" : "RX";
   const [ci, cf] = (Math.abs(v.clar_hz) / 1000).toFixed(3).split(".");   // clear decimal point (DSEG's is tiny)
-  $("clar-val").innerHTML = `${v.clar_hz > 0 ? "+" : v.clar_hz < 0 ? "-" : ""}${ci}<i class="cdot"></i>${cf}`;
+  $("clar-val").innerHTML = `${v.clar_hz > 0 ? "+" : v.clar_hz < 0 ? "-" : ""}${seg8(ci)}<i class="cdot"></i>${seg8(cf)}`;
   $("tune-mark").style.left = (50 + Math.max(-1000, Math.min(1000, v.clar_hz)) * 0.045) + "%";   // ±1 kHz on 5 … 95 %
   setClarOff(v.clar_hz);
   if (Date.now() - (touched.get("hq-clar") || 0) > 2000) $("clar-rx").classList.toggle("on", !!v.rx_clar);
@@ -768,7 +779,7 @@ function renderRadio(s) {
   const m = s.tx ? s.meters : null;
   if (m) meterSet(m.po, `PO ${Math.round(poWatts(m.po))} W`);
   else meterSet(s.smeter, sUnits(s.smeter));
-  $("sm-read").classList.toggle("tx", !!s.tx);    // readout hidden while transmitting
+  dsmSet(m ? 0 : s.smeter);                        // receive only: dark while transmitting
   $("ameter").setAttribute("title", m ? `PO raw ${m.po} · SWR raw ${m.swr} · ALC raw ${m.alc} · ID raw ${m.id ?? "—"}` : `S meter ${sUnits(s.smeter)} (raw ${s.smeter})`);
   $("tx-meters").classList.toggle("on", !!m);
   $("tx-read").classList.toggle("on", !!m);
@@ -795,7 +806,7 @@ function renderRadio(s) {
 
   if (s.other) {                                   // slow tier present
     const [m, k, h] = fmtHzGroups(s.other.freq_hz);
-    $("freq-b").innerHTML = `${+m}<span class="sep">.</span>${k}<span class="sep">.</span>${h}`;
+    $("freq-b").innerHTML = `${seg8(m.replace(/^0/, "!"))}<span class="sep">.</span>${seg8(k)}<span class="sep">.</span>${seg8(h)}`;
     $("mode-b").textContent = s.other.mode;
     $("rxtx").textContent = `RX ${s.rx_vfo} · TX ${s.tx_vfo}`;
     $("split").classList.toggle("on", s.rx_vfo !== s.tx_vfo);
@@ -845,7 +856,7 @@ function renderRadio(s) {
     highlightMem(v);
     $("lamp-pll").classList.toggle("on", !!s.pll_unlock);
     if (s.power) $("f-pwr").textContent = s.power + " W";
-    if (s.power != null) $("tx-pwr").textContent = s.power;
+    if (s.power != null) $("tx-pwr").innerHTML = seg8(String(s.power).padStart(3, "!"));
   }
   $("f-dial").textContent = (v.freq_hz / 1000).toFixed(2) + " kHz";
 }

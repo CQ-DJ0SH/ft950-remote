@@ -930,6 +930,10 @@ function appendRx(d) {
     setBox("rx", d.df);
     if ($("af").classList.contains("on")) setBox("tx", d.df);   // adopt frequency of caller
     if (d.from) fillQso(d);
+    if (d.from && !isMine(d)) {                                  // DX Call fields, as WSJT-X
+      $("dx-call").value = d.from.toUpperCase();
+      $("dx-grid").value = (d.grid || "").toUpperCase();
+    }
   };
   tr.ondblclick = () => { tr.onclick(); answer(d); };          // iDigi: double-click answers
   $("rx-body").appendChild(tr);
@@ -1095,6 +1099,32 @@ function huntLabel(on = seqState?.hunt) {
   if ($("seq-hunt").innerHTML !== html) $("seq-hunt").innerHTML = html;
 }
 setInterval(() => { if (seqState?.hunt) huntLabel(true); }, 1000);
+// DX Call: call a station typed in by hand (My Messages head). No Enter-to-call:
+// a key press in the field must not key the transmitter.
+$("dx-go").onclick = async () => {
+  const call = $("dx-call").value.trim().toUpperCase();
+  if (!/^[A-Z0-9/]{3,12}$/.test(call)) { toast("Enter a DX call", true); $("dx-call").focus(); return; }
+  if (call === myCall) { toast(`${call} is your own callsign`, true); $("dx-call").focus(); return; }
+  // the grid is optional and only shown: a 6-character one is cut to 4, anything
+  // else is left out - it never stops the call
+  let grid = $("dx-grid").value.replace(/\s/g, "").toUpperCase().slice(0, 4);
+  if (grid && !/^[A-R]{2}[0-9]{2}$/.test(grid)) { toast(`Grid "${grid}" left out (4 characters, e.g. JO62)`); grid = ""; }
+  try {
+    renderSeq(await api("/api/seq/call", { call, grid, tx_hz: boxes.tx, parity: $("dx-par").value }));
+    toast(`Calling ${call} …`);
+  } catch { /* toast */ }
+};
+for (const id of ["dx-call", "dx-grid"]) $(id).addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase(); });
+$("dx-grid").maxLength = 6;                         // a full locator may be pasted; it is cut to 4
+// directed CQ: the choice is kept per browser; changed while calling CQ, it takes
+// effect with the next CQ (restarts the CQ sequence)
+$("cq-to").value = store.get("cqTo", "");
+$("cq-to").onchange = async () => {
+  store.set("cqTo", $("cq-to").value);
+  if (seqState?.kind === "cq" && !seqState?.session) {
+    try { renderSeq(await api("/api/seq/cq", { tx_hz: boxes.tx, cq_to: $("cq-to").value })); } catch { /* toast */ }
+  }
+};
 // Hunt = auto-clicker for new stations' CQs (settings: Settings ▸ FT8 ▸ Hunt)
 $("seq-hunt").onclick = async () => {
   const on = !$("seq-hunt").classList.contains("on");
@@ -1107,7 +1137,8 @@ $("seq-hunt").onclick = async () => {
 };
 $("seq-cq").onclick = async () => {
   try {
-    renderSeq(seqState?.kind === "cq" ? await api("/api/seq/halt", {}) : await api("/api/seq/cq", { tx_hz: boxes.tx }));
+    renderSeq(seqState?.kind === "cq" ? await api("/api/seq/halt", {})
+      : await api("/api/seq/cq", { tx_hz: boxes.tx, cq_to: $("cq-to").value }));
   } catch { /* toast */ }
 };
 const STATE_CLS = { "done": "sess-ok", "running": "sess-run" };

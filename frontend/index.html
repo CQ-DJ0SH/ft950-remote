@@ -366,7 +366,7 @@
               <button class="sg" data-f="rr73" title="RR73 (and the older RRR)">RR73</button>
               <button class="sg" data-f="73">73</button>
             </div>
-            <label class="chk" title="Auto-scroll new rows into view"><input type="checkbox" id="rx-follow" checked> follow</label>
+            <label class="chk follow-ico" title="follow: the newest row stays in view (click to switch)"><input type="checkbox" id="rx-follow" checked><span aria-hidden="true">⤓</span></label>
             <button class="btn sm" id="rx-clear" title="Clear list">✕</button>
           </div>
           <div class="tbl" id="rx-wrap">
@@ -379,7 +379,15 @@
 
         <div class="side">
           <div class="pane">
-            <div class="pane-head"><h3 title="Double-click a received message (◀) to answer that station">My Messages</h3><span class="spacer"></span><label class="chk" title="Auto-scroll new rows into view"><input type="checkbox" id="my-follow" checked> follow</label><button class="btn sm" id="my-clear" title="Clear list">✕</button></div>
+            <div class="pane-head"><h3 title="Double-click a received message (◀) to answer that station">My Messages</h3>
+<span class="spacer"></span>
+              <span class="dx-call" title="DX Call: call a station typed in by hand - also one not decoded yet. A click on a decode fills it in.">
+                <input id="dx-call" maxlength="12" placeholder="DX call" autocapitalize="characters" autocomplete="off" spellcheck="false">
+                <input id="dx-grid" maxlength="4" placeholder="grid" autocapitalize="characters" autocomplete="off" spellcheck="false">
+                <select id="dx-par" title="TX period: auto = opposite to the station's last decode (else the next period), or even / odd"><option value="auto">auto</option><option value="even">even</option><option value="odd">odd</option></select>
+                <button class="btn sm" id="dx-go" type="button" title="Call this station now (the sequencer takes over, as with a double-click)">Call DX</button>
+              </span>
+              <label class="chk follow-ico" title="follow: the newest row stays in view (click to switch)"><input type="checkbox" id="my-follow" checked><span aria-hidden="true">⤓</span></label><button class="btn sm" id="my-clear" title="Clear list">✕</button></div>
             <div class="tbl short">
               <table class="msgs">
                 <thead><tr><th>Time</th><th></th><th class="n">SNR</th><th class="n">Δ</th><th class="n">Freq</th><th>Message</th><th>DXCC</th></tr></thead>
@@ -389,7 +397,7 @@
             </div>
           </div>
           <div class="pane">
-            <div class="pane-head"><h3>Sessions</h3><span class="spacer"></span><button class="btn sm toggle" id="sess-autolog" title="Auto-log: a QSO the sequencer completes goes into the log (Wavelog / QRZ.com, Settings ▸ Log) without a click. Off: it is offered in the log form instead.">Auto-log</button><button class="btn sm" id="sess-qrz" disabled title="Look up the marked session's call on QRZ.com (popup)">QRZ Visit</button><button class="btn sm" id="sess-map" disabled title="Show the marked session's station on a world map (popup): locator, or the DXCC entity centre without one">Map Display</button><label class="chk" title="Keep the newest session (bottom row) in view"><input type="checkbox" id="sess-follow" checked> follow</label><button class="btn sm" id="sess-clear" title="Clear the session list (a QSO in progress stays)">✕</button></div>
+            <div class="pane-head"><h3>Sessions</h3><span class="spacer"></span><button class="btn sm toggle" id="sess-autolog" title="Auto-log: a QSO the sequencer completes goes into the log (Wavelog / QRZ.com, Settings ▸ Log) without a click. Off: it is offered in the log form instead.">Auto-log</button><button class="btn sm" id="sess-qrz" disabled title="Look up the marked session's call on QRZ.com (popup)">QRZ Visit</button><button class="btn sm" id="sess-map" disabled title="Show the marked session's station on a world map (popup): locator, or the DXCC entity centre without one">Map Display</button><label class="chk follow-ico" title="follow: the newest row stays in view (click to switch)"><input type="checkbox" id="sess-follow" checked><span aria-hidden="true">⤓</span></label><button class="btn sm" id="sess-clear" title="Clear the session list (a QSO in progress stays)">✕</button></div>
             <div class="tbl short">
               <table class="msgs">
                 <thead><tr><th>Call</th><th>Time</th><th>Duration</th><th class="n">Freq</th><th>Band</th><th class="n">Tries</th><th>State</th><th>DXCC</th></tr></thead>
@@ -399,7 +407,7 @@
             </div>
           </div>
           <div class="pane">
-            <div class="pane-head"><h3>Session Messages</h3><span class="panel-stat" id="sessmsg-call"></span><span class="spacer"></span><label class="chk" title="Auto-scroll the newest message of the session into view"><input type="checkbox" id="sessmsg-follow" checked> follow</label></div>
+            <div class="pane-head"><h3>Session Messages</h3><span class="panel-stat" id="sessmsg-call"></span><span class="spacer"></span><label class="chk follow-ico" title="follow: the newest row stays in view (click to switch)"><input type="checkbox" id="sessmsg-follow" checked><span aria-hidden="true">⤓</span></label></div>
             <div class="tbl short">
               <table class="msgs">
                 <thead><tr><th>Time</th><th></th><th class="n">SNR</th><th class="n">Δ</th><th class="n">Freq</th><th>Message</th></tr></thead>
@@ -414,13 +422,13 @@
       <div class="strip">
         <div class="seg" id="digi-mode"></div>
         <button class="btn sm toggle" id="seq-cq" title="Call CQ (auto-sequencer): CQ · report · RR73 · log">CQ</button>
+        <select id="cq-to" title="Directed CQ: CQ DX (stations outside your continent), CQ EU / NA / SA / AF / AS / OC (that continent only), CQ POTA / SOTA - or a plain CQ"><option value="">—</option><option>DX</option><option>EU</option><option>NA</option><option>SA</option><option>AF</option><option>AS</option><option>OC</option><option>POTA</option><option>SOTA</option></select>
         <button class="btn sm toggle" id="seq-answer" title="Auto answer: while no QSO runs, a station calling you (locator, report or R-report to your call) is answered automatically on the TX frequency — the strongest if several call. Double-click a row to answer a station by hand.">Auto Answer</button>
         <button class="btn sm toggle" id="seq-hunt" title="Hunt: while no QSO runs, new stations calling CQ are called automatically on the TX frequency, one after the other — each QSO is waited for. A station that never answers is struck through and not called again. Switches itself off after the time set in Settings ▸ FT8 ▸ Hunt, and only calls while this panel is open.">Auto Hunt</button>
         <button class="btn sm toggle" id="af" title="Adopt Frequency: clicking a station also moves the TX window to its frequency, and Auto Answer / Auto Hunt answer on the partner's frequency">AF</button>
         <label class="txlvl" title="DIGI RX level: software gain on the Pi, −20 … +20 dB, for the FT8/FT4 decoder, the waterfall and the meter on the right only (browser audio and the radio's own level are not changed) — aim for −40 … −20 dBFS. Double-click: 0 dB."><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg><input type="range" id="rx-level" min="-20" max="20" step="1" value="0"><b id="rx-level-val">—</b></label>
         <button class="btn sm tune" id="tune" title="Steady tone on the TX frequency (max. 10 s) — for tuner and ALC/power adjustment">TUNE</button>
         <label class="txlvl" title="FT8/FT4 TX drive: audio level into the radio's DATA input, 0 … 100 % (same value as Settings ▸ Audio ▸ FT8 TX DRIVE). Set it with TUNE: full power, ALC barely moving."><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"></path><path d="M8.5 7.5a5 5 0 0 1 7 0"></path><path d="M5.5 4.5a9 9 0 0 1 13 0"></path><circle cx="12" cy="10" r="1.5"></circle></svg><input type="range" id="dg-tx-level" min="0" max="100" step="1"><b id="dg-tx-level-val">—</b></label>
-        <div class="cycle" title="Progress of the current cycle"><i id="cycle-bar"></i><span id="cycle-txt">RECEIVE</span></div>
         <span class="chip parity" id="parity">EVEN</span>
         <span class="chip" id="dec-ms" title="jt9 run time of the last cycle">— ms</span>
         <div class="seg" id="digi-depth" title="jt9 decode depth: D1 fast, D2 normal (default), D3 deep (subtraction + a-priori, slowest). AUTO picks the depth from the measured run time."></div>
@@ -448,6 +456,7 @@
         <span class="lvl" title="Receive level from the radio (RMS) — target −40 … −20 dBFS, adjustable on the radio (Settings ▸ Audio). Set it with the slider on the left (software gain on the Pi).">
           <span class="lvl-bar"><i id="lvl-bar"></i></span><b id="lvl-val">— dBFS</b>
         </span>
+        <div class="cycle" title="Progress of the current cycle"><i id="cycle-bar"></i><span id="cycle-txt">RECEIVE</span></div>
         <span class="spacer"></span>
         <label>Palette <select id="wf-cmap"><option>Purple</option><option>Rainbow</option><option>Blue</option></select></label>
         <label>Contrast <input type="range" id="wf-contrast" min="0" max="100" value="55"><b class="wf-val" id="wf-contrast-val">55</b></label>

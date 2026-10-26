@@ -1740,3 +1740,36 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 /* DIGI strip: NTP as LED + text, like the title bar's CAT / USB AUDIO */
 #l-ntp{margin-right:4px; gap:6px}
 #l-ntp .stat-label{font-size:10px}
+/* DX Call in the My Messages head */
+.dx-call{display:inline-flex; align-items:center; gap:6px; margin:0 12px 0 0}   /* right, before follow */
+.dx-call input{font:600 12px var(--font-mono); text-transform:uppercase; color:var(--text); background:var(--field-bg);
+  border:1px solid var(--sw-edge); border-radius:6px; padding:3px 7px; outline:none}
+.dx-call input:focus{border-color:var(--accent)}
+.dx-call #dx-call{width:88px}
+.dx-call #dx-grid{width:52px}
+.dx-call select{font:600 11px var(--font-mono); color:var(--text); background:var(--ctrl-bg); border:1px solid var(--sw-edge);
+  border-radius:6px; padding:3px 4px}
+/* "follow" as a small icon toggle (⤓ = stays at the newest row): faint when off,
+   in the panel colour when on; the checkbox stays (hidden) for the code and the keyboard */
+.follow-ico{position:relative; display:inline-flex; cursor:pointer}
+.follow-ico input{position:absolute; opacity:0; width:1px; height:1px; margin:0}
+.follow-ico span{display:inline-flex; align-items:center; justify-content:center; width:31px; height:25px; box-sizing:border-box;
+  border:1px solid var(--edge); border-radius:6px; font-size:14px; line-height:1; color:var(--text-dim); opacity:.45; transition:.15s}
+.follow-ico input:checked + span{color:var(--accent); border-color:color-mix(in srgb, var(--accent) 60%, transparent); opacity:1}
+.follow-ico input:focus-visible + span{box-shadow:0 0 0 2px var(--cyan)}
+@media (hover:hover){.follow-ico:hover span{opacity:1}}
+/* directed CQ choice beside the CQ button */
+#cq-to{font:600 11px var(--font-mono); color:var(--text); background:var(--ctrl-bg); border:1px solid var(--sw-edge);
+  border-radius:6px; padding:3px 4px; margin-left:-4px}
+/* DIGI strip: room for the directed-CQ choice - the two level sliders a little shorter */
+.txlvl input[type=range]{width:80px}
+#cq-to{padding:3px 2px; width:46px}
+.txlvl b{min-width:6ch}   /* "-20 dB" / "100%" fit without moving the strip */
+.strip .cycle{width:108px}   /* a little narrower: room for the directed-CQ choice */
+#cq-to{height:25px; box-sizing:border-box; padding-top:0; padding-bottom:0}   /* as tall as the buttons beside it */
+/* the cycle bar (RECEIVE / TRANSMIT) in the DIGI footer, beside the RX level */
+.foot .cycle{width:120px; height:20px; margin-left:10px}
+.foot .cycle span{font-size:10px; line-height:18px}
+.foot .cycle{width:92px; margin-left:0}
+.foot .lvl .lvl-bar{width:100px}
+#f-tx{display:inline-block; min-width:4ch; text-align:right; font-variant-numeric:tabular-nums}   /* "607" or "1500": the footer does not move */

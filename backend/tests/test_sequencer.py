@@ -262,9 +262,11 @@ def test_early_range_narrows_to_the_partner_when_far_from_our_tx():
     s = _seq()
     s.session = s._new_session(_d("CQ M0DPK IO80", df=607))
     s.tx_hz = 1950.0
-    assert s.early_range() == (457, 757)                  # partner only: the fast pass can run
+    assert s.early_range() == (407, 807)                  # partner only (±200 Hz): the fast pass can run
     s.tx_hz = 900.0
-    assert s.early_range() == (457, 1050)                 # close: both, as before
+    assert s.early_range() == (407, 1100)                 # close: both, as before
+    s.mode, s.tx_hz = "FT4", 607.0
+    assert s.early_range() == (307, 907)                  # FT4 needs ±300 Hz
 
 
 def test_auto_answer_and_hunt_adopt_the_partners_frequency():

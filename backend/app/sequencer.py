@@ -39,6 +39,10 @@ WAIT_MARGIN = 0.45          # stop waiting for decodes this long before the late
 # Hunt (the DIGI strip's auto-clicker): switches itself off after this long, and
 # only calls while a browser shows the DIGI panel - an operator at the station.
 PARTNER_SPAN_MAX = 1000    # wider than this, the fast partner pass looks at the partner only
+# Room around the partner for the narrow passes. Measured with jt9 on recorded
+# periods: FT8 ±150 Hz lost 2 of 54 decodes, ±200 none; FT4 needs far more
+# (±150 Hz found 1 of 24, ±250 all 24) - its decoder wants margin above the tones.
+PARTNER_MARGIN = {"FT8": 200, "FT4": 300}
 HUNT_MAX_S = 180 * 60       # default; Settings ▸ FT8 ▸ Hunt, 0 = no switch-off
 HUNT_BLOCK_MAX = 1000       # calls kept on the no-reply list
 
@@ -165,14 +169,15 @@ class Sequencer:
             return None
         if self.session and self.session.get("df"):
             df = self.session["df"]
-            lo = min(df, self.tx_hz) - 150
-            hi = max(df, self.tx_hz) + 150
+            m = PARTNER_MARGIN.get(self.mode, 200)
+            lo = min(df, self.tx_hz) - m
+            hi = max(df, self.tx_hz) + m
             if hi - lo > PARTNER_SPAN_MAX:
                 # partner far from our TX frequency: the partner answers on its own
                 # frequency, so decode around it only. (The span over both was so
                 # wide that the digi service skipped the fast partner pass, and every
                 # reply came only with the full pass - after our TX had started.)
-                lo, hi = df - 150, df + 150
+                lo, hi = df - m, df + m
             return int(max(100, lo)), int(min(3500, hi))
         return int(self.digi.config["low_hz"]), int(self.digi.config["high_hz"])
 

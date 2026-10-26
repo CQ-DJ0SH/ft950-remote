@@ -129,6 +129,12 @@ class Sequencer:
             self.session["their_report"] = d["msg"].split()[-1].lstrip("R")
         self.tries = 0
         self._log_rx(d)
+        # The decode we answer is the partner's period, already evaluated: the
+        # loop need not wait for it (it was decoded before the sequence ran,
+        # so on_decodes never marked it), so a click early in our own period
+        # still goes out in that period instead of waiting until 1.55 s.
+        if d.get("t0") is not None:
+            self._seen[d["t0"]] = True
         self._run()
         return await self.publish()
 

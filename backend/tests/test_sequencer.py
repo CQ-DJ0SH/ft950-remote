@@ -233,3 +233,10 @@ def test_hunt_list_edited_by_hand():
     assert s.hunt_pick([_d("CQ SP2DDD JO93", worked=_w())]) is None
     asyncio.run(s.set_hunt_blocked("SP2DDD", False))
     assert s.hunt_blocked == {} and saved[-1] == {}
+
+
+def test_answer_marks_the_partners_period_as_evaluated():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    s._run = lambda: None                                   # no loop in the test
+    asyncio.run(s.answer(_d("CQ SP2DDD JO93", t0=30.0), 1500))
+    assert s._seen.get(30.0) is True                        # TX in the next period starts at once

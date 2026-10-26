@@ -19,7 +19,7 @@ EN = [
     ("img", "screenshots/vfo.png", 174),
     ("h1", "2  Features"),
     ("ul", [
-        "VFO panel with an LCD modelled on the FT-950's display: FT-2000 style "
+        "VFO panel with an LCD modelled on the FT-950's display: FT-950 style "
         "analog meter, signal path as lit cells, mode lamps, DSP bars, "
         "seven-segment frequency, clarifier, VFO-B, PO/SWR/ALC/ID/AF bars on transmit.",
         "Title-bar switches: split, ANT 1/2, tuner and ATU tuning, CLAR/CLR, "
@@ -122,18 +122,22 @@ EN = [
     ("h2", "LCD"),
     ("img", "manual/lcd.png", 174),
     ("p", "Left window: the analog meter — S on receive, PO on transmit — with "
-          "the FT-2000's scales (S, PO, COMP, ID, SWR, ALC/VDD) and the MONI/NB/"
+          "the FT-950's scales (S, PO 0–150 W, COMP 0–20 dB, ID, SWR 1–∞, ALC/VDD "
+          "13.8 V), white on black with steel-blue bands, and the MONI/NB/"
           "TUNER/MIC EQ indicators."),
     ("p", "Right window: the signal path ANT · ATT · FLT · IPO · R.FLT · AGC "
           "as fixed cells (only the active values light up), BUSY, the mode lamps "
           "LSB USB CW AM FM RTTY PKT REV (DATA-U lights PKT + USB, CW-R lights "
           "CW + REV), TX lamp and set power, the PO/SWR/ALC/ID/AF bars, the DSP "
           "bars, the frequency to 1 Hz, the clarifier scale (red mark = offset, "
-          "±1 kHz, a tick every 100 Hz) with its value, the S readout and VFO-B."),
-    ("p", "The S readout left of VFO-B shows the needle's value: S and its digit "
-          "stay in place, the part above S9 (+20, +40, +60) sits in a red "
-          "two-digit field of its own, unlit segments dimmed. On transmit the box "
-          "stays and its content goes."),
+          "±1 kHz, a tick every 100 Hz) with its value, VFO-B under VFO A and a "
+          "digital S meter."),
+    ("p", "The digital S meter under VFO-B is a 40-segment bar, blue to S9 and red "
+          "above, with the scale 1 … 9, +20, +40, +60 at the needle's S points; it "
+          "stays dark while transmitting. As on the FT-950's LCD, every 7-segment "
+          "digit place shows a dimmed 8 and unlit bar segments are dimmed, and "
+          "nothing changes colour — the PWR box keeps its colours on transmit, "
+          "the TX lamp shows it."),
     ("p", "PO and SWR use approximate calibration points; ID (amps) follows the "
           "meter's 5/10/15 A marks; AF shows the microphone level on voice and "
           "the tone drive on FT8/TUNE (computed from FT8 TX DRIVE, not measured). "

@@ -17,7 +17,7 @@ DE = [
     ("h1", "2  Funktionen"),
     ("ul", [
         "VFO-Feld mit einem LCD nach dem Vorbild des FT-950-Displays: Analoginstrument "
-        "im Stil des FT-2000, Signalweg als beleuchtete Felder, Betriebsartenlampen, "
+        "im Stil des FT-950, Signalweg als beleuchtete Felder, Betriebsartenlampen, "
         "DSP-Balken, Sieben-Segment-Frequenzanzeige, Ablage (Clarifier), VFO-B sowie "
         "PO/SWR/ALC/ID/AF-Balken beim Senden.",
         "Schalter in der Titelleiste: Split, ANT 1/2, Tuner und ATU-Abstimmung, "
@@ -135,7 +135,8 @@ DE = [
     ("h2", "LCD"),
     ("img", "manual/lcd.png", 174),
     ("p", "Linkes Fenster: das Analoginstrument — S-Meter beim Empfang, PO beim "
-          "Senden — mit den Skalen des FT-2000 (S, PO, COMP, ID, SWR, ALC/VDD) und "
+          "Senden — mit den Skalen des FT-950 (S, PO 0–150 W, COMP 0–20 dB, ID, SWR "
+          "1–∞, ALC/VDD 13,8 V), weiß auf Schwarz mit stahlblauen Bögen, und "
           "den Anzeigen MONI/NB/TUNER/MIC EQ."),
     ("p", "Rechtes Fenster: der Signalweg ANT · ATT · FLT · IPO · R.FLT · AGC als "
           "feste Felder (nur die aktiven Werte leuchten), BUSY, die "
@@ -143,11 +144,13 @@ DE = [
           "+ USB, bei CW-R CW + REV), TX-Lampe und eingestellte Leistung, die "
           "PO/SWR/ALC/ID/AF-Balken, die DSP-Balken, die Frequenz bis 1 Hz, die "
           "Ablageskala (rote Marke = Ablage, ±1 kHz, ein Strich je 100 Hz) mit ihrem "
-          "Wert, die S-Anzeige sowie VFO-B."),
-    ("p", "Die S-Anzeige links von VFO-B zeigt den Wert der Nadel: S und die Ziffer "
-          "bleiben an ihrem Platz, der Teil über S9 (+20, +40, +60) steht in einem "
-          "eigenen roten zweistelligen Feld, unbeleuchtete Segmente abgedunkelt. "
-          "Beim Senden bleibt der Kasten stehen, sein Inhalt verschwindet."),
+          "Wert, VFO-B unter VFO A und ein digitales S-Meter."),
+    ("p", "Das digitale S-Meter unter VFO-B ist ein Balken aus 40 Segmenten, blau "
+          "bis S9 und rot darüber, mit der Skala 1 … 9, +20, +40, +60 an den S-Punkten "
+          "der Nadel; beim Senden bleibt es dunkel. Wie beim LCD des FT-950 zeigt "
+          "jede 7-Segment-Stelle eine abgedunkelte 8, unbeleuchtete Balkensegmente "
+          "sind abgedunkelt, und nichts wechselt die Farbe — der PWR-Kasten behält "
+          "beim Senden seine Farben, das zeigt die TX-Lampe."),
     ("p", "PO und SWR arbeiten mit ungefähren Kalibrierpunkten; ID (Ampere) folgt "
           "den 5/10/15-A-Marken des Instruments; AF zeigt bei Sprache den "
           "Mikrofonpegel und bei FT8/TUNE die Tonansteuerung (aus FT8 TX DRIVE "

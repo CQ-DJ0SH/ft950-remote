@@ -12,11 +12,12 @@ decoding, plus voice operation over WebRTC.
 ## Features
 
 - **VFO panel** with an LCD modelled on the FT-950's own display:
-  - FT-2000 style analog meter (S, PO, COMP, ID, SWR, ALC/VDD) in its own window
+  - analog meter after the FT-950's (S, PO, COMP, ID, SWR, ALC/VDD) in its own window
   - signal path (ANT · ATT · FLT · IPO · R.FLT · AGC) as fixed cells, only the
     active values lit; DSP bars; mode lamps (LSB USB CW AM FM RTTY PKT REV)
   - seven-segment frequency to 1 Hz, tunable by mouse wheel or drag on a digit;
-    clarifier scale, S readout, VFO-B
+    VFO-B under it, a digital S meter, clarifier scale; unlit segments shown
+    dimmed as on the real LCD
   - PO / SWR / ALC / ID (amps) / AF bars while transmitting, with **peak hold**
     until the next transmission (PEAK)
   - title bar: clickable dial LOCK, split, ANT 1/2, tuner and ATU tuning, CLAR/CLR, FLT · IPO ·

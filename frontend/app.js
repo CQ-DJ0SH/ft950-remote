@@ -1187,7 +1187,7 @@ function renderSeq(s) {
   for (const x of s.sessions) {
     if (x.logged === false && x.state === "done" && !prompted.has(x.started)) {
       prompted.add(x.started);
-      $("q-call").value = x.call; $("q-grid").value = x.grid || "";
+      $("q-call").value = x.call; $("q-grid").value = x.grid || ""; logReady();
       $("q-sent").value = x.report_sent || x.my_report || ""; $("q-rcvd").value = x.their_report || "";
       toast(`QSO with ${x.call} complete — details are in the log form, press LOG QSO.`);
     }
@@ -2162,6 +2162,7 @@ $("sys-canvas").addEventListener("mouseleave", () => { $("sys-tip").hidden = tru
 let logCfg = null;
 function fillQso(d) {
   $("q-call").value = d.from;
+  logReady();
   $("q-grid").value = d.grid || "";
   $("q-rcvd").value = (d.snr < 0 ? "-" : "+") + String(Math.abs(d.snr)).padStart(2, "0");   // −5 → "-05"
   for (const id of ["q-name", "q-qth", "q-country", "q-sent", "q-comment"]) $(id).value = "";
@@ -2206,6 +2207,11 @@ $("q-lookup").onclick = qrzLookup;
 $("q-call").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); qrzLookup(); } });
 $("qso-form").onsubmit = (e) => e.preventDefault();
 $("q-clear").onclick = () => { $("qso-form").reset(); showWorked(null); };
+// LOG QSO is lit (filled) only when there is something to log: a callsign in the form
+function logReady() { $("q-log").classList.toggle("ready", !!$("q-call").value.trim()); }
+$("q-call").addEventListener("input", logReady);
+$("qso-form").addEventListener("reset", () => setTimeout(logReady));
+logReady();
 $("q-log").onclick = async () => {
   if (!$("q-call").value.trim()) { toast("Enter a callsign", true); $("q-call").focus(); return; }
   const body = {
@@ -2254,9 +2260,10 @@ async function loadLogStatus() {
   let s;
   try { s = await api("/api/log/status"); } catch { return; }
   logCfg = s;
-  $("l-wl").classList.toggle("on", s.wavelog_ready);
-  $("l-qrz").classList.toggle("on", s.qrz_ready);
-  $("l-auto").classList.toggle("on", s.auto_log);
+  // LED + text, as CAT / USB AUDIO in the title bar
+  $("l-wl").classList.toggle("online", !!s.wavelog_ready);
+  $("l-qrz").classList.toggle("online", !!s.qrz_ready);
+  $("l-auto").classList.toggle("online", !!s.auto_log);
   $("sess-autolog").classList.toggle("on", !!s.auto_log);
   const w = s.worked;
   $("worked-stat").textContent = w.synced_at

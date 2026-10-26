@@ -1510,8 +1510,6 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 :root[data-theme="light"] .pwr-big .pb-track::before{background:repeating-linear-gradient(90deg, color-mix(in srgb,var(--text) 65%,transparent) 0 1px, transparent 1px 5.263%)}
 /* "W" after each scale number - hung outside, so the number itself stays centred on its tick */
 .pwr-big .pb-scale span::after{content:"W"; position:absolute; left:100%; margin-left:1px; font-size:.85em; opacity:.8}
-/* log panel: WAVELOG / QRZ / AUTO lit as an outline in the accent colour, not filled */
-.logp .panel-head .lamp.on:not(.warn):not(.bad){background:transparent; color:var(--accent); border-color:var(--accent)}
 /* light theme: the LCD windows darker (the slate was too pale) - closer to the dark-theme glass */
 :root[data-theme="light"] .lcd{--lbg:#16202a}
 :root[data-theme="light"] .lcd-meter, :root[data-theme="light"] .lcd-main{
@@ -1699,3 +1697,12 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .ctcss #btn-mon{margin-left:2px; padding:4px 8px; font-size:10px; letter-spacing:.1em}
 .tuner-sel .sel-row{gap:10px}   /* a little tighter: CTCSS fits beside the mode keys down to ~1400 px */
 .tuner-sel .sel-row .ctcss{margin-left:auto}   /* CTCSS · tone · MON at the right end of the MODE row */
+/* log panel: WAVELOG / QRZ / AUTO as LED + text, like CAT / USB AUDIO in the title bar */
+.logp .panel-head .stat{margin-right:0; gap:7px}
+.logp .panel-head .stat .stat-label{font-size:10px}
+/* QRZ LOOKUP / LOG QSO the size of the other panel buttons (CW SEND); LOG QSO only
+   outlined until a callsign is in the form, filled when there is something to log */
+.panel-head .log-btn{padding:6px 13px; font-size:12px; line-height:20px; border-radius:7px}
+.log-btn.primary:not(.ready){background:var(--ctrl-bg); color:var(--accent); border-color:var(--accent); font-weight:600}
+/* QRZ LOOKUP as a normal panel button (text and edge as SYNC); LOG QSO stays the one in colour */
+.log-btn.ghost{color:var(--text); border-color:var(--sw-edge)}

@@ -245,7 +245,9 @@ EN = [
         "log automatically: Auto-log in the Sessions header (default on) logs every "
         "completed QSO, otherwise it is offered in the log form. It can send RRR instead of RR73 "
         "(Settings ▸ FT8).",
-        "The slider with the speaker sets the DIGI RX level on the Pi, the one with "
+        "The slider with the speaker sets the DIGI RX level on the Pi (the meter "
+        "for it, target −40 … −20 dBFS, is in the footer next to the dial "
+        "frequency), the one with "
         "the antenna next to it the FT8/FT4 TX drive (as FT8 TX DRIVE in Settings ▸ Audio); TUNE sends "
         "a steady tone. Halt TRX, right in the title bar, is active only during "
         "an FT8/FT4 transmission or a sequence (dimmed otherwise) and stops at once.",

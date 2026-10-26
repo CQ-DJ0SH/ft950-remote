@@ -269,7 +269,8 @@ DE = [
         "automatisch geloggt, sonst landet es im Logformular. Statt RR73 kann sie RRR "
         "senden (Settings ▸ FT8).",
         "Der Schieberegler mit dem Lautsprecher stellt den DIGI-Empfangspegel auf "
-        "dem Pi ein, der mit der Antenne daneben den FT8/FT4-Sendepegel (wie "
+        "dem Pi ein (die Anzeige dazu, Ziel −40 … −20 dBFS, steht in der Fußzeile "
+        "neben der Frequenz), der mit der Antenne daneben den FT8/FT4-Sendepegel (wie "
         "FT8 TX DRIVE in Settings ▸ Audio); TUNE sendet einen Dauerton. Halt TRX rechts in der Titelzeile "
         "ist nur bei einer FT8/FT4-Sendung oder während einer Sequenz aktiv (sonst abgedunkelt) und bricht sofort ab.",
     ]),

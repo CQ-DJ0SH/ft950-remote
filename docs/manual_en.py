@@ -223,7 +223,8 @@ EN = [
     ("img", "manual/digi.png", 174),
     ("p", "DECODE in the panel's title bar switches decoding on and off (as in "
           "the CW skimmer). Decoding runs every period with WSJT-X's jt9 — or a "
-          "faster build chosen in Settings ▸ FT8 ▸ Decoder (see below). The passband is split "
+          "faster build chosen in Settings ▸ FT8 ▸ Decoder (see below); the WSJT-X plate in "
+          "the title bar shows the one that runs (2.7, 2.7 fast, 3.3 MT). The passband is split "
           "over three cores. D1/D2/D3/AUTO in the strip pick the depth: D2 "
           "(default) puts the decodes on screen about 1.5–2 s after the period on a "
           "Pi 5, D3 finds a few more weak signals in about 3 s, AUTO follows the "
@@ -334,7 +335,10 @@ EN = [
         "depth (as D1/D2/D3/AUTO in the panel) and range, closing message RR73 or "
         "RRR, Auto Hunt (whom to call: not worked on this band, never worked, DXCC "
         "new on this band, DXCC never worked; minimum SNR; switch-off time, 0 = "
-        "never; the no-reply list with Clear list), and the colours of the message "
+        "never; the no-reply list as a table — blocked time, call, country, grid, "
+        "band, SNR, tries — with fixed column heads, × to take a call off, a field "
+        "to add one by hand and Clear list; these edits apply at once), and the "
+        "colours of the message "
         "lists with preview and reset.",
         "Audio: capture device, codec level, FT8 TX drive, the FT-950 audio menus, "
         "voice TX processing, WebRTC buffers.",

@@ -244,7 +244,8 @@ DE = [
     ("img", "manual/digi.png", 174),
     ("p", "DECODE in der Titelzeile des Felds schaltet die Dekodierung ein und aus "
           "(wie beim CW-Skimmer). Dekodiert wird in jeder Periode mit jt9 aus WSJT-X — oder mit einem "
-          "schnelleren Build aus Settings ▸ FT8 ▸ Decoder (siehe unten). Der Durchlassbereich "
+          "schnelleren Build aus Settings ▸ FT8 ▸ Decoder (siehe unten); das WSJT-X-Schild in "
+          "der Titelzeile zeigt den laufenden an (2.7, 2.7 fast, 3.3 MT). Der Durchlassbereich "
           "wird auf drei Kerne verteilt. Die Tiefe wählen D1/D2/D3/AUTO in der "
           "Leiste: D2 (Standard) bringt die Dekodierungen auf dem Pi 5 etwa 1,5–2 s "
           "nach Periodenende, D3 findet ein paar schwache Signale mehr und braucht "
@@ -361,7 +362,10 @@ DE = [
         "-bereich, Abschluss RR73 oder RRR, Auto Hunt (wen anrufen: auf diesem "
         "Band nicht gearbeitet, nie gearbeitet, DXCC neu auf diesem Band, DXCC nie "
         "gearbeitet; Mindest-SNR; Abschaltzeit, 0 = nie; die Liste ohne Antwort "
-        "mit Clear list) und die Farben der Meldungslisten mit Vorschau und "
+        "als Tabelle — Sperrzeit, Rufzeichen, Land, Locator, Band, SNR, Versuche — "
+        "mit fester Kopfzeile, × zum Entfernen, einem Feld zum Hinzufügen von Hand "
+        "und Clear list; diese Änderungen wirken sofort) und die Farben der "
+        "Meldungslisten mit Vorschau und "
         "Zurücksetzen.",
         "Audio: Aufnahmegerät, Codec-Pegel, FT8-Sendeansteuerung, die Audiomenüs des "
         "FT-950, Sprachaufbereitung beim Senden, WebRTC-Puffer.",

@@ -108,8 +108,7 @@ code{font-family:var(--font-mono);font-size:.92em}
   content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px;
   border-radius:3px; background:var(--accent); box-shadow:0 0 12px var(--accent-glow);
 }
-.vfo{--accent:#8fd6ff; --accent-glow:#3fb4ff}   /* the LCD blue */
-:root[data-theme="light"] .vfo{--accent:#3a9be0; --accent-glow:#3a9be0}
+.vfo{--accent:var(--amber); --accent-glow:var(--amber-glow)}
 .digi{--accent:#6fd89a; --accent-glow:#6fd89a}
 .digi::before{box-shadow:0 0 9px -2px var(--accent-glow)}
 
@@ -143,7 +142,7 @@ code{font-family:var(--font-mono);font-size:.92em}
 .panel.collapsed .panel-toggle{transform:rotate(180deg)}
 .panel.collapsed{padding-bottom:12px}
 .panel.collapsed > :not(.panel-head):not(.screw){display:none}
-.logp{--accent:var(--amber); --accent-glow:var(--amber-glow)}   /* the VFO panel's former amber */
+.logp{--accent:#5aa9e6; --accent-glow:#5aa9e6}
 .logp::before{box-shadow:0 0 9px -2px var(--accent-glow)}
 .panel.collapsed .panel-head{margin-bottom:0}
 .panel-stat{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); letter-spacing:.05em}
@@ -1433,7 +1432,7 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .switch:checked::after{left:20px; background:#fff}
 #tx-auto:checked{background:#8b7ad6; border-color:#8b7ad6}            /* AGC: audio-panel violet */
 .dsp-sw:checked{background:var(--accent); border-color:var(--accent)}   /* DSP: receive processing, the
-   VFO panel's accent (LCD blue) - red is kept for transmit */
+   VFO panel's accent - red is kept for transmit */
 .switch:focus-visible{outline:none; box-shadow:0 0 0 2px var(--cyan)}
 :root[data-theme="light"] .switch{--track-empty:#c8d2d9}
 .mictest-toggle{margin-right:6px}
@@ -1617,3 +1616,26 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .lcd .vfo-b{border-top:2px solid color-mix(in srgb, var(--lb) 40%, transparent)}   /* the divider 2 px, dimmed */
 /* DIGI RX level in the footer (it wrapped in the control row) */
 .foot .lvl{margin-left:8px}
+/* PEAK: label, LED and the box around the values in the LCD green */
+.lcd-txm .pk-led{color:var(--lg)}
+.lcd-txm .pk-led i{background:var(--lg)}
+.lcd-txm.peak .pk-led i{box-shadow:0 0 6px var(--lg)}
+.lcd-txm.peak .pk-box{border-color:var(--lg)}
+/* Settings ▸ Appearance: panel tiles (a small map of the console, as TM-V71 Remote) */
+.panel-off{display:none !important}
+.duo:has(> .panel-off){grid-template-columns:minmax(0,1fr)}        /* PTT or Audio alone: full width */
+.duo:not(:has(> .panel:not(.panel-off))){display:none}
+.panel-list{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin-top:10px; max-width:640px}
+.panel-tile{grid-column:1 / -1; justify-content:space-between; gap:12px; min-height:40px; padding:8px 11px; border-radius:8px;
+  background:var(--ctrl-bg); border:1px solid var(--edge); transition:.18s}
+.panel-tile.is-half{grid-column:auto}
+.panel-tile .panel-row-txt{font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+@media (hover:hover){.panel-tile:hover{border-color:var(--accent,var(--amber))}}
+.panel-tile.is-off{border-style:dashed; opacity:.6}
+.panel-tile.is-off .panel-row-txt{font-weight:500}
+@media (max-width:560px){ .panel-list{grid-template-columns:1fr} .panel-tile.is-half{grid-column:1 / -1} }
+.acc-prev{border:1px solid; font-weight:600; letter-spacing:.08em}
+#accent-grid{margin-top:10px}
+#settings .mixer-field{margin-top:16px}
+/* Settings ▸ Memories: the column heads stay put while the channel list scrolls */
+.mem-row.mem-head{position:sticky; top:0; z-index:2; background:var(--panel-2)}

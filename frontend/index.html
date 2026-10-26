@@ -622,6 +622,7 @@
       <button class="tab" data-tab="audio" role="tab">Audio</button>
       <button class="tab" data-tab="log" role="tab">Log</button>
       <button class="tab" data-tab="memories" role="tab">Memories</button>
+      <button class="tab" data-tab="appearance" role="tab">Appearance</button>
       <button class="tab" data-tab="hardware" role="tab">Pi Hardware</button>
     </div>
 
@@ -799,6 +800,27 @@
         split sets TX on B, a key without split sets TX on A).</p>
       <div class="modal-actions"><span class="ma-note">Each row is saved with its WRITE button</span>
         <button class="btn-ghost" data-close>CLOSE</button>
+      </div>
+    </section>
+
+    <!-- APPEARANCE: panels on/off and their accent colours (per browser, as TM-V71 Remote) -->
+    <section class="tab-pane" data-pane="appearance">
+      <p class="pane-hint">Not every station needs every panel, and the colours are yours to choose. Changes show at once; SAVE keeps them, closing without it drops them. Both belong to this browser, like the collapse arrows: the PC in the shack and the tablet on the sofa may show a different console.</p>
+      <div class="mixer-field">
+        <span class="logo-label">Console panels</span>
+        <div class="panel-list" id="panel-list"></div>
+        <p class="pane-hint">A hidden panel keeps its live data and comes back complete — a view setting, not a switch-off. The exception is the HackRF: hiding it stops the sweep. VFO, PTT and Audio always stay — the radio is worked from them.</p>
+      </div>
+      <div class="mixer-field">
+        <span class="logo-label">Panel accent colours</span>
+        <div class="color-grid" id="accent-grid"></div>
+        <p class="pane-hint">The accent lights a panel's title, its switches, keys and sliders. A colour chosen here holds in both themes; Reset brings back the theme's own.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="panels-all" type="button">SHOW ALL</button>
+        <button class="btn-ghost" id="accents-reset" type="button">RESET COLOURS</button>
+        <button class="btn-ghost" data-close>CLOSE</button>
+        <button class="btn-primary" id="appearance-save" type="button">SAVE</button>
       </div>
     </section>
 

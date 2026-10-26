@@ -1373,6 +1373,7 @@ function openSettings() {
 function closeSettings() {
   modal.classList.remove("open");
   applyColors(digiColors);              // unsaved colour preview is dropped
+  revertAppearance();                   // and so are unsaved panel / accent changes
   clearInterval(paneTimer);
   paneTimer = null;
 }
@@ -1394,6 +1395,7 @@ function showTab(name) {
   if (name === "ft8") loadFt8();
   if (name === "log") loadLogSettings();
   if (name === "memories") loadMemEditor();
+  if (name === "appearance") renderAppearance();
   if (name === "audio") { loadAudio(true); loadVoice(); loadMenus(); paneTimer = setInterval(() => loadAudio(false), 1000); }
   if (name === "hardware") {
     loadSystem();
@@ -3601,3 +3603,123 @@ let cwCallTouched = 0;
 $("cw-call").addEventListener("input", () => { cwCallTouched = Date.now(); });
 $("cw-sent-clear").onclick = () => { $("cw-sent").innerHTML = ""; };
 $("cw-stop").onclick = () => api("/api/cw/stop", {}).then(() => toast("CW stopped after the current chunk")).catch(() => {});
+
+// ---------------------------------------------------------------- Settings ▸ Appearance
+// Panels on/off and their accent colours, per browser (as TM-V71 Remote's Panels tab).
+// VFO, PTT and Audio always stay (`fixed`: no tile, only an accent colour) - the radio
+// cannot be worked without them; the others get one tile each.
+const PANELS = [
+  { key: "vfo", sel: "#vfo", name: "VFO", fixed: true },
+  { key: "ptt", sel: "#pttp", name: "PTT · Memory", fixed: true },
+  { key: "audio", sel: "#audiop", name: "Audio · WebRTC", fixed: true },
+  { key: "digi", sel: "#digi", name: "DIGI · FT8/FT4" },
+  { key: "cw", sel: "#cwp", name: "CW" },
+  { key: "hackrf", sel: "#hackrf", name: "HackRF waterfall" },
+  { key: "log", sel: "#log", name: "Log · Wavelog" },
+];
+const panelEl = (p) => document.querySelector(p.sel);
+// keys this build no longer has are dropped, so SHOW ALL never does nothing
+// saved = what SAVE stored; panelsOff / accents = the working copy, shown live as a preview
+const savedPanels = () => store.get("panelsOff", []).filter((k) => PANELS.some((p) => p.key === k && !p.fixed));
+let panelsOff = new Set(savedPanels());
+let accents = store.get("accents", {});
+
+function applyPanels() {
+  for (const p of PANELS) panelEl(p)?.classList.toggle("panel-off", panelsOff.has(p.key));
+}
+function setPanelHidden(key, hidden) {
+  if (hidden) panelsOff.add(key); else panelsOff.delete(key);
+  applyPanels();
+  // canvases laid out while hidden come up zero-sized: measure again on the way back
+  requestAnimationFrame(() => {
+    window.dispatchEvent(new Event("resize"));
+    if (key === "digi" && !hidden) buildAxis();
+    if (key === "hackrf") hrfPanelToggled();      // hidden: the sweep stops, shown: resumes
+  });
+}
+function applyAccents() {
+  for (const p of PANELS) {
+    const el = panelEl(p), c = accents[p.key];
+    if (!el) continue;
+    if (c) { el.style.setProperty("--accent", c); el.style.setProperty("--accent-glow", c); }
+    else { el.style.removeProperty("--accent"); el.style.removeProperty("--accent-glow"); }
+  }
+}
+function accentNow(el) {                        // the accent in effect, as #rrggbb
+  const ctx = document.createElement("canvas").getContext("2d");
+  ctx.fillStyle = "#000";
+  ctx.fillStyle = getComputedStyle(el).getPropertyValue("--accent").trim() || "#000";
+  return ctx.fillStyle.startsWith("#") ? ctx.fillStyle : "#000000";
+}
+function renderAppearance() {
+  const box = $("panel-list");
+  box.textContent = "";
+  for (const p of PANELS) {
+    if (!panelEl(p) || p.fixed) continue;
+    const tile = document.createElement("label");
+    tile.className = "switch-label panel-tile";
+    tile.title = p.name;
+    tile.innerHTML = `<span class="panel-row-txt">${esc(p.name)}</span><input type="checkbox" class="switch">`;
+    const cb = tile.querySelector("input");
+    cb.checked = !panelsOff.has(p.key);
+    tile.classList.toggle("is-off", !cb.checked);
+    cb.onchange = () => {
+      tile.classList.toggle("is-off", !cb.checked);
+      setPanelHidden(p.key, !cb.checked);
+      toast(`${p.name}: ${cb.checked ? "shown" : "hidden"}`);
+    };
+    box.appendChild(tile);
+  }
+  const grid = $("accent-grid");
+  grid.textContent = "";
+  for (const p of PANELS) {
+    const el = panelEl(p);
+    if (!el) continue;
+    const row = document.createElement("div");
+    row.className = "color-row";
+    row.innerHTML = `<input type="color" value="${accentNow(el)}" aria-label="${esc(p.name)} accent">` +
+      `<span class="cname">${esc(p.name)}${accents[p.key] ? "" : ' <small class="dim">(theme)</small>'}</span>` +
+      `<span class="cprev acc-prev">${esc(p.name.split(" ")[0])}</span>` +
+      `<button type="button" class="mini-btn" title="Back to the theme colour">Reset</button>`;
+    const prev = row.querySelector(".acc-prev");
+    prev.style.color = prev.style.borderColor = accentNow(el);
+    row.querySelector("input").oninput = (e) => {
+      accents[p.key] = e.target.value;
+      applyAccents();
+      prev.style.color = prev.style.borderColor = e.target.value;
+      row.querySelector(".cname small")?.remove();
+    };
+    row.querySelector("button").onclick = () => {
+      delete accents[p.key];
+      applyAccents();
+      renderAppearance();
+    };
+    grid.appendChild(row);
+  }
+}
+$("panels-all").onclick = () => {
+  for (const k of [...panelsOff]) setPanelHidden(k, false);
+  renderAppearance();
+  toast("All panels shown");
+};
+$("accents-reset").onclick = () => {
+  accents = {};
+  applyAccents();
+  renderAppearance();
+  toast("Accent colours back to the theme's");
+};
+$("appearance-save").onclick = () => {
+  store.set("panelsOff", [...panelsOff]);
+  store.set("accents", accents);
+  toast("Appearance saved");
+};
+// closing Settings without SAVE drops the preview: back to the saved panels and colours
+function revertAppearance() {
+  const was = new Set(panelsOff);
+  panelsOff = new Set(savedPanels());
+  accents = store.get("accents", {});
+  applyAccents();
+  for (const p of PANELS) if (was.has(p.key) !== panelsOff.has(p.key)) setPanelHidden(p.key, panelsOff.has(p.key));
+}
+applyPanels();
+applyAccents();

@@ -207,8 +207,12 @@ class MenuResetReq(BaseModel):
     nos: list[int] | None = None            # None = every menu that differs
 
 
+CQ_TO = ("", "DX", "EU", "NA", "SA", "AF", "AS", "OC", "POTA", "SOTA")
+
+
 class SeqCqReq(BaseModel):
     tx_hz: float = Field(ge=200, le=2900)
+    cq_to: Literal["", "DX", "EU", "NA", "SA", "AF", "AS", "OC", "POTA", "SOTA"] = ""   # directed CQ
 
 
 class SeqAutoReq(BaseModel):
@@ -220,6 +224,13 @@ class SeqAutoReq(BaseModel):
 class HuntBlockReq(BaseModel):
     call: Callsign = Field(pattern=r"^[A-Za-z0-9/]{3,12}$")
     blocked: bool
+
+
+class SeqCallReq(BaseModel):
+    call: Callsign = Field(pattern=r"^[A-Za-z0-9/]{3,12}$")
+    grid: str = Field(default="", max_length=8)        # optional, only shown; checked in call_station
+    tx_hz: float = Field(ge=200, le=2900)
+    parity: Literal["auto", "even", "odd"] = "auto"
 
 
 class SeqAnswerReq(BaseModel):

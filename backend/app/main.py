@@ -36,7 +36,7 @@ from .models import (zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, Pow
                      ClarReq, IfShiftReq, LevelReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
-                     RadioAudioReq, HuntBlockReq, SeqAnswerReq, SeqCqReq, SettingsReq,
+                     RadioAudioReq, HuntBlockReq, SeqAnswerReq, SeqCallReq, SeqCqReq, SettingsReq,
                      ToggleReq, TuneReq, TuneReq2,
                      ValueReq, VoiceCfgReq, WebRTCOffer, WidthReq)
 from .radio_service import RadioService
@@ -1038,7 +1038,7 @@ async def seq_status() -> dict:
 
 @app.post("/api/seq/cq")
 async def seq_cq(req: SeqCqReq) -> dict:
-    return await sequencer.start_cq(req.tx_hz)
+    return await sequencer.start_cq(req.tx_hz, req.cq_to)
 
 
 @app.post("/api/seq/answer")
@@ -1049,6 +1049,15 @@ async def seq_answer(req: SeqAnswerReq) -> dict:
         raise HTTPException(400, f"Decode incomplete: {', '.join(missing)}")
     d.update(analyse(d["msg"]))             # never trust the browser's parse
     return await sequencer.answer(d, req.tx_hz)
+
+
+@app.post("/api/seq/call")
+async def seq_call(req: SeqCallReq) -> dict:
+    """DX Call: call a station typed in by hand (My Messages)."""
+    try:
+        return await sequencer.call_station(req.call, req.grid, req.tx_hz, req.parity)
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.post("/api/seq/sessions/clear")

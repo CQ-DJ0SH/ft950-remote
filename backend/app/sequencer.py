@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import re
 import time
 from collections import deque
 from datetime import datetime, timezone
@@ -64,6 +65,7 @@ class Sequencer:
         self.step: Optional[str] = None
         self.tries = 0
         self.cq_count = 0
+        self.cq_to = ""                          # directed CQ: "DX", "EU", "POTA" … ("" = plain CQ)
         self.mode = "FT8"
         self.parity = 0                          # my TX periods: index % 2 == parity
         # Auto answer: while idle, a station calling me (grid / report /
@@ -105,8 +107,11 @@ class Sequencer:
         if not self.me or not self.grid4:
             raise RuntimeError("Callsign and locator missing (Settings ▸ General)")
 
-    async def start_cq(self, tx_hz: float) -> dict:
+    async def start_cq(self, tx_hz: float, cq_to: str = "") -> dict:
+        """CQ, optionally directed: "CQ DX …", "CQ EU …", "CQ POTA …" (FT8/FT4
+        standard messages allow up to four letters after CQ)."""
         self._require()
+        self.cq_to = (cq_to or "").strip().upper()
         await self.halt(stop_tx=False)
         self.mode, self.tx_hz = self.digi.current_mode(), clamp_tx_hz(tx_hz)
         period = MODES[self.mode]["period"]
@@ -136,7 +141,8 @@ class Sequencer:
         if to_me and kind in ("report", "rreport"):
             self.session["their_report"] = d["msg"].split()[-1].lstrip("R")
         self.tries = 0
-        self._log_rx(d)
+        if not d.get("manual"):                             # a DX Call typed in was never received
+            self._log_rx(d)
         # The decode we answer is the partner's period, already evaluated: the
         # loop need not wait for it (it was decoded before the sequence ran,
         # so on_decodes never marked it), so a click early in our own period
@@ -145,6 +151,33 @@ class Sequencer:
             self._seen[d["t0"]] = True
         self._run()
         return await self.publish()
+
+    async def call_station(self, call: str, grid: str, tx_hz: float, parity: str = "auto") -> dict:
+        """DX Call: call a station typed in by hand. With a recent decode of it,
+        that decode is answered (its frequency, SNR and period, as a
+        double-click); without one we call in the next period, or in the even /
+        odd one asked for, with a -10 report until we hear it."""
+        self._require()
+        call, grid = call.strip().upper(), grid.strip().upper()[:4]
+        if call == self.me:
+            raise RuntimeError(f"{call} is your own callsign")
+        if not re.match(r"^[A-R]{2}\d{2}$", grid):        # optional and only shown: a bad one is dropped
+            grid = ""
+        mode = self.digi.current_mode()
+        period = MODES[mode]["period"]
+        heard = [d for d in self.digi.decodes
+                 if (d.get("from") or "").upper() == call and d.get("mode") == mode]
+        if heard and parity == "auto":
+            return await self.answer(heard[-1], tx_hz)
+        n = math.floor(time.time() / period)               # the current period
+        want = {"even": 0, "odd": 1}.get(parity)
+        ours = n + 1 if want is None else (n + 1 if (n + 1) % 2 == want else n + 2)
+        d = {"msg": f"CQ {call} {grid}".strip(), "kind": "CQ", "from": call, "to": None,
+             "grid": grid, "t0": (ours - 1) * period, "snr": heard[-1]["snr"] if heard else -10,
+             "df": heard[-1]["df"] if heard else round(tx_hz), "dt": 0.0, "mode": mode,
+             "dxcc": self.digi.dxcc.lookup(call) if hasattr(self.digi, "dxcc") else None,
+             "manual": True}                                # typed in, never received
+        return await self.answer(d, tx_hz)
 
     async def halt(self, stop_tx: bool = True) -> dict:
         if self._task and self._task is not asyncio.current_task():
@@ -450,7 +483,7 @@ class Sequencer:
     def _next_message(self) -> Optional[str]:
         me, s = self.me, self.session
         if self.step == "cq":
-            return f"CQ {me} {self.grid4}"
+            return f"CQ {self.cq_to + ' ' if self.cq_to else ''}{me} {self.grid4}"
         if not s or self.step == "done":
             return None
         # once sent, a report is fixed — repeats and the log use the same value
@@ -550,7 +583,7 @@ class Sequencer:
                     "band": band_for_hz(s.get("freq_hz") or ((self.tx.service.status.get("vfo") or {}).get("freq_hz")))}
         return {"kind": self.kind, "step": self.step, "mode": self.mode, "tx_hz": self.tx_hz,
                 "parity": "EVEN" if self.parity == 0 else "ODD", "tries": self.tries,
-                "cq_count": self.cq_count, "next": self._next_message() if self.kind else None,
+                "cq_count": self.cq_count, "cq_to": self.cq_to, "next": self._next_message() if self.kind else None,
                 "last_tx": self.last_tx, "session": view(self.session) if self.session else None,
                 "sessions": [view(s) for s in list(self.sessions)[:20]],
                 "auto_log": self.logbook.auto_log, "auto_answer": self.auto_answer,

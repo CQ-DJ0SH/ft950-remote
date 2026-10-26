@@ -309,3 +309,43 @@ def test_halt_endpoint_switches_hunt_off(monkeypatch):
         await s.halt()
     asyncio.run(halt_like_endpoint())
     assert s.hunt is False and s.hunt_until == 0.0
+
+
+def test_dx_call_typed_in(monkeypatch):
+    import app.sequencer as sq
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    s._run = lambda: None
+    s.digi.decodes = []
+    monkeypatch.setattr(sq.time, "time", lambda: 1000 * 15 + 3.0)       # 3 s into period 1000
+    asyncio.run(s.call_station("k1abc", "fn42", 1500, "auto"))
+    assert s.session["call"] == "K1ABC" and s.step == "call"
+    assert s._next_message() == "K1ABC DJ0SH JO62"
+    assert s.parity == 1001 % 2                                          # the next period
+    assert s.session["msgs"] == []                                       # nothing logged as received
+    asyncio.run(s.call_station("K1ABC", "", 1500, "odd"))
+    assert s.parity == 1                                                 # odd periods asked for
+    heard = _d("CQ K1ABC FN42", t0=999 * 15.0, snr=-7, df=812)
+    s.digi.decodes = [heard]
+    asyncio.run(s.call_station("K1ABC", "", 1500, "auto"))               # heard: its decode is answered
+    assert s.session["df"] == 812 and s.session["snr"] == -7 and s.parity == 1000 % 2
+
+
+def test_dx_call_refuses_own_call_and_tolerates_grids():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    s._run = lambda: None
+    s.digi.decodes = []
+    with pytest.raises(RuntimeError):
+        asyncio.run(s.call_station("dj0sh", "JO62", 1500))
+    asyncio.run(s.call_station("K1ABC", "fn42xy", 1500))
+    assert s.session["grid"] == "FN42"                              # 6 characters cut to 4
+    asyncio.run(s.call_station("K1ABC", "12AB", 1500))
+    assert s.session["grid"] == ""                                  # not a grid: left out
+
+
+def test_directed_cq():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    s._run = lambda: None
+    asyncio.run(s.start_cq(1500, "dx"))
+    assert s._next_message() == "CQ DX DJ0SH JO62" and s.status()["cq_to"] == "DX"
+    asyncio.run(s.start_cq(1500))
+    assert s._next_message() == "CQ DJ0SH JO62"

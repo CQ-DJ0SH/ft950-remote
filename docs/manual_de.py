@@ -350,6 +350,10 @@ DE = [
           "wahlweise ins QRZ.com-Logbuch; QRZ LOOKUP füllt Name, QTH und Locator aus. "
           "Der Worked-before-Index wird aus Wavelog geladen und färbt die FT8-Liste. "
           "Unter Settings ▸ Log stehen die Zugänge — die Schlüssel verlassen den Pi nie."),
+    ("p", "In der Titelzeile LEDs wie in der Titelleiste der Seite: WAVELOG und QRZ "
+          "grün, wenn eingerichtet, AUTO grün, solange fertige QSOs automatisch "
+          "geloggt werden. LOG QSO ist nur umrandet, solange das Formular leer ist, "
+          "und gefüllt, sobald ein Rufzeichen darin steht — dann gibt es etwas zu loggen."),
 
     ("h1", "13  Einstellungen"),
     ("img", "manual/set-general.png", 120),

@@ -324,6 +324,10 @@ EN = [
           "optionally to the QRZ.com logbook; QRZ LOOKUP fills name, QTH and "
           "locator. The worked-before index is downloaded from Wavelog and colours "
           "the FT8 list. Settings ▸ Log holds the accounts — the keys never leave the Pi."),
+    ("p", "In the title bar, LEDs as in the page's own title bar: WAVELOG and QRZ "
+          "green when set up, AUTO green while completed QSOs are logged "
+          "automatically. LOG QSO is only outlined while the form is empty and "
+          "filled once a callsign is in it — then there is something to log."),
 
     ("h1", "13  Settings"),
     ("img", "manual/set-general.png", 120),

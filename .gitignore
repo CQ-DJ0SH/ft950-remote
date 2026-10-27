@@ -24,6 +24,7 @@ docs/FT-950_CAT_Manual_ENG.*
 backend/runtime.json
 backend/runtime.tmp
 backend/app/sys_history.csv
+backend/app/dec_history.csv
 
 # Neuropol (nameplate font, as in TM-V71 Remote) has unclear redistribution
 # terms: local copy only, the UI falls back to Saira Condensed without it

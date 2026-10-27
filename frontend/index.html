@@ -494,6 +494,56 @@
 
   <!-- ===================== HACKRF (ported from TM-V71 Remote) ===================== -->
   <!-- CW: skimmer (every carrier in the passband decoded at once, like the FT8 list) + the radio's keyer -->
+  <!-- RTTY skimmer: every RTTY signal in the passband, AFSK transmit (as FT8, DATA input) -->
+  <section class="panel cwp rttyp" id="rttyp">
+    <div class="panel-head">
+      <h2>RTTY · SKIMMER</h2>
+      <button class="btn sm toggle" id="rt-on" title="Decode every RTTY signal in the receive passband (45.45 Bd, 170 Hz shift; runs on the Pi while switched on)">DECODE</button>
+      <span class="panel-stat" id="rt-stat"></span>
+      <span class="spacer"></span>
+      <span class="cw-ro" title="Standard amateur RTTY: 45.45 baud, 170 Hz shift, Baudot">45.45 Bd · 170 Hz</span>
+      <span class="cw-ro" id="rt-side" title="Which audio tone is the mark: in LSB / DATA-L the lower, in USB / DATA-U the higher (on the air the mark is always the higher frequency)">MARK —</span>
+      <button class="btn sm toggle" id="rt-rev" title="Reverse: swap mark and space (receive and transmit)">REV</button>
+      <button class="btn sm" id="rt-clear" title="Clear the decoded text">CLEAR</button>
+      <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
+    </div>
+    <div class="cw-body">
+      <div class="cw-grid">
+        <div class="pane cw-sig-pane">
+          <div class="pane-head"><h3>Signals</h3><span class="chk" id="rt-count"></span></div>
+          <div class="tbl cw-tbl">
+            <table class="msgs">
+              <colgroup><col style="width:58px"><col style="width:84px"><col style="width:46px"><col style="width:46px"><col></colgroup>
+              <thead><tr><th class="n">Tone</th><th class="n">Freq</th><th class="n">SNR</th><th class="n">Q</th><th>Text</th></tr></thead>
+              <tbody id="rt-body"><tr class="empty"><td colspan="5">Switch DECODE on — every RTTY signal in the passband gets a row. Click one to follow it.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="side">
+          <div class="pane">
+            <div class="pane-head"><h3>Text</h3><span class="chk" id="rt-sel-lbl">no signal selected</span></div>
+            <div class="cw-text rt-text" id="rt-text" aria-live="polite"></div>
+          </div>
+          <div class="pane">
+            <div class="pane-head"><h3>Sent</h3><span class="spacer"></span><button class="btn sm" id="rt-sent-clear" title="Clear list">✕</button></div>
+            <div class="cw-sent" id="rt-sent"></div>
+          </div>
+        </div>
+      </div>
+    <div class="cw-macros">
+      <label class="cw-call" title="Callsign for the macros — taken from the selected signal, editable">CALL <input type="text" id="rt-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <span id="rt-macro-btns"></span>
+      <span class="spacer"></span>
+      <label class="cw-call" title="TX frequency: the centre between mark and space, in Hz of audio (clicking a signal sets it to that station)">TX <input type="number" id="rt-txhz" min="300" max="2600" step="5"> Hz</label>
+    </div>
+    <div class="cw-tx">
+      <input type="text" id="rt-msg" placeholder="text to send in RTTY (AFSK on the DATA input: radio in DATA-L or DATA-U)…" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button class="btn rt-send" id="rt-send">SEND</button>
+      <button class="btn halt" id="rt-stop" title="Stop transmitting at once">STOP</button>
+    </div>
+    </div>
+  </section>
+
   <section class="panel cwp" id="cwp">
     <div class="panel-head">
       <h2>CW · SKIMMER</h2>
@@ -888,21 +938,37 @@
         <dt>Swap</dt><dd id="sys-swap">—</dd>
         <dt>Disk (/)</dt><dd id="sys-disk">—</dd>
         <dt>This service</dt><dd id="sys-app">—</dd>
+        <dt>WSJT-X decoder</dt><dd id="sys-dec">—</dd>
+        <dt>Decoder memory</dt><dd id="sys-decmem">—</dd>
+        <dt>Decoder CPU (1 min)</dt><dd id="sys-deccpu">—</dd>
         <dt>Uptime</dt><dd id="sys-uptime">—</dd>
       </dl>
       <figure class="sys-graph">
         <div class="sys-graph-head">
           <figcaption>History</figcaption>
           <div class="sys-range" role="group" aria-label="Time range">
-            <button type="button" class="sys-range-btn" data-hours="1">1h</button>
-            <button type="button" class="sys-range-btn" data-hours="6">6h</button>
-            <button type="button" class="sys-range-btn is-on" data-hours="24">24h</button>
+            <button type="button" class="sys-range-btn sys-only" data-hours="1">1h</button>
+            <button type="button" class="sys-range-btn sys-only" data-hours="6">6h</button>
+            <button type="button" class="sys-range-btn sys-only is-on" data-hours="24">24h</button>
           </div>
         </div>
         <canvas id="sys-canvas" aria-label="Temperature, load and memory over time"></canvas>
         <div id="sys-tip" class="sys-tip" hidden></div>
       </figure>
-      <p class="pane-hint">Live figures of the Raspberry Pi, updated while this tab is open. The graph records one value per minute and survives restarts.</p>
+      <!-- the WSJT-X decoder on its own: CPU share and memory of jt9 -->
+      <figure class="sys-graph dec-graph">
+        <div class="sys-graph-head">
+          <figcaption>WSJT-X decoder (jt9)</figcaption>
+          <div class="sys-range" role="group" aria-label="Time range">
+            <button type="button" class="sys-range-btn dec-range-btn" data-hours="1">1h</button>
+            <button type="button" class="sys-range-btn dec-range-btn" data-hours="6">6h</button>
+            <button type="button" class="sys-range-btn dec-range-btn is-on" data-hours="24">24h</button>
+          </div>
+        </div>
+        <canvas id="dec-canvas" aria-label="WSJT-X decoder: CPU share and memory over time"></canvas>
+        <div id="dec-tip" class="sys-tip" hidden></div>
+      </figure>
+      <p class="pane-hint">Live figures of the Raspberry Pi, updated while this tab is open. The graphs record one value per minute and survive restarts. Decoder: CPU time of every jt9 run as the kernel reports it when the run ends, peak memory read while it runs; the parallel parts of one pass are added up.</p>
       <div class="modal-actions"><span class="ma-note">Read only</span>
         <button class="btn-ghost" data-close>CLOSE</button>
       </div>

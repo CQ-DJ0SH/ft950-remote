@@ -35,6 +35,8 @@ EN = [
         "HF band conditions under the waterfall from real VOACAP for your locator: "
         "80-40, 30-20, 17-15, 12-10 and 6m in green / yellow / red, with a sun/moon "
         "switch for day and night.",
+        "RTTY skimmer: every RTTY signal in the passband decoded at once (45.45 Bd, "
+        "170 Hz); transmit as AFSK through the DATA input, with macros.",
         "CW skimmer: every CW signal in the passband decoded at once; send through "
         "the radio's keyer with macros.",
         "HackRF waterfall relayed from TM-V71 Remote, following the amateur band of VFO A.",
@@ -100,7 +102,7 @@ EN = [
           "the repository), your callsign (shown with a slashed zero), the "
           "nameplate, the CAT and USB AUDIO lamps, the UTC clock, the theme switch, "
           "Settings and — once a Shelly is set up — the power switch."),
-    ("p", "Below follow the panels VFO, PTT · MEMORY and AUDIO, DIGI, CW, HackRF "
+    ("p", "Below follow the panels VFO, PTT · MEMORY and AUDIO, DIGI, RTTY, CW, HackRF "
           "and LOG. Most can be collapsed with ▲; PTT and AUDIO always stay open. "
           "The panels are shown at 90 % zoom so the whole station fits on one screen."),
 
@@ -342,7 +344,42 @@ EN = [
         "not shown.",
     ]),
 
-    ("h1", "10  CW skimmer"),
+    ("h1", "10  RTTY skimmer"),
+    ("img", "manual/rtty.png", 174),
+    ("p", "The RTTY panel below DIGI decodes every RTTY signal in the passband at "
+          "once — standard amateur RTTY: 45.45 baud, 170 Hz shift, Baudot with US "
+          "figures, 1.5 stop bits. DECODE switches it on (it runs on the Pi only "
+          "while on). Each signal gets a row: tone (the audio centre between mark "
+          "and space), frequency on the air, SNR, quality (share of characters with "
+          "a correct stop bit) and the running text; a click shows its whole text on "
+          "the right and takes its callsign into CALL."),
+    ("ul", [
+        "How it works: every 0.5 s a spectrum of the last 2 s is searched for "
+        "pairs of peaks 170 Hz apart with a dip between them (up to 8 signals, "
+        "slow drift is followed). Per signal, mark and space go through a filter "
+        "matched to the bit; their levels are compared after each is normalised "
+        "to its own peak, so fading of one tone does not flip the bits. A UART "
+        "finds start bit, five data bits and stop bit. A character only counts "
+        "where one tone stands clearly above the other, so noise prints nothing, "
+        "and a row is shown only once most of its frames are clean.",
+        "Mark and space: on the air the mark is the higher frequency. In LSB / "
+        "DATA-L that is the lower audio tone, in USB / DATA-U the higher one — the "
+        "panel follows the radio's mode (MARK ↓ / ↑). REV swaps them, for a "
+        "station sending reversed (receive and transmit).",
+        "Transmit: AFSK through the DATA input, like FT8 — the radio in DATA-L "
+        "(usual), DATA-U or USB, at the FT8 TX drive. The text goes into the send "
+        "line, by hand or from the macros CQ, CALL, 599, TU, AGN, QRZ and RY "
+        "({MY}, {LOC} and the CALL field are filled in); Enter or SEND transmits "
+        "it with CR LF before and after, mark idle in front. TX is the centre "
+        "frequency in Hz of audio (300–2600); a click on a signal sets it to that "
+        "station. STOP and Halt TRX stop at once; a watchdog ends the transmission "
+        "at the latest 3 s after its length. While the FT8 sequencer or Auto Hunt "
+        "runs, RTTY does not transmit.",
+        "The panel can be hidden and gets its own accent colour in Settings ▸ "
+        "Appearance.",
+    ]),
+
+    ("h1", "11  CW skimmer"),
     ("img", "manual/cw.png", 174),
     ("p", "DECODE starts the skimmer. Every CW carrier in the passband gets its "
           "own decoder; the table shows pitch, RF frequency, speed, SNR and the "
@@ -353,7 +390,7 @@ EN = [
           "CW or CW-R with BK-IN on. Macros (CQ, CALL, 5NN, RR, 73, AGN, QRZ) fill "
           "the send line; CALL is taken from the selected signal."),
 
-    ("h1", "11  HackRF waterfall"),
+    ("h1", "12  HackRF waterfall"),
     ("img", "manual/hackrf.png", 174),
     ("p", "The HackRF One sits on the second Pi with TM-V71 Remote. FT-950 Remote "
           "relays its waterfall (Settings ▸ General ▸ HackRF source). With follow "
@@ -365,7 +402,7 @@ EN = [
           "40 m instead of about 50 from the normal 2 MHz row. The mouse shows "
           "frequency and level under the pointer."),
 
-    ("h1", "12  Log"),
+    ("h1", "13  Log"),
     ("p", "The LOG panel logs to Wavelog (API key and station profile) and "
           "the QRZ.com logbook — each with its own button beside the callsign: LOG "
           "WAVELOG and LOG QRZ.COM (the form stays, so a QSO can go to both; a ✓ "
@@ -378,7 +415,7 @@ EN = [
           "form is empty and filled once a callsign is in it — then there is "
           "something to log. Recent QSOs: QRZ Visit and Map Display for the marked row."),
 
-    ("h1", "13  Settings"),
+    ("h1", "14  Settings"),
     ("img", "manual/set-general.png", 120),
     ("ul", [
         "General: callsign, locator, CAT port and baud rate, Shelly and auto "
@@ -402,12 +439,17 @@ EN = [
         "voice TX processing, WebRTC buffers.",
         "Log: Wavelog and QRZ.com.",
         "Memories: the 32 memory keys with CTCSS, split and VFO B.",
-        "Appearance (per browser): hide the DIGI, CW, HackRF and Log panels (VFO, "
+        "Appearance (per browser): hide the DIGI, RTTY, CW, HackRF and Log panels (VFO, "
         "PTT and Audio always stay; hiding the HackRF stops its sweep), an accent "
         "colour per panel with Reset, and peak hold of the LCD meters (PO · SWR · ALC · "
         "ID · VDD) on/off. "
         "Changes show at once and are kept with SAVE.",
-        "Pi Hardware: load, temperature, memory, disk and a 24 h graph.",
+        "Pi Hardware: load, temperature, memory, disk and a 24 h graph; below it the "
+        "WSJT-X decoder (jt9) on its own — the last pass (CPU seconds, run time, "
+        "parts), its memory (the parallel parts added up, peak) and the CPU of the "
+        "last minute as a share of the Pi, with its own 24 h graph of CPU share and "
+        "memory. CPU time comes from the kernel when a jt9 run ends; the memory is "
+        "jt9's own peak, read while it runs.",
     ]),
     ("img", "manual/set-ft8.png", 120),
     ("img", "manual/set-appearance.png", 120),
@@ -415,7 +457,7 @@ EN = [
           "On Audio changes apply at once, on Memories each row has its own WRITE, "
           "Pi Hardware is read only."),
 
-    ("h1", "14  Remote power"),
+    ("h1", "15  Remote power"),
     ("p", "A Shelly relay (Gen1 or Gen2/Plus/Pro, detected automatically) "
           "switches the radio's 13.8 V. The power switch in the title bar turns it "
           "on and off — before cutting the supply, a transmission and the sequencer "
@@ -423,7 +465,7 @@ EN = [
           "the radio is off a plate covers the page. Auto power-off switches the "
           "radio off when no browser has had the page open for the set time."),
 
-    ("h1", "15  Troubleshooting"),
+    ("h1", "16  Troubleshooting"),
     ("ul", [
         "CAT offline: check the by-id port and menu 026 = 3 (38400 Bd).",
         "No receive audio: CONNECT, then check RX GAIN and that MUTE/DROP are off.",
@@ -436,7 +478,7 @@ EN = [
         "in Settings ▸ General.",
     ]),
 
-    ("h1", "16  Technical reference"),
+    ("h1", "17  Technical reference"),
     ("diagram", "system", "en"),
     ("h2", "Backend"),
     ("ul", [
@@ -447,7 +489,8 @@ EN = [
         "digi.py: UTC-anchored slices, jt9 in parallel sub-bands, adaptive depth, "
         "early and partner passes; sequencer.py: the QSO state machine.",
         "voice.py: WebRTC hub, PTT lease, pre-roll, AGC, compressor, pre-emphasis.",
-        "cw.py: the CW skimmer; hackrf_proxy.py; shelly.py; recorder.py.",
+        "cw.py: the CW skimmer; rtty.py: the RTTY skimmer and AFSK; dec_history.py: "
+        "the decoder figures; hackrf_proxy.py; shelly.py; recorder.py.",
         "propagation.py: VOACAP band conditions — the ring of 36 paths, one run per "
         "UTC day, the day/night halves; GET /api/propagation.",
     ]),

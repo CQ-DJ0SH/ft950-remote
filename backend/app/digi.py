@@ -32,6 +32,7 @@ from typing import Callable, Optional
 import numpy as np
 
 from .audio import RATE, AudioCapture, apply_gain, to_12k
+from . import dec_history
 from .dxcc import Dxcc
 from .state import ConnectionManager
 
@@ -225,6 +226,64 @@ def decoder_tag(config: dict) -> str:
 
 def digi_jt9_path(decoder_id: str) -> str:
     return decoder_config(decoder_id)["jt9"]
+
+
+def _vm_hwm_kb(pid: int) -> int:
+    """Peak resident memory of a running process (VmHWM; exec starts it afresh)."""
+    try:
+        with open(f"/proc/{pid}/status", encoding="ascii", errors="ignore") as f:
+            for line in f:
+                if line.startswith("VmHWM:"):
+                    return int(line.split()[1])
+    except (OSError, ValueError):
+        pass
+    return 0
+
+
+def _run_measured(cmd: list[str], cwd: str, timeout: float, tag: str
+                  ) -> tuple[int, bytes, bytes, bool]:
+    """Run jt9 in a worker thread and measure it.
+
+    CPU: os.wait4 hands back the child's own user + system time (asyncio's
+    subprocess reaps without it). Memory: wait4's maxrss would include this
+    process's size from before the exec, so jt9's own peak (VmHWM) is read from
+    /proc while it runs, every 0.1 s. Returns (exit code, stdout, stderr, timed out)."""
+    import selectors
+    import tempfile
+    import threading
+    with tempfile.TemporaryFile() as errf:          # stderr to a file: no pipe deadlock
+        start = time.time()
+        p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=errf)
+        killed = threading.Event()
+
+        def _kill() -> None:
+            killed.set()
+            p.kill()
+        timer = threading.Timer(timeout, _kill)
+        timer.start()
+        chunks, hwm = [], 0
+        fd = p.stdout.fileno()
+        try:
+            with selectors.DefaultSelector() as sel:
+                sel.register(fd, selectors.EVENT_READ)
+                while True:
+                    hwm = max(hwm, _vm_hwm_kb(p.pid))
+                    if sel.select(0.1):
+                        chunk = os.read(fd, 65536)
+                        if not chunk:
+                            break
+                        chunks.append(chunk)
+            _, status, ru = os.wait4(p.pid, 0)
+        finally:
+            timer.cancel()
+            p.stdout.close()
+        p.returncode = os.waitstatus_to_exitcode(status)   # reaped: Popen must not wait again
+        end = time.time()
+        errf.seek(0)
+        err = errf.read()
+    if not killed.is_set():
+        dec_history.add_run(start, end, ru.ru_utime + ru.ru_stime, hwm, tag)
+    return p.returncode, b"".join(chunks), err, killed.is_set()
 
 
 class DigiService:
@@ -541,17 +600,13 @@ class DigiService:
             cmd += ["-G", c["my_grid"][:4]]     # messages carry 4-char grids
         if threads:
             cmd += ["-M", "-N", str(threads)]    # WSJT-X 3.3 MTft8
-        proc = await asyncio.create_subprocess_exec(
-            *cmd, str(wav), cwd=str(wav.parent),
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        try:
-            out, err = await asyncio.wait_for(proc.communicate(),
-                                              MODES[mode]["period"])
-        except asyncio.TimeoutError:
-            proc.kill()
+        code, out, err, timed_out = await asyncio.to_thread(
+            _run_measured, [*cmd, str(wav)], str(wav.parent), MODES[mode]["period"],
+            decoder_tag(c))
+        if timed_out:
             raise RuntimeError("jt9 took longer than one period")
-        if proc.returncode != 0:
-            raise RuntimeError(f"jt9 exit {proc.returncode}: {err.decode()[-200:]}")
+        if code != 0:
+            raise RuntimeError(f"jt9 exit {code}: {err.decode(errors='replace')[-200:]}")
         return out.decode(errors="replace")
 
     def _record(self, stat: dict, decodes: list[dict]) -> None:

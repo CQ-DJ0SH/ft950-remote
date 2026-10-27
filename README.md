@@ -60,6 +60,10 @@ decoding, plus voice operation over WebRTC.
     80-40 · 30-20 · 17-15 · 12-10 · 6m in green / yellow / red, computed by
     real **VOACAP** for your own locator; the sun/moon shows day or night at
     the station and switches the view to the other half of the day
+- **RTTY skimmer** (panel below DIGI): every RTTY signal in the passband
+  decoded at once (45.45 Bd, 170 Hz, Baudot; matched filters, automatic
+  threshold, squelch on clean frames), one row each; transmit as AFSK through
+  the DATA input with macros, mark/space following the sideband, REV
 - **CW skimmer**: every CW signal in the passband decoded at once (own STFT
   front end, adaptive timing), listed like the FT8 table; select one, zero
   beat, send through the radio's own keyer (`KM`/`KY`) with macros
@@ -78,7 +82,8 @@ decoding, plus voice operation over WebRTC.
   - the FT-950's audio menus with saved defaults, FT8 TX drive, voice TX
     processing
   - WebRTC buffers, logbook accounts, memories (with FT8/FT4 defaults)
-  - Pi hardware graphs
+  - Pi hardware graphs, and the WSJT-X decoder's CPU time and memory (table
+    and its own 24 h graph)
 
 ## Hardware
 

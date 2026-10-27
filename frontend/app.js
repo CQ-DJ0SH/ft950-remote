@@ -2123,7 +2123,6 @@ $("menu-reset").onclick = async () => { try { renderMenus(await api("/api/radio/
 $("menu-snap").onclick = async () => { try { renderMenus(await api("/api/radio/menus/defaults", {})); toast("Current values saved as default."); } catch { /* toast */ } };
 
 // -- Pi hardware (as TM-V71 Remote): live figures + 24 h graph
-let sysHist = null, sysRangeH = 24, sysHover = -1;
 const fmtBytes = (n) => {
   if (!n) return "0 B";
   const u = ["B", "KB", "MB", "GB", "TB"];
@@ -2149,25 +2148,48 @@ async function loadSystem() {
   $("sys-disk").textContent = `${fmtBytes(s.disk_used)} / ${fmtBytes(s.disk_total)}${pct(s.disk_used, s.disk_total)}`;
   $("sys-app").textContent = s.app_rss ? `${fmtBytes(s.app_rss)} · ${s.app_threads} Threads` : "—";
   $("sys-uptime").textContent = fmtUptime(s.uptime_sec);
+  // the WSJT-X decoder (jt9): its last pass and the last minute
+  const d = s.decoder || {};
+  const ago = d.last_age_s != null ? ` · ${Math.round(d.last_age_s)} s ago` : "";
+  $("sys-dec").textContent = d.decoder
+    ? `${d.decoder} · last pass ${d.last_cpu_s} s CPU in ${d.last_wall_s} s${d.last_parts > 1 ? ` · ${d.last_parts} parts` : ""}${ago}`
+    : "no decode yet";
+  $("sys-decmem").textContent = d.decoder
+    ? `${d.last_mem_mb} MB${d.last_parts > 1 ? ` (${d.last_parts} × up to ${d.last_part_mem_mb} MB)` : ""} · peak ${d.peak_mem_mb} MB`
+    : "—";
+  $("sys-deccpu").textContent = d.decoder
+    ? `${d.min_cpu_s} s CPU · ${(d.min_cpu_s / 60 / (s.cores || 1) * 100).toFixed(1)} % of the Pi · ${d.min_passes} passes`
+    : "—";
 }
-async function loadSysHistory() {
-  try { sysHist = await api("/api/system/history?hours=24"); } catch { sysHist = null; }
-  drawSysGraph();
-}
-for (const b of document.querySelectorAll(".sys-range-btn")) {
-  b.onclick = () => {
-    sysRangeH = +b.dataset.hours;
-    for (const x of document.querySelectorAll(".sys-range-btn")) x.classList.toggle("is-on", x === b);
-    drawSysGraph();
-  };
-}
-// Three stacked panels on one canvas (°C, load, MB share no scale), shared time axis.
-const SYS_PANELS = [
-  { key: "temp_c", title: "TEMPERATURE", slot: 1, fmt: (v) => `${v.toFixed(1)} °C`, min0: false },
-  { key: "load1", title: "LOAD (1 MIN)", slot: 2, fmt: (v) => v.toFixed(2), min0: true },
-  { key: "app_rss_mb", title: "MEMORY", slot: 0, fmt: (v) => `${v} MB`, min0: true, with: "mem_used_mb" },
-];
+// History graphs (24 h, one value a minute): stacked panels on one canvas, one
+// scale per panel, a shared time axis. Each graph keeps its own data, range and
+// hover; the hardware graph and the WSJT-X decoder graph are two of them.
 const SYS_HUES = { dark: ["#3987e5", "#d95926", "#199e70"], light: ["#2a78d6", "#eb6834", "#1baf7a"] };
+const hhmm = (t) => { const d = new Date(t * 1000); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const GRAPHS = {
+  sys: {
+    canvas: "sys-canvas", tip: "sys-tip", range: ".sys-only", url: "/api/system/history?hours=24",
+    hist: null, rangeH: 24, hover: -1,
+    panels: [
+      { key: "temp_c", title: "TEMPERATURE", slot: 1, fmt: (v) => `${v.toFixed(1)} °C`, min0: false },
+      { key: "load1", title: "LOAD (1 MIN)", slot: 2, fmt: (v) => v.toFixed(2), min0: true, lab: (v) => v.toFixed(1) },
+      { key: "app_rss_mb", title: "MEMORY", slot: 0, fmt: (v) => `${v} MB`, min0: true, with: "mem_used_mb",
+        head: (now, other) => `Service ${now} MB   Host ${other} MB` },
+    ],
+    tipHtml: (h, i) => `${h.temp_c[i] == null ? "—" : h.temp_c[i].toFixed(1) + " °C"} &middot; Load ${h.load1[i] == null ? "—" : h.load1[i].toFixed(2)}<br>` +
+      `Service ${h.app_rss_mb[i]} MB &middot; Host ${h.mem_used_mb[i]} MB`,
+  },
+  dec: {
+    canvas: "dec-canvas", tip: "dec-tip", range: ".dec-range-btn", url: "/api/system/decoder-history?hours=24",
+    hist: null, rangeH: 24, hover: -1,
+    panels: [
+      { key: "cpu_pct", title: "CPU (SHARE OF THE PI)", slot: 0, fmt: (v) => `${v.toFixed(1)} %`, min0: true, lab: (v) => v.toFixed(1) },
+      { key: "mem_mb", title: "MEMORY (PEAK OF A PASS)", slot: 2, fmt: (v) => `${v} MB`, min0: true },
+    ],
+    tipHtml: (h, i) => `CPU ${h.cpu_pct[i].toFixed(1)} % (${h.cpu_s[i]} s) &middot; ${h.passes[i]} passes<br>` +
+      `Memory ${h.mem_mb[i]} MB &middot; longest pass ${(h.wall_ms[i] / 1000).toFixed(1)} s`,
+  },
+};
 const cssVar = (name, fb) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fb;
 function niceMax(v) {
   if (!(v > 0)) return 1;
@@ -2175,17 +2197,19 @@ function niceMax(v) {
   for (const st of [1, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10]) if (v <= st * mag) return st * mag;
   return 10 * mag;
 }
-function sysWindow() {
-  if (!sysHist || !sysHist.n) return null;
-  const cut = (sysHist.ts[sysHist.n - 1] || 0) - sysRangeH * 3600;
+function graphWindow(G) {
+  const h = G.hist;
+  if (!h || !h.n) return null;
+  const cut = (h.ts[h.n - 1] || 0) - G.rangeH * 3600;
   let from = 0;
-  while (from < sysHist.n && sysHist.ts[from] < cut) from++;
-  return { from, n: sysHist.n - from };
+  while (from < h.n && h.ts[from] < cut) from++;
+  return { from, n: h.n - from };
 }
-function panelRange(p, win) {
+function panelRange(G, p, win) {
+  const h = G.hist;
   let hi = -Infinity, lo = Infinity;
-  for (const col of [sysHist[p.key]].concat(p.with ? [sysHist[p.with]] : [])) {
-    for (let i = win.from; i < sysHist.n; i++) {
+  for (const col of [h[p.key]].concat(p.with ? [h[p.with]] : [])) {
+    for (let i = win.from; i < h.n; i++) {
       const v = col[i];
       if (v == null) continue;
       if (v > hi) hi = v;
@@ -2197,38 +2221,38 @@ function panelRange(p, win) {
   const pad = Math.max(2, (hi - lo) * 0.25);
   return { lo, hi, yMin: Math.floor((lo - pad) / 5) * 5, yMax: Math.ceil((hi + pad) / 5) * 5 };
 }
-function drawSysGraph() {
-  const cv = $("sys-canvas");
+function drawGraph(G) {
+  const cv = $(G.canvas);
   if (!cv || !modal.classList.contains("open") || activeTab !== "hardware") return;
   const dpr = window.devicePixelRatio || 1;
   const r = cv.getBoundingClientRect();
-  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
-  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-  const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+  const w = Math.max(1, Math.round(r.width * dpr)), hgt = Math.max(1, Math.round(r.height * dpr));
+  if (cv.width !== w || cv.height !== hgt) { cv.width = w; cv.height = hgt; }
+  const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, h = G.hist;
   const light = document.documentElement.dataset.theme === "light";
   const hues = light ? SYS_HUES.light : SYS_HUES.dark;
   const ink = cssVar("--text", "#c9d6df"), dim = cssVar("--text-dim", "#93a6b4");
   const fUi = cssVar("--font-ui", "sans-serif"), fMono = cssVar("--font-mono", "monospace");
   ctx.clearRect(0, 0, W, H);
-  const win = sysWindow();
+  const win = graphWindow(G);
   if (!win || win.n < 2) {
     ctx.fillStyle = dim;
     ctx.font = `${11 * dpr}px ${fUi}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(sysHist ? "collecting values — one per minute" : "no history yet", W / 2, H / 2);
+    ctx.fillText(h ? "collecting values — one per minute" : "no history yet", W / 2, H / 2);
     return;
   }
   const padL = 44 * dpr, padR = 10 * dpr, padT = 8 * dpr, padB = 18 * dpr, gap = 10 * dpr;
   const plotW = W - padL - padR;
-  const panelH = (H - padT - padB - gap * (SYS_PANELS.length - 1)) / SYS_PANELS.length;
-  const t0 = sysHist.ts[win.from], t1 = sysHist.ts[sysHist.n - 1], span = Math.max(1, t1 - t0);
+  const panelH = (H - padT - padB - gap * (G.panels.length - 1)) / G.panels.length;
+  const t0 = h.ts[win.from], t1 = h.ts[h.n - 1], span = Math.max(1, t1 - t0);
   const xOf = (t) => padL + (t - t0) / span * plotW;
-  const last = (col) => { for (let i = sysHist.n - 1; i >= win.from; i--) if (col[i] != null) return col[i]; return null; };
+  const last = (col) => { for (let i = h.n - 1; i >= win.from; i--) if (col[i] != null) return col[i]; return null; };
 
-  SYS_PANELS.forEach((p, pi) => {
+  G.panels.forEach((p, pi) => {
     const top = padT + pi * (panelH + gap), bot = top + panelH;
-    const { lo, hi, yMin, yMax } = panelRange(p, win);
+    const { lo, hi, yMin, yMax } = panelRange(G, p, win);
     const yOf = (v) => bot - (v - yMin) / Math.max(1e-9, yMax - yMin) * panelH;
     ctx.strokeStyle = "rgba(127,140,150,0.12)";
     ctx.lineWidth = dpr;
@@ -2238,14 +2262,14 @@ function drawSysGraph() {
     }
     ctx.fillStyle = dim; ctx.textAlign = "right"; ctx.textBaseline = "middle";
     ctx.font = `${9 * dpr}px ${fMono}`;
-    const lab = (v) => (p.key === "load1" ? v.toFixed(1) : String(Math.round(v)));
+    const lab = p.lab || ((v) => String(Math.round(v)));
     ctx.fillText(lab(yMax), padL - 6 * dpr, top + 5 * dpr);
     ctx.fillText(lab(yMin), padL - 6 * dpr, bot - 5 * dpr);
-    if (p.with) {                       // host memory as a recessive area
-      ctx.beginPath(); ctx.moveTo(xOf(sysHist.ts[win.from]), bot);
-      for (let i = win.from; i < sysHist.n; i++) {
-        const v = sysHist[p.with][i];
-        if (v != null) ctx.lineTo(xOf(sysHist.ts[i]), yOf(v));
+    if (p.with) {                       // the larger quantity as a recessive area
+      ctx.beginPath(); ctx.moveTo(xOf(h.ts[win.from]), bot);
+      for (let i = win.from; i < h.n; i++) {
+        const v = h[p.with][i];
+        if (v != null) ctx.lineTo(xOf(h.ts[i]), yOf(v));
       }
       ctx.lineTo(xOf(t1), bot); ctx.closePath();
       ctx.fillStyle = light ? "rgba(90,105,118,0.16)" : "rgba(147,166,180,0.18)";
@@ -2254,10 +2278,10 @@ function drawSysGraph() {
     ctx.strokeStyle = hues[p.slot]; ctx.lineWidth = 2 * dpr; ctx.lineJoin = "round";
     ctx.beginPath();
     let pen = false;
-    for (let i = win.from; i < sysHist.n; i++) {
-      const v = sysHist[p.key][i];
+    for (let i = win.from; i < h.n; i++) {
+      const v = h[p.key][i];
       if (v == null) { pen = false; continue; }
-      const x = xOf(sysHist.ts[i]), y = yOf(v);
+      const x = xOf(h.ts[i]), y = yOf(v);
       if (pen) ctx.lineTo(x, y); else ctx.moveTo(x, y);
       pen = true;
     }
@@ -2269,17 +2293,14 @@ function drawSysGraph() {
     ctx.font = `${9 * dpr}px ${fUi}`;
     ctx.fillStyle = dim;
     ctx.fillText(p.title, hx + sw + 5 * dpr, hy);
-    const now = last(sysHist[p.key]);
+    const now = last(h[p.key]);
     let txt = now == null ? "—" : `${p.fmt(now)}   min ${p.fmt(lo)}   max ${p.fmt(hi)}`;
-    if (p.with) {
-      const hv = last(sysHist[p.with]);
-      txt = `Service ${now == null ? "—" : p.fmt(now)}   Host ${hv == null ? "—" : p.fmt(hv)}`;
-    }
+    if (p.head) { const ov = last(h[p.with]); txt = p.head(now == null ? "—" : now, ov == null ? "—" : ov); }
     ctx.textAlign = "right"; ctx.fillStyle = ink;
     ctx.font = `${10 * dpr}px ${fMono}`;
     ctx.fillText(txt, W - padR - 2 * dpr, hy);
-    if (sysHover >= win.from && sysHover < sysHist.n && sysHist[p.key][sysHover] != null) {
-      const x = Math.round(xOf(sysHist.ts[sysHover])) + 0.5, y = yOf(sysHist[p.key][sysHover]);
+    if (G.hover >= win.from && G.hover < h.n && h[p.key][G.hover] != null) {
+      const x = Math.round(xOf(h.ts[G.hover])) + 0.5, y = yOf(h[p.key][G.hover]);
       ctx.beginPath(); ctx.arc(x, y, 3.2 * dpr, 0, Math.PI * 2);
       ctx.fillStyle = hues[p.slot]; ctx.fill();
       ctx.strokeStyle = cssVar("--panel-2", "#161e25"); ctx.lineWidth = 2 * dpr; ctx.stroke();
@@ -2289,42 +2310,54 @@ function drawSysGraph() {
   ctx.font = `${9 * dpr}px ${fMono}`;
   const ticks = Math.min(6, Math.max(2, Math.round(plotW / (70 * dpr))));
   for (let i = 0; i <= ticks; i++) {
-    const t = t0 + span * i / ticks, d = new Date(t * 1000);
+    const t = t0 + span * i / ticks;
     ctx.textAlign = i === 0 ? "left" : (i === ticks ? "right" : "center");
-    ctx.fillText(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`, xOf(t), H - padB + 4 * dpr);
+    ctx.fillText(hhmm(t), xOf(t), H - padB + 4 * dpr);
   }
-  if (sysHover >= win.from && sysHover < sysHist.n) {
-    const x = Math.round(xOf(sysHist.ts[sysHover])) + 0.5;
+  if (G.hover >= win.from && G.hover < h.n) {
+    const x = Math.round(xOf(h.ts[G.hover])) + 0.5;
     ctx.strokeStyle = light ? "rgba(27,39,49,0.35)" : "rgba(201,214,223,0.35)";
     ctx.lineWidth = dpr;
     ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, H - padB); ctx.stroke();
   }
 }
-$("sys-canvas").addEventListener("mousemove", (ev) => {
-  const win = sysWindow();
-  if (!win || win.n < 2) return;
-  const r = $("sys-canvas").getBoundingClientRect(), padL = 44, padR = 10;
-  const plotW = Math.max(1, r.width - padL - padR);
-  const f = Math.min(1, Math.max(0, (ev.clientX - r.left - padL) / plotW));
-  const t = sysHist.ts[win.from] + (sysHist.ts[sysHist.n - 1] - sysHist.ts[win.from]) * f;
-  let best = win.from, bd = Infinity;
-  for (let i = win.from; i < sysHist.n; i++) {
-    const d = Math.abs(sysHist.ts[i] - t);
-    if (d < bd) { bd = d; best = i; }
-  }
-  sysHover = best;
-  const d = new Date(sysHist.ts[best] * 1000);
-  const tc = sysHist.temp_c[best], ld = sysHist.load1[best];
-  const tip = $("sys-tip");
-  tip.innerHTML = `<b>${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}</b><br>` +
-    `${tc == null ? "—" : tc.toFixed(1) + " °C"} &middot; Load ${ld == null ? "—" : ld.toFixed(2)}<br>` +
-    `Service ${sysHist.app_rss_mb[best]} MB &middot; Host ${sysHist.mem_used_mb[best]} MB`;
-  tip.hidden = false;
-  tip.style.left = `${Math.min(r.width - 10, Math.max(60, padL + f * plotW))}px`;
-  tip.style.top = `${Math.max(0, ev.clientY - r.top - 54)}px`;
+function drawSysGraph() { for (const G of Object.values(GRAPHS)) drawGraph(G); }
+async function loadSysHistory() {
+  await Promise.all(Object.values(GRAPHS).map(async (G) => {
+    try { G.hist = await api(G.url); } catch { G.hist = null; }
+  }));
   drawSysGraph();
-});
-$("sys-canvas").addEventListener("mouseleave", () => { $("sys-tip").hidden = true; sysHover = -1; drawSysGraph(); });
+}
+for (const G of Object.values(GRAPHS)) {
+  for (const b of document.querySelectorAll(G.range)) {
+    b.onclick = () => {
+      G.rangeH = +b.dataset.hours;
+      for (const x of document.querySelectorAll(G.range)) x.classList.toggle("is-on", x === b);
+      drawGraph(G);
+    };
+  }
+  $(G.canvas).addEventListener("mousemove", (ev) => {
+    const win = graphWindow(G), h = G.hist;
+    if (!win || win.n < 2) return;
+    const r = $(G.canvas).getBoundingClientRect(), padL = 44, padR = 10;
+    const plotW = Math.max(1, r.width - padL - padR);
+    const f = Math.min(1, Math.max(0, (ev.clientX - r.left - padL) / plotW));
+    const t = h.ts[win.from] + (h.ts[h.n - 1] - h.ts[win.from]) * f;
+    let best = win.from, bd = Infinity;
+    for (let i = win.from; i < h.n; i++) {
+      const d = Math.abs(h.ts[i] - t);
+      if (d < bd) { bd = d; best = i; }
+    }
+    G.hover = best;
+    const tip = $(G.tip);
+    tip.innerHTML = `<b>${hhmm(h.ts[best])}</b><br>` + G.tipHtml(h, best);
+    tip.hidden = false;
+    tip.style.left = `${Math.min(r.width - 10, Math.max(60, padL + f * plotW))}px`;
+    tip.style.top = `${Math.max(0, ev.clientY - r.top - 54)}px`;
+    drawGraph(G);
+  });
+  $(G.canvas).addEventListener("mouseleave", () => { $(G.tip).hidden = true; G.hover = -1; drawGraph(G); });
+}
 
 // ---------------------------------------------------------------- log panel (Wavelog + QRZ)
 let logCfg = null;
@@ -3874,6 +3907,99 @@ $("cw-call").addEventListener("input", () => { cwCallTouched = Date.now(); });
 $("cw-sent-clear").onclick = () => { $("cw-sent").innerHTML = ""; };
 $("cw-stop").onclick = () => api("/api/cw/stop", {}).then(() => toast("CW stopped after the current chunk")).catch(() => {});
 
+// ---------------------------------------------------------------- RTTY skimmer + AFSK
+let rtState = { channels: [] }, rtSel = null;
+const RT_SIDES = ["LSB", "DATA-L", "RTTY-L", "CW-R"];
+function rtRf(tone) {                          // the signal's centre on the air
+  const v = radio.vfo;
+  if (!v?.freq_hz) return null;
+  return RT_SIDES.includes(v.mode) ? v.freq_hz - tone : v.freq_hz + tone;
+}
+const RT_TX_MODES = ["DATA-L", "DATA-U", "USB"];
+function renderRtty(s) {
+  rtState = s;
+  $("rt-on").classList.toggle("on", !!s.enabled);
+  $("rt-rev").classList.toggle("on", !!s.rev);
+  $("rt-side").textContent = s.upper_mark ? "MARK ↑" : "MARK ↓";
+  const txOk = RT_TX_MODES.includes(s.mode);
+  $("rt-stat").textContent = s.sending ? "SENDING" : (txOk ? "" : `TX needs DATA-L / DATA-U (radio: ${s.mode || "—"})`);
+  $("rt-stat").classList.toggle("rt-sending", !!s.sending);
+  $("rt-send").disabled = !!s.sending;
+  $("rt-count").textContent = s.enabled ? `${s.channels.length} signal${s.channels.length === 1 ? "" : "s"}` : "";
+  const body = $("rt-body");
+  if (!s.enabled || !s.channels.length) {
+    body.innerHTML = `<tr class="empty"><td colspan="5">${s.enabled ? "Listening … no RTTY signal in the passband yet." : "Switch DECODE on — every RTTY signal in the passband gets a row. Click one to follow it."}</td></tr>`;
+  } else {
+    body.innerHTML = s.channels.map((c) => {
+      const rf = rtRf(c.hz);
+      return `<tr data-id="${c.id}" class="${c.id === rtSel ? "sel" : ""}"><td class="n">${Math.round(c.hz)}</td>` +
+        `<td class="n">${rf ? (rf / 1000).toFixed(2) : "—"}</td><td class="n">${c.snr}</td><td class="n">${c.q}</td>` +
+        `<td class="msg cw-tail"><span>${esc(c.text.replace(/\n+/g, " ").slice(-120))}</span></td></tr>`;
+    }).join("");
+    for (const tr of body.querySelectorAll("tr[data-id]")) tr.onclick = () => {
+      rtSel = +tr.dataset.id;
+      const c = rtState.channels.find((x) => x.id === rtSel);
+      if (c) { $("rt-txhz").value = Math.round(c.hz); store.set("rttyTxHz", Math.round(c.hz)); }   // answer on its frequency
+      renderRtty(rtState);
+    };
+  }
+  const sel = s.channels.find((c) => c.id === rtSel);
+  $("rt-sel-lbl").textContent = sel ? `${Math.round(sel.hz)} Hz · ${(rtRf(sel.hz) / 1000).toFixed(2)} kHz · Q ${sel.q} %` : "no signal selected";
+  if (sel) {
+    const t = $("rt-text");
+    const atEnd = t.scrollTop + t.clientHeight >= t.scrollHeight - 8;
+    t.textContent = sel.text;
+    if (atEnd) t.scrollTop = t.scrollHeight;
+    const c = cwCallFrom(sel.text.toUpperCase());
+    if (c && Date.now() - rtCallTouched > 20000) $("rt-call").value = c;
+  }
+}
+let rtCallTouched = 0;
+$("rt-call").addEventListener("input", () => { rtCallTouched = Date.now(); });
+$("rt-txhz").value = store.get("rttyTxHz", 2210);
+$("rt-txhz").onchange = (e) => store.set("rttyTxHz", Math.max(300, Math.min(2600, +e.target.value || 2210)));
+async function loadRtty() { try { renderRtty(await api("/api/rtty")); } catch { /* backend down */ } }
+ws("/ws/rtty", (m) => { if (m.t === "rtty") renderRtty(m); });
+loadRtty();
+setInterval(loadRtty, 10000);
+$("rt-on").onclick = async () => { try { renderRtty(await api("/api/rtty/enable", { on: !rtState.enabled })); } catch { /* toast */ } };
+$("rt-rev").onclick = async () => { try { renderRtty(await api("/api/rtty/rev", { on: !rtState.rev })); } catch { /* toast */ } };
+$("rt-clear").onclick = async () => { try { renderRtty(await api("/api/rtty/clear", {})); $("rt-text").textContent = ""; } catch { /* toast */ } };
+$("rt-send").onclick = async () => {
+  const text = $("rt-msg").value.trim();
+  if (!text) return;
+  const hz = Math.max(300, Math.min(2600, +$("rt-txhz").value || 2210));
+  try {
+    const r = await api("/api/rtty/send", { text: text.toUpperCase(), hz });
+    toast(`Sending RTTY at ${hz} Hz (${r.seconds} s)`);
+    $("rt-msg").value = "";
+    const row = document.createElement("div");
+    row.innerHTML = `<span class="t">${new Date().toISOString().slice(11, 19)}</span>${esc(text.toUpperCase())}`;
+    $("rt-sent").appendChild(row);
+    $("rt-sent").scrollTop = $("rt-sent").scrollHeight;
+  } catch { /* toast */ }
+};
+$("rt-msg").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("rt-send").click(); } });
+$("rt-stop").onclick = () => api("/api/rtty/stop", {}).then(() => toast("RTTY stopped")).catch(() => {});
+$("rt-sent-clear").onclick = () => { $("rt-sent").innerHTML = ""; };
+// RTTY macros: click puts the text into the send line (Enter / SEND transmits)
+const RT_MACROS = [
+  ["CQ", "CQ CQ CQ DE {MY} {MY} {MY} PSE K"], ["CALL", "{CALL} DE {MY} {MY} K"],
+  ["599", "{CALL} DE {MY} TU UR 599 599 {LOC} {LOC} BK"], ["TU", "{CALL} TU 73 DE {MY} SK"],
+  ["AGN", "AGN AGN PSE"], ["QRZ", "QRZ? DE {MY} K"], ["RY", "RYRYRYRYRYRYRYRYRYRY"],
+];
+$("rt-macro-btns").innerHTML = RT_MACROS.map(([n]) => `<button class="btn sm rt-mac" data-n="${n}">${n}</button>`).join("");
+for (const b of document.querySelectorAll(".rt-mac")) {
+  const tpl = RT_MACROS.find(([n]) => n === b.dataset.n)[1];
+  b.title = tpl;
+  b.onclick = () => {
+    const call = $("rt-call").value.trim().toUpperCase();
+    if (tpl.includes("{CALL}") && !call) { toast("No callsign — select a signal or type one into CALL", true); $("rt-call").focus(); return; }
+    $("rt-msg").value = tpl.replaceAll("{MY}", cwMy.call).replaceAll("{LOC}", cwMy.loc).replaceAll("{CALL}", call);
+    $("rt-msg").focus();
+  };
+}
+
 // ---------------------------------------------------------------- Settings ▸ Appearance
 // Panels on/off and their accent colours, per browser (as TM-V71 Remote's Panels tab).
 // VFO, PTT and Audio always stay (`fixed`: no tile, only an accent colour) - the radio
@@ -3883,6 +4009,7 @@ const PANELS = [
   { key: "ptt", sel: "#pttp", name: "PTT · Memory", fixed: true },
   { key: "audio", sel: "#audiop", name: "Audio · WebRTC", fixed: true },
   { key: "digi", sel: "#digi", name: "DIGI · FT8/FT4" },
+  { key: "rtty", sel: "#rttyp", name: "RTTY" },
   { key: "cw", sel: "#cwp", name: "CW" },
   { key: "hackrf", sel: "#hackrf", name: "HackRF waterfall" },
   { key: "log", sel: "#log", name: "Log · Wavelog" },

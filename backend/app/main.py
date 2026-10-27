@@ -14,12 +14,13 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import menus as exmenus
-from . import mixer, runtime, sys_history, system_info
+from . import dec_history, mixer, runtime, sys_history, system_info
 from .logbook import LogBook, LogError, band_for_hz
 from .tx import Transmitter
 from .sequencer import Sequencer
 from .recorder import Recorder
 from .cw import CWSkimmer, cw_duration_s
+from .rtty import RTTYSkimmer, duration_s as rtty_duration_s
 from .shelly import ShellyError, ShellySwitch
 from .propagation import Propagation
 from .hackrf_proxy import DEFAULT_URL as HACKRF_DEFAULT, HackRFError, HackRFProxy
@@ -32,7 +33,7 @@ from .config import APP_VERSION, settings
 from .digi import DECODERS as DIGI_DECODERS, MODES as DIGI_MODES, DigiService, decoder_available, decoder_config, decoder_tag
 from .ft950 import (AGC_SET, ATT, BANDS, MODES, PREAMP, ROOF_SET, WIDTHS,
                     FT950Error, width_column)
-from .models import (zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
+from .models import (RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
                      ClarReq, ContourReq, IfShiftReq, LevelReq, NotchReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
@@ -68,6 +69,9 @@ capture.subscribe(recorder.feed)
 skimmer = CWSkimmer()
 capture.subscribe(skimmer.feed)
 cw_manager = ConnectionManager()
+rtty_skimmer = RTTYSkimmer()
+capture.subscribe(rtty_skimmer.feed)
+rtty_manager = ConnectionManager()
 digi = DigiService(capture, digi_manager, lambda: service.status,
                    settings.digi_work_dir, settings.digi_keep_slices,
                    settings.digi_data_dir)
@@ -140,11 +144,16 @@ async def _worked_sync_loop() -> None:
 async def _sys_history_loop() -> None:
     """Sample the host metrics once a minute for the 24 h graph."""
     sys_history.load()
+    dec_history.load()
     while True:
         try:
             sys_history.add(await asyncio.to_thread(system_info.collect))
         except Exception as exc:  # noqa: BLE001
             log.debug("system history sample failed: %s", exc)
+        try:
+            dec_history.sample()
+        except Exception as exc:  # noqa: BLE001
+            log.debug("decoder history sample failed: %s", exc)
         await asyncio.sleep(sys_history.STEP_S)
 
 
@@ -160,6 +169,7 @@ async def lifespan(app: FastAPI):
     hfollow = asyncio.create_task(hackrf.follow_loop())
     autooff = asyncio.create_task(_auto_power_off_loop())
     cwloop = asyncio.create_task(_cw_broadcast_loop())
+    rttyloop = asyncio.create_task(_rtty_broadcast_loop())
     opus_mono.install()                     # before the first peer builds an encoder
     if _rt.get("codec_playback") is not None:
         # ALSA restores its own (old) mixer state at boot — measured: the codec
@@ -175,6 +185,7 @@ async def lifespan(app: FastAPI):
     hfollow.cancel()
     autooff.cancel()
     cwloop.cancel()
+    rttyloop.cancel()
     for pc in list(pcs):
         await pc.close()
     wsync.cancel()
@@ -831,7 +842,14 @@ async def radio_menus_snapshot() -> dict:
 # -- Pi hardware -------------------------------------------------------------
 @app.get("/api/system")
 async def get_system() -> dict:
-    return await asyncio.to_thread(system_info.collect)
+    d = await asyncio.to_thread(system_info.collect)
+    d["decoder"] = dec_history.live()          # the WSJT-X decoder: last pass, last minute
+    return d
+
+
+@app.get("/api/system/decoder-history")
+async def get_decoder_history(hours: float = 24.0) -> dict:
+    return dec_history.series(min(max(hours, 0.0), 24.0))
 
 
 @app.get("/api/system/history")
@@ -1275,6 +1293,101 @@ async def cw_stop() -> dict:
 @app.websocket("/ws/cw")
 async def ws_cw(ws: WebSocket) -> None:
     await _stream(ws, cw_manager)
+
+
+# -- RTTY: skimmer (every RTTY signal in the passband) + AFSK transmit ----------
+LOWER_SIDEBAND = ("LSB", "DATA-L", "RTTY-L", "CW-R")
+
+
+def _rtty_upper_mark() -> bool:
+    """In USB / DATA-U the mark (the higher RF frequency) is the higher audio
+    tone; in LSB / DATA-L the lower one."""
+    return (service.status.get("vfo") or {}).get("mode") not in LOWER_SIDEBAND
+
+
+async def _rtty_broadcast_loop() -> None:
+    last = -1
+    while True:
+        await asyncio.sleep(0.25)
+        rtty_skimmer.upper_mark = _rtty_upper_mark()
+        if rtty_manager.count and rtty_skimmer.version != last:
+            last = rtty_skimmer.version
+            await rtty_manager.broadcast({"t": "rtty", **_rtty_view()})
+
+
+_rtty_job: asyncio.Task | None = None
+
+
+def _rtty_view() -> dict:
+    return {**rtty_skimmer.snapshot(), "sending": bool(_rtty_job and not _rtty_job.done()),
+            "mode": (service.status.get("vfo") or {}).get("mode")}
+
+
+async def _rtty_send(text: str, hz: float, upper: bool) -> None:
+    try:
+        await tx.send_rtty(text, hz, upper)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("RTTY TX failed: %s", exc)
+    finally:
+        rtty_skimmer.version += 1                 # the panel sees "sending" end
+
+
+@app.get("/api/rtty")
+async def rtty_status() -> dict:
+    return _rtty_view()
+
+
+@app.post("/api/rtty/enable")
+async def rtty_enable(req: OnOffReq) -> dict:
+    rtty_skimmer.set_enabled(req.on)
+    return _rtty_view()
+
+
+@app.post("/api/rtty/clear")
+async def rtty_clear() -> dict:
+    rtty_skimmer.clear()
+    return _rtty_view()
+
+
+@app.post("/api/rtty/rev")
+async def rtty_rev(req: OnOffReq) -> dict:
+    """Swap mark and space (for a station sending reversed)."""
+    rtty_skimmer.rev = req.on
+    rtty_skimmer.version += 1
+    return _rtty_view()
+
+
+@app.post("/api/rtty/send")
+async def rtty_send(req: RttySendReq) -> dict:
+    """Send text in RTTY: AFSK on the DATA input (radio in DATA-L or DATA-U)."""
+    global _rtty_job
+    if sequencer.kind or sequencer.hunt:
+        raise HTTPException(409, "The FT8 sequencer is running — stop it first (Halt TRX)")
+    if _rtty_job and not _rtty_job.done():
+        raise HTTPException(409, "still sending")
+    try:
+        tx._check()
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    upper = _rtty_upper_mark() != rtty_skimmer.rev
+    _rtty_job = asyncio.create_task(_rtty_send(req.text, req.hz, upper))
+    rtty_skimmer.version += 1
+    return {"ok": True, "seconds": round(rtty_duration_s(req.text), 1)}
+
+
+@app.post("/api/rtty/stop")
+async def rtty_stop() -> dict:
+    if tx.state.get("active") == "rtty":
+        await tx.stop()
+    if _rtty_job and not _rtty_job.done():
+        _rtty_job.cancel()
+    rtty_skimmer.version += 1
+    return {"ok": True}
+
+
+@app.websocket("/ws/rtty")
+async def ws_rtty(ws: WebSocket) -> None:
+    await _stream(ws, rtty_manager)
 
 
 # -- HF band conditions (VOACAP for the own locator; the strip under DIGI) -------

@@ -36,6 +36,9 @@ DE = [
         "KW-Ausbreitung unter dem Wasserfall, mit echtem VOACAP für den eigenen "
         "Locator berechnet: 80-40, 30-20, 17-15, 12-10 und 6m in Grün / Gelb / Rot, "
         "mit Sonne/Mond-Schalter für Tag und Nacht.",
+        "RTTY-Skimmer: alle RTTY-Signale im Durchlassbereich werden gleichzeitig "
+        "dekodiert (45,45 Bd, 170 Hz); Senden als AFSK über den DATA-Eingang, mit "
+        "Makros.",
         "CW-Skimmer: Alle CW-Signale im Durchlassbereich werden gleichzeitig "
         "dekodiert; gesendet wird über den eingebauten Keyer des Funkgeräts, mit Makros.",
         "HackRF-Wasserfall, weitergereicht von TM-V71 Remote, der dem Amateurfunkband "
@@ -111,7 +114,7 @@ DE = [
           "Typenschild, die Lampen CAT und USB AUDIO, die UTC-Uhr, den "
           "Design-Umschalter, Settings und — sobald ein Shelly eingerichtet ist — den "
           "Netzschalter."),
-    ("p", "Darunter folgen die Felder VFO, PTT · MEMORY und AUDIO, DIGI, CW, HackRF "
+    ("p", "Darunter folgen die Felder VFO, PTT · MEMORY und AUDIO, DIGI, RTTY, CW, HackRF "
           "und LOG. Die meisten lassen sich mit ▲ einklappen; PTT und AUDIO bleiben "
           "immer offen. Die Felder werden mit 90 % Zoom dargestellt, damit die ganze "
           "Station auf einen Bildschirm passt."),
@@ -372,7 +375,44 @@ DE = [
         "Leiste nicht.",
     ]),
 
-    ("h1", "10  CW-Skimmer"),
+    ("h1", "10  RTTY-Skimmer"),
+    ("img", "manual/rtty.png", 174),
+    ("p", "Das RTTY-Feld unter DIGI dekodiert jedes RTTY-Signal im Durchlassbereich "
+          "gleichzeitig — Standard-Amateurfunk-RTTY: 45,45 Baud, 170 Hz Shift, "
+          "Baudot mit US-Ziffern, 1,5 Stoppbits. DECODE schaltet es ein (es läuft "
+          "auf dem Pi nur, solange es an ist). Jedes Signal bekommt eine Zeile: Ton "
+          "(die NF-Mitte zwischen Mark und Space), Frequenz auf dem Band, SNR, "
+          "Qualität (Anteil der Zeichen mit korrektem Stoppbit) und der laufende "
+          "Text; ein Klick zeigt den ganzen Text rechts und übernimmt das "
+          "Rufzeichen in CALL."),
+    ("ul", [
+        "Arbeitsweise: alle 0,5 s wird ein Spektrum der letzten 2 s nach "
+        "Spitzenpaaren im Abstand von 170 Hz mit einer Senke dazwischen durchsucht "
+        "(bis zu 8 Signale, langsame Drift wird nachgeführt). Pro Signal laufen "
+        "Mark und Space durch ein auf das Bit abgestimmtes Filter; ihre Pegel "
+        "werden verglichen, nachdem jeder auf seine eigene Spitze normiert ist, so "
+        "dass Schwund eines Tons die Bits nicht kippt. Ein UART findet Startbit, "
+        "fünf Datenbits und Stoppbit. Ein Zeichen zählt nur, wo ein Ton deutlich "
+        "über dem anderen steht — Rauschen druckt nichts —, und eine Zeile "
+        "erscheint erst, wenn die meisten ihrer Rahmen sauber sind.",
+        "Mark und Space: auf dem Band ist Mark die höhere Frequenz. In LSB / "
+        "DATA-L ist das der tiefere NF-Ton, in USB / DATA-U der höhere — das Feld "
+        "folgt der Betriebsart des Funkgeräts (MARK ↓ / ↑). REV vertauscht beide, "
+        "für eine Station, die verkehrt sendet (Empfang und Senden).",
+        "Senden: AFSK über den DATA-Eingang, wie FT8 — das Funkgerät in DATA-L "
+        "(üblich), DATA-U oder USB, mit dem FT8-Sendepegel. Der Text kommt in die "
+        "Sendezeile, von Hand oder aus den Makros CQ, CALL, 599, TU, AGN, QRZ und RY "
+        "({MY}, {LOC} und das Feld CALL werden eingesetzt); Enter oder SEND sendet "
+        "ihn mit CR LF davor und danach, mit Mark-Ruhe vorweg. TX ist die "
+        "Mittenfrequenz in Hz NF (300–2600); ein Klick auf ein Signal setzt sie auf "
+        "diese Station. STOP und Halt TRX brechen sofort ab; ein Watchdog beendet "
+        "die Sendung spätestens 3 s nach ihrer Länge. Solange die FT8-Ablaufsteuerung "
+        "oder Auto Hunt läuft, sendet RTTY nicht.",
+        "Das Feld lässt sich unter Settings ▸ Appearance ausblenden und bekommt "
+        "dort eine eigene Akzentfarbe.",
+    ]),
+
+    ("h1", "11  CW-Skimmer"),
     ("img", "manual/cw.png", 174),
     ("p", "DECODE startet den Skimmer. Jeder CW-Träger im Durchlassbereich bekommt "
           "einen eigenen Decoder; die Tabelle zeigt Tonhöhe, HF-Frequenz, Tempo, SNR "
@@ -384,7 +424,7 @@ DE = [
           "eingeschaltet sein. Makros (CQ, CALL, 5NN, RR, 73, AGN, QRZ) füllen die "
           "Sendezeile; CALL wird vom ausgewählten Signal übernommen."),
 
-    ("h1", "11  HackRF-Wasserfall"),
+    ("h1", "12  HackRF-Wasserfall"),
     ("img", "manual/hackrf.png", 174),
     ("p", "Der HackRF One hängt am zweiten Pi mit TM-V71 Remote. FT-950 Remote "
           "reicht dessen Wasserfall weiter (Settings ▸ General ▸ HackRF source). Mit "
@@ -396,7 +436,7 @@ DE = [
           "820 Punkte für 40 m statt etwa 50 aus der normalen 2-MHz-Zeile. Die Maus "
           "zeigt Frequenz und Pegel unter dem Zeiger."),
 
-    ("h1", "12  Logbuch"),
+    ("h1", "13  Logbuch"),
     ("p", "Das Feld LOG loggt in Wavelog (API-Schlüssel und Stationsprofil) und "
           "ins QRZ.com-Logbuch — jeweils mit eigenem Knopf neben dem Rufzeichen: LOG "
           "WAVELOG und LOG QRZ.COM (das Formular bleibt stehen, so kann ein QSO in "
@@ -411,7 +451,7 @@ DE = [
           "gibt es etwas zu loggen. Recent QSOs: QRZ Visit und Map Display für die "
           "markierte Zeile."),
 
-    ("h1", "13  Einstellungen"),
+    ("h1", "14  Einstellungen"),
     ("img", "manual/set-general.png", 120),
     ("ul", [
         "General: Rufzeichen, Locator, CAT-Port und Baudrate, Shelly und "
@@ -436,12 +476,17 @@ DE = [
         "FT-950, Sprachaufbereitung beim Senden, WebRTC-Puffer.",
         "Log: Wavelog und QRZ.com.",
         "Memories: die 32 Speichertasten mit CTCSS, Split und VFO B.",
-        "Appearance (pro Browser): die Felder DIGI, CW, HackRF und Log ausblenden "
+        "Appearance (pro Browser): die Felder DIGI, RTTY, CW, HackRF und Log ausblenden "
         "(VFO, PTT und Audio bleiben immer; ein ausgeblendetes HackRF stoppt den "
         "Sweep), eine Akzentfarbe pro Feld mit Reset, und Peak Hold der LCD-Anzeigen "
         "(PO · SWR · ALC · ID · VDD) ein/aus. Änderungen wirken sofort und bleiben mit SAVE.",
         "Pi Hardware: Last, Temperatur, Arbeitsspeicher, Datenträger und ein "
-        "24-h-Verlauf.",
+        "24-h-Verlauf; darunter der WSJT-X-Decoder (jt9) für sich — der letzte "
+        "Durchlauf (CPU-Sekunden, Laufzeit, Teile), sein Speicher (die parallelen "
+        "Teile zusammengezählt, Spitze) und die CPU der letzten Minute als Anteil am "
+        "Pi, mit eigenem 24-h-Verlauf von CPU-Anteil und Speicher. Die CPU-Zeit "
+        "meldet der Kernel, wenn ein jt9-Lauf endet; der Speicher ist jt9s eigene "
+        "Spitze, gelesen während er läuft.",
     ]),
     ("img", "manual/set-ft8.png", 120),
     ("img", "manual/set-appearance.png", 120),
@@ -449,7 +494,7 @@ DE = [
           "und Appearance dazu SAVE. Unter Audio wirken Änderungen sofort, unter Memories hat jede "
           "Zeile ihr eigenes WRITE, Pi Hardware ist nur zur Ansicht."),
 
-    ("h1", "14  Fernein- und -ausschalten"),
+    ("h1", "15  Fernein- und -ausschalten"),
     ("p", "Ein Shelly-Relais (Gen1 oder Gen2/Plus/Pro, wird automatisch erkannt) "
           "schaltet die 13,8 V des Funkgeräts. Der Netzschalter in der Titelleiste "
           "schaltet ein und aus — bevor die Versorgung getrennt wird, werden eine "
@@ -459,7 +504,7 @@ DE = [
           "Funkgerät aus, wenn die Seite für die eingestellte Zeit in keinem Browser "
           "mehr offen war."),
 
-    ("h1", "15  Fehlersuche"),
+    ("h1", "16  Fehlersuche"),
     ("ul", [
         "CAT offline: by-id-Port prüfen und Menü 026 = 3 (38400 Bd).",
         "Kein Empfangston: CONNECT, dann RX GAIN prüfen und ob MUTE/DROP aus sind.",
@@ -473,7 +518,7 @@ DE = [
         "Settings ▸ General einen Locator eintragen.",
     ]),
 
-    ("h1", "16  Technische Referenz"),
+    ("h1", "17  Technische Referenz"),
     ("diagram", "system", "de"),
     ("h2", "Backend"),
     ("ul", [
@@ -487,7 +532,8 @@ DE = [
         "QSO-Zustandsautomat.",
         "voice.py: WebRTC-Hub, PTT-Freigabe, Vorlauf (Pre-Roll), AGC, Kompressor, "
         "Höhenanhebung.",
-        "cw.py: der CW-Skimmer; hackrf_proxy.py; shelly.py; recorder.py.",
+        "cw.py: der CW-Skimmer; rtty.py: RTTY-Skimmer und AFSK; dec_history.py: "
+        "die Decoder-Werte; hackrf_proxy.py; shelly.py; recorder.py.",
         "propagation.py: VOACAP-Bandbedingungen — der Ring aus 36 Pfaden, ein Lauf "
         "pro UTC-Tag, die Tag- und Nachthälfte; GET /api/propagation.",
     ]),

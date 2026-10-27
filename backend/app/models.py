@@ -262,6 +262,12 @@ class CwSpeedReq(BaseModel):
     wpm: int = Field(ge=4, le=60)
 
 
+class RttySendReq(BaseModel):
+    # letters, figures and the punctuation Baudot has; newlines become CR LF
+    text: str = Field(min_length=1, max_length=600, pattern=r"^[A-Za-z0-9 .,?/:;'()!$&#\"\-\n]+$")
+    hz: float = Field(ge=300, le=2600)                 # centre between mark and space
+
+
 class CwSendReq(BaseModel):
     text: str = Field(min_length=1, max_length=500, pattern=r"^[A-Za-z0-9 .,?/=+\-@]+$")
 

@@ -1938,3 +1938,11 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .foot .blk-sep:has(+ label #wf-cmap){margin:0 auto}  /* centred between Adopt Frequency and Palette */
 .foot .blk-sep:has(+ .prop){margin:0 5px 0 -9px}     /* centred between Brightness (its 14px margin) and VOACAP */
 .foot .prop{margin-left:0}
+.dec-graph canvas{height:210px}   /* two panels: CPU and memory of the decoder */
+/* RTTY panel: the CW panel's layout, its own accent (teal) */
+.rttyp{--accent:#4fd1c5; --accent-glow:#4fd1c5}
+:root[data-theme="light"] .rttyp{--accent:#16877d; --accent-glow:#3fb3a8}
+.rt-text{font-size:15px; letter-spacing:.04em}
+.rttyp .panel-stat.rt-sending{color:var(--tx); font-weight:700}
+.rttyp .cw-call input#rt-txhz{width:70px}
+.rttyp .rt-send{border-color:var(--tx)}

@@ -258,6 +258,36 @@ class Transmitter:
         await self.stop()
         return {"sent": True, "start_offset": round(start - t0, 2)}
 
+    async def send_rtty(self, text: str, centre: float, upper_mark: bool) -> dict:
+        """Send ``text`` in RTTY (AFSK through the DATA input, as FT8).
+
+        The tones are generated before keying; the transmission ends with the
+        buffer, or with stop()/Halt TRX. Returns when it is over."""
+        from . import rtty
+        centre = max(300.0, min(2600.0, float(centre)))   # both tones inside the TX filter
+        wave = await asyncio.to_thread(rtty.waveform, text, centre, upper_mark, RATE)
+        dur = len(wave) / RATE
+        async with self._lock:
+            if self.state["active"]:
+                await self._stop_locked()
+            self._check()
+            await asyncio.to_thread(self.service.radio.ptt, True)
+            await asyncio.sleep(PTT_LEAD_S)
+            amp = 0.98 * self.level * 32767           # same drive as FT8 / TUNE
+            out = BufferOut(self.device_getter(), (wave * amp).astype(np.int16))
+            out.start()
+            self._tone = out
+            now = time.time()
+            self.state = {"active": "rtty", "hz": centre, "since": now, "until": now + dur,
+                          "message": text}
+            self._watchdog = asyncio.create_task(self._expire(dur + 3.0))
+            log.info("RTTY TX at %.0f Hz (%s mark), %.1f s: %r", centre,
+                     "upper" if upper_mark else "lower", dur, text[:60])
+        await asyncio.to_thread(out.done.wait, dur + 4)
+        if self.state["active"] == "rtty":
+            await self.stop()
+        return {"sent": True, "seconds": round(dur, 1)}
+
     async def _voice_guard(self) -> None:
         while True:
             await asyncio.sleep(0.25)

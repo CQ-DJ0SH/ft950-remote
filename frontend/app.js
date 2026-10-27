@@ -1024,6 +1024,10 @@ function applyDigiStatus(s) {
   $("my-empty").textContent = myCall ? `No messages to ${myCall} yet.`
     : "No callsign set (Settings ▸ General).";
   segSet($("digi-mode"), s.config?.mode);
+  // AUTO shows the mode it found ("AUTO · FT8") - the footer no longer does
+  const autoBtn = $("digi-mode").querySelector('[data-v="AUTO"]');
+  const autoTxt = s.config?.mode === "AUTO" && s.mode ? `AUTO · ${s.mode}` : "AUTO";
+  if (autoBtn && autoBtn.textContent !== autoTxt) autoBtn.textContent = autoTxt;
   $("digi-on").classList.toggle("on", !!s.config?.enabled);
   $("f-grid").textContent = s.config?.my_grid || "—";
   myGrid = s.config?.my_grid || "";
@@ -1095,7 +1099,9 @@ function huntLabel(on = seqState?.hunt) {
     const left = Math.max(0, Math.round((huntEnd - Date.now()) / 1000));
     t = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
   }
-  const html = on ? `Hunt<small class="hunt-left">${t}</small>` : "Auto Hunt";
+  const ico = '<svg class="hunt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">'
+    + '<circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>';
+  const html = on ? `Hunt<small class="hunt-left">${t}</small>${ico}` : "Auto Hunt" + ico;
   if ($("seq-hunt").innerHTML !== html) $("seq-hunt").innerHTML = html;
 }
 setInterval(() => { if (seqState?.hunt) huntLabel(true); }, 1000);
@@ -1147,6 +1153,7 @@ function renderSeq(s) {
   const follow = s.kind && s.kind !== "cq" && s.tx_hz ? s.tx_hz : null;   // a QSO on its own frequency
   if (follow !== seqTxHz) { seqTxHz = follow; placeBoxes(); }
   $("seq-cq").classList.toggle("on", s.kind === "cq");
+  $("cq-to").classList.toggle("on", s.kind === "cq");          // lit with CQ: what is being called
   $("seq-answer").classList.toggle("on", !!s.auto_answer);
   $("seq-hunt").classList.toggle("on", !!s.hunt);
   // off: "Auto Hunt"; on: "Hunt" and the time left as m:ss, counted down here
@@ -1259,7 +1266,6 @@ function renderTx(s) {
   showHalt();
   const on = s.active === "tune";
   $("tune").classList.toggle("on", on);
-  if (s.active === "ft") $("cycle-txt").textContent = "TRANSMIT";
   $("tune").textContent = on ? `TUNE ${Math.ceil(s.remaining_s ?? 0)}s` : "TUNE";
   if (s.level != null && Date.now() - (touched.get("tx-level") || 0) > 1500) {
     for (const id of ["tx-level", "dg-tx-level"]) {      // Settings ▸ Audio and the DIGI strip
@@ -1336,7 +1342,9 @@ function tick() {
   const even = n % 2 === 0;
   $("parity").textContent = even ? "EVEN" : "ODD";
   $("parity").classList.toggle("odd", !even);
-  $("cycle-txt").textContent = radio.tx ? "TRANSMIT" : "RECEIVE";
+  // RX / TX and the time into the period, e.g. "RX 7.3 / 15 s"
+  const into = now - n * p, txt = `${radio.tx ? "TX" : "RX"} ${into.toFixed(1)} / ${p} s`;
+  if ($("cycle-txt").textContent !== txt) $("cycle-txt").textContent = txt;
   requestAnimationFrame(tick);
 }
 
@@ -1454,7 +1462,13 @@ const hzAt = (e) => {
   const r = $("wf-wrap").getBoundingClientRect();
   return F0 + (e.clientX - r.left) / r.width * (F1 - F0);
 };
-$("wf-wrap").addEventListener("click", (e) => setBox(e.shiftKey ? "rx" : "tx", hzAt(e)));
+// a TX frequency picked by hand switches AF off, so the next click on a station
+// (or Auto Answer / Auto Hunt) does not move it away again
+$("wf-wrap").addEventListener("click", (e) => {
+  if (e.shiftKey) { setBox("rx", hzAt(e)); return; }   // Shift+click: RX window only
+  if (afOn()) { $("af").onclick(); toast("Adopt Frequency off: TX frequency set by hand"); }
+  setBox("tx", hzAt(e));
+});
 $("wf-wrap").addEventListener("mousemove", (e) => {
   const tip = $("wf-tip"), r = $("wf-wrap").getBoundingClientRect();
   tip.hidden = false;

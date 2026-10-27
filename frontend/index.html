@@ -348,10 +348,12 @@
       <h2>DIGI · FT8/FT4</h2>
       <span class="digi-brand" aria-hidden="true"><span class="screw screw-l"></span><span class="db-txt">WSJT-X</span><span class="db-ver" id="db-ver" title="The decoder that runs (Settings ▸ FT8 ▸ Decoder)"></span><span class="screw screw-r"></span></span>
       <button class="btn sm toggle on" id="digi-on" title="FT8/FT4 decoding on/off">DECODE</button>
-      <span class="panel-stat" id="digi-head-stat"></span>
+      <span class="seq-block"><button class="btn sm toggle" id="seq-cq" title="Call CQ (auto-sequencer): CQ · report · RR73 · log">CQ</button><select id="cq-to" title="Directed CQ: CQ DX (stations outside your continent), CQ EU / NA / SA / AF / AS / OC (that continent only), CQ POTA / SOTA - or a plain CQ"><option value="">—</option><option>DX</option><option>EU</option><option>NA</option><option>SA</option><option>AF</option><option>AS</option><option>OC</option><option>POTA</option><option>SOTA</option></select><button class="btn sm toggle" id="seq-answer" title="Auto answer: while no QSO runs, a station calling you (locator, report or R-report to your call) is answered automatically on the TX frequency — the strongest if several call. Double-click a row to answer a station by hand.">Auto Answer</button><button class="btn sm toggle" id="seq-hunt" title="Hunt: while no QSO runs, new stations calling CQ are called automatically on the TX frequency, one after the other — each QSO is waited for. A station that never answers is struck through and not called again. Switches itself off after the time set in Settings ▸ FT8 ▸ Hunt, and only calls while this panel is open.">Auto Hunt<svg class="hunt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg></button></span>
+      <span class="panel-stat" id="digi-head-stat" hidden></span>
       <span class="spacer"></span>
       <span class="chip seq-tx" id="seq-tx" title="Next sequencer transmission">TX —</span>
       <button class="btn sm halt" id="halt" disabled title="Stop transmitting immediately (PTT off), stop the sequencer and switch Auto Hunt off — active during an FT8/FT4 transmission, while a sequence runs or while Auto Hunt is on">Halt TRX</button>
+      <span class="lamp" id="l-ptt" title="Transmitter active (PTT)">TX</span>
       <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
     </div>
     <div class="digi-body">
@@ -421,51 +423,46 @@
 
       <div class="strip">
         <div class="seg" id="digi-mode"></div>
-        <button class="btn sm toggle" id="seq-cq" title="Call CQ (auto-sequencer): CQ · report · RR73 · log">CQ</button>
-        <select id="cq-to" title="Directed CQ: CQ DX (stations outside your continent), CQ EU / NA / SA / AF / AS / OC (that continent only), CQ POTA / SOTA - or a plain CQ"><option value="">—</option><option>DX</option><option>EU</option><option>NA</option><option>SA</option><option>AF</option><option>AS</option><option>OC</option><option>POTA</option><option>SOTA</option></select>
-        <button class="btn sm toggle" id="seq-answer" title="Auto answer: while no QSO runs, a station calling you (locator, report or R-report to your call) is answered automatically on the TX frequency — the strongest if several call. Double-click a row to answer a station by hand.">Auto Answer</button>
-        <button class="btn sm toggle" id="seq-hunt" title="Hunt: while no QSO runs, new stations calling CQ are called automatically on the TX frequency, one after the other — each QSO is waited for. A station that never answers is struck through and not called again. Switches itself off after the time set in Settings ▸ FT8 ▸ Hunt, and only calls while this panel is open.">Auto Hunt</button>
-        <button class="btn sm toggle" id="af" title="Adopt Frequency: clicking a station also moves the TX window to its frequency, and Auto Answer / Auto Hunt answer on the partner's frequency">AF</button>
-        <label class="txlvl" title="DIGI RX level: software gain on the Pi, −20 … +20 dB, for the FT8/FT4 decoder, the waterfall and the meter on the right only (browser audio and the radio's own level are not changed) — aim for −40 … −20 dBFS. Double-click: 0 dB."><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg><input type="range" id="rx-level" min="-20" max="20" step="1" value="0"><b id="rx-level-val">—</b></label>
-        <button class="btn sm tune" id="tune" title="Steady tone on the TX frequency (max. 10 s) — for tuner and ALC/power adjustment">TUNE</button>
-        <label class="txlvl" title="FT8/FT4 TX drive: audio level into the radio's DATA input, 0 … 100 % (same value as Settings ▸ Audio ▸ FT8 TX DRIVE). Set it with TUNE: full power, ALC barely moving."><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"></path><path d="M8.5 7.5a5 5 0 0 1 7 0"></path><path d="M5.5 4.5a9 9 0 0 1 13 0"></path><circle cx="12" cy="10" r="1.5"></circle></svg><input type="range" id="dg-tx-level" min="0" max="100" step="1"><b id="dg-tx-level-val">—</b></label>
+        <div class="cycle" title="Progress of the current cycle"><i id="cycle-bar"></i><span id="cycle-txt">RECEIVE</span></div>
         <span class="chip parity" id="parity">EVEN</span>
+        <span class="strip-lbl" title="Decoding: time the last decode took, and how many it found">Decode</span>
         <span class="chip" id="dec-ms" title="jt9 run time of the last cycle">— ms</span>
-        <div class="seg" id="digi-depth" title="jt9 decode depth: D1 fast, D2 normal (default), D3 deep (subtraction + a-priori, slowest). AUTO picks the depth from the measured run time."></div>
         <span class="chip" id="dec-n" title="Decodes in the last cycle">0</span>
-        <span class="lamps">
-          <span class="stat" id="l-ntp" title="System clock synchronised via NTP — no decoding without sync"><span class="led"></span><span class="stat-label">NTP</span></span>
-          <span class="lamp" id="l-ptt" title="Transmitter active">PTT</span>
-          <span class="lamp" id="l-ovl" title="Codec overload (peak > −1 dBFS)">OVL</span>
+        <span class="stat" id="l-ntp" title="NTP: system clock synchronised (green) — no decoding without sync (red)"><span class="led"></span></span>
+        <label class="txlvl" title="DIGI RX level: software gain on the Pi, −20 … +20 dB, for the FT8/FT4 decoder, the waterfall and the meter on the right only (browser audio and the radio's own level are not changed) — aim for −40 … −20 dBFS. Double-click: 0 dB."><span class="strip-lbl">RX</span><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg><input type="range" id="rx-level" min="-20" max="20" step="1" value="0"><b id="rx-level-val">—</b></label>
+        <span class="lvl" title="Receive level from the radio (RMS) — target −40 … −20 dBFS, adjustable on the radio (Settings ▸ Audio). Set it with the slider on the left (software gain on the Pi).">
+          <span class="lvl-bar"><i id="lvl-bar"></i></span><b id="lvl-val">— dBFS</b>
         </span>
+        <label class="txlvl" title="FT8/FT4 TX drive: audio level into the radio's DATA input, 0 … 100 % (same value as Settings ▸ Audio ▸ FT8 TX DRIVE). Set it with TUNE: full power, ALC barely moving."><span class="strip-lbl">TX</span><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"></path><path d="M8.5 7.5a5 5 0 0 1 7 0"></path><path d="M5.5 4.5a9 9 0 0 1 13 0"></path><circle cx="12" cy="10" r="1.5"></circle></svg><input type="range" id="dg-tx-level" min="0" max="100" step="1"><b id="dg-tx-level-val">—</b></label>
+        <button class="btn sm tune" id="tune" title="Steady tone on the TX frequency (max. 10 s) — for tuner and ALC/power adjustment">TUNE</button>
       </div>
 
       <div class="wf-axis" id="wf-axis"></div>
       <div class="wf-wrap" id="wf-wrap">
         <canvas id="wf"></canvas>
-        <div class="wf-box rx" id="box-rx" title="RX window (Shift+click)"></div>
         <div class="wf-box tx" id="box-tx" title="TX window (click)"></div>
+        <div class="wf-box rx" id="box-rx" title="RX window (Shift+click)"></div>
         <div class="wf-tip" id="wf-tip" hidden></div>
       </div>
 
       <div class="foot">
-        <span id="f-grid">—</span>
+        <span id="f-grid" hidden>—</span>
         <span id="f-dial">— kHz</span>
         <span id="f-pwr">— W</span>
-        <span id="f-mode">—</span>
-        <span class="lvl" title="Receive level from the radio (RMS) — target −40 … −20 dBFS, adjustable on the radio (Settings ▸ Audio). Set it with the slider on the left (software gain on the Pi).">
-          <span class="lvl-bar"><i id="lvl-bar"></i></span><b id="lvl-val">— dBFS</b>
-        </span>
-        <div class="cycle" title="Progress of the current cycle"><i id="cycle-bar"></i><span id="cycle-txt">RECEIVE</span></div>
+        <span id="f-mode" hidden>—</span>
+        <div class="seg" id="digi-depth" title="jt9 decode depth: D1 fast, D2 normal (default), D3 deep (subtraction + a-priori, slowest). AUTO picks the depth from the measured run time."></div>
+        <span class="lamp" id="l-ovl" title="Codec overload (peak > −1 dBFS)">OVL</span>
+        <span class="txoff" title="TX offset (click in the waterfall)">TX <b id="f-tx">—</b> Hz</span>
+        <button class="btn sm toggle" id="af" title="Adopt Frequency: clicking a station also moves the TX window to its frequency, and Auto Answer / Auto Hunt answer on the partner's frequency">Adopt Frequency</button>
         <span class="spacer"></span>
         <label>Palette <select id="wf-cmap"><option>Purple</option><option>Rainbow</option><option>Blue</option></select></label>
         <label>Contrast <input type="range" id="wf-contrast" min="0" max="100" value="55"><b class="wf-val" id="wf-contrast-val">55</b></label>
         <label>Brightness <input type="range" id="wf-bright" min="0" max="100" value="45"><b class="wf-val" id="wf-bright-val">45</b></label>
-        <span class="txoff" title="TX offset (click in the waterfall)">TX <b id="f-tx">—</b> Hz</span>
         <!-- HF band conditions for this locator, as iDigi shows them: sun or
              moon for the station's own day/night, four band pairs in green /
              yellow / red. Computed by VOACAP on the Pi (/api/propagation). -->
         <span class="prop" id="prop" hidden>
+          <span class="prop-lbl">VOACAP</span>
           <button class="prop-dn" id="prop-dn" type="button" aria-pressed="false">
             <svg class="prop-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2" fill="currentColor"></circle><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"></path></svg>
             <svg class="prop-moon" viewBox="0 0 24 24"><path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1z" fill="currentColor"></path></svg>

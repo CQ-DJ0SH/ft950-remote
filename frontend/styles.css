@@ -346,10 +346,10 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .wf-wrap{position:relative; height:240px; background:#06043a; cursor:crosshair}
 .wf-wrap canvas{width:100%; height:100%; display:block; image-rendering:pixelated}
 .wf-box{position:absolute; top:0; bottom:0; pointer-events:none; display:none}
-.wf-box.tx{border:1px solid var(--tx); background:color-mix(in srgb,var(--tx) 10%,transparent)}
-.wf-box.tx::before{content:""; position:absolute; left:0; right:0; top:0; height:3px;
-  background:repeating-linear-gradient(90deg,var(--tx) 0 3px,transparent 3px 6px)}
-.wf-box.rx{border:1px dashed var(--ok)}
+.wf-box.tx{border:2px solid var(--tx); box-sizing:border-box; background:color-mix(in srgb,var(--tx) 14%,transparent)}
+.wf-box.rx{border:1px solid var(--ok)}
+.wf-box.tx::before{content:""; position:absolute; left:0; right:0; top:0; height:2px;
+  background:var(--tx)}
 .wf-tip{position:absolute; top:6px; padding:2px 6px; background:rgba(0,0,0,.75); color:#fff; font:500 12px var(--font-mono); border-radius:4px; pointer-events:none; transform:translateX(-50%)}
 .foot{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:6px 12px; font:500 12px var(--font-mono); color:var(--text-dim); background:var(--panel-2)}
 .foot label{display:flex; align-items:center; gap:6px; font-family:var(--font-ui)}
@@ -1768,8 +1768,49 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .strip .cycle{width:108px}   /* a little narrower: room for the directed-CQ choice */
 #cq-to{height:25px; box-sizing:border-box; padding-top:0; padding-bottom:0}   /* as tall as the buttons beside it */
 /* the cycle bar (RECEIVE / TRANSMIT) in the DIGI footer, beside the RX level */
-.foot .cycle{width:120px; height:20px; margin-left:10px}
-.foot .cycle span{font-size:10px; line-height:18px}
-.foot .cycle{width:92px; margin-left:0}
-.foot .lvl .lvl-bar{width:100px}
 #f-tx{display:inline-block; min-width:4ch; text-align:right; font-variant-numeric:tabular-nums}   /* "607" or "1500": the footer does not move */
+/* DIGI title bar: CQ · directed CQ · Auto Answer as one block on the left (the status
+   text there is gone - the cycle bar and the lists show it) */
+.digi .seq-block{display:inline-flex; align-items:center; gap:6px; margin-left:6px}
+.digi .seq-block #cq-to{margin-left:-2px}
+.digi #digi-head-stat{display:none}
+/* the directed-CQ choice lit together with CQ (same look as the active CQ button) */
+#cq-to.on{background:var(--accent); border-color:var(--accent); color:#06222a}
+#cq-to.on option{background:var(--ctrl-bg); color:var(--text)}
+/* the cycle bar back in the strip: RX/TX with the time into the period, clear lettering */
+.strip .cycle{width:150px}
+.cycle span{font:700 12px/20px var(--font-mono); letter-spacing:.04em; color:var(--text);
+  font-variant-numeric:tabular-nums; text-shadow:0 0 3px var(--field-bg), 0 0 6px var(--field-bg)}
+.strip .lvl .lvl-bar{width:80px}   /* the RX level back in the strip, a little shorter */
+/* NTP and OVL in the DIGI footer */
+.foot #l-ntp{margin:0 0 0 4px}
+.foot #l-ovl{font-size:10px}
+.foot #f-mode{display:none}   /* the mode shows in the strip (AUTO / FT8 / FT4) */
+#digi-mode .sg[data-v="AUTO"]{min-width:8.2em; font-variant-numeric:tabular-nums}   /* "AUTO" / "AUTO · FT4": one width */
+/* TX lamp in the DIGI title bar, between Halt TRX and the collapse arrow */
+.digi > .panel-head #l-ptt{margin-right:8px; flex:none}
+/* decode depth in the DIGI footer */
+.foot #digi-depth{margin-left:6px}
+.foot #digi-depth .sg{padding:2px 8px; font-size:11px}
+/* label in front of the decode time and count */
+.strip .strip-lbl{font:600 10px var(--font-ui); letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); margin-left:4px}
+.strip #parity{margin-right:12px}   /* a gap after EVEN/ODD before DECODE */
+/* NTP: just the LED, beside the decode count (the tooltip names it) */
+.strip #l-ntp{margin:0 0 0 2px; gap:0}
+.foot #f-grid{display:none}   /* the locator is in Settings and the title bar callsign */
+/* TUNE and the TX drive behind NTP, set apart */
+.strip .txlvl:has(#rx-level){margin-left:auto}   /* RX group takes the free space after NTP */
+/* RX level slider sits right before the receive level, both pushed right */
+.strip .txlvl:has(#dg-tx-level){margin-left:28px}   /* TX group (TX level + TUNE) at the right end */
+.strip .lvl{margin-left:0}
+.strip .lvl::before{content:"·"; color:var(--text-dim); font-weight:700; margin-right:2px}
+.foot .txoff{margin-right:-4px}   /* TX Hz right next to the Adopt Frequency button that sets it */
+.prop .prop-lbl{font:600 10px var(--font-ui); letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim)}
+.foot #l-ovl + .txoff{margin-left:22px}
+.strip > .strip-lbl{margin-left:90px}   /* DECODE group a little further right */
+#seq-hunt .hunt-ico{width:13px; height:13px; margin-left:6px; vertical-align:-2px; color:var(--accent)}   /* small crosshair in the panel accent inside Auto Hunt */
+#seq-hunt.on .hunt-ico{color:currentColor}
+#seq-hunt{min-width:112px}   /* same width on and off (widest: "Hunt 180:00" + icon) */
+.foot .prop{margin-left:6px}   /* palette + contrast + brightness a little further left */
+.foot label:has(#wf-contrast){margin-right:0}   /* Brightness close to Contrast */
+.foot{gap:10px}   /* a little tighter: "Adopt Frequency" fits in one row */

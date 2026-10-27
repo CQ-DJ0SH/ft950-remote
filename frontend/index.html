@@ -433,15 +433,18 @@
         <div class="seg" id="digi-mode"></div>
         <div class="cycle" title="Progress of the current cycle"><i id="cycle-bar"></i><span id="cycle-txt">RECEIVE</span></div>
         <span class="chip parity" id="parity">EVEN</span>
+        <span class="head-sep blk-sep" aria-hidden="true"></span>
         <span class="strip-lbl" title="Decoding: time the last decode took, and how many it found">Decode</span>
         <span class="chip" id="dec-ms" title="jt9 run time of the last cycle">— ms</span>
         <span class="chip" id="dec-n" title="Decodes in the last cycle">0</span>
         <span class="stat" id="l-ntp" title="NTP: system clock synchronised (green) — no decoding without sync (red)"><span class="led"></span></span>
-        <label class="txlvl" title="DIGI RX level: software gain on the Pi, −20 … +20 dB, for the FT8/FT4 decoder, the waterfall and the meter on the right only (browser audio and the radio's own level are not changed) — aim for −40 … −20 dBFS. Double-click: 0 dB."><span class="strip-lbl">RX</span><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg><input type="range" id="rx-level" min="-20" max="20" step="1" value="0"><b id="rx-level-val">—</b></label>
+        <span class="head-sep blk-sep" aria-hidden="true"></span>
+        <label class="txlvl" title="DIGI RX level: software gain on the Pi, −20 … +20 dB, for the FT8/FT4 decoder, the waterfall and the meter on the right only (browser audio and the radio's own level are not changed) — aim for −40 … −20 dBFS. Double-click: 0 dB."><span class="strip-lbl lbl-rx">RX</span><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg><input type="range" id="rx-level" min="-20" max="20" step="1" value="0"><b id="rx-level-val">—</b></label>
         <span class="lvl" title="Receive level from the radio (RMS) — target −40 … −20 dBFS, adjustable on the radio (Settings ▸ Audio). Set it with the slider on the left (software gain on the Pi).">
           <span class="lvl-bar"><i id="lvl-bar"></i></span><b id="lvl-val">— dBFS</b>
         </span>
-        <label class="txlvl" title="FT8/FT4 TX drive: audio level into the radio's DATA input, 0 … 100 % (same value as Settings ▸ Audio ▸ FT8 TX DRIVE). Set it with TUNE: full power, ALC barely moving."><span class="strip-lbl">TX</span><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"></path><path d="M8.5 7.5a5 5 0 0 1 7 0"></path><path d="M5.5 4.5a9 9 0 0 1 13 0"></path><circle cx="12" cy="10" r="1.5"></circle></svg><input type="range" id="dg-tx-level" min="0" max="100" step="1"><b id="dg-tx-level-val">—</b></label>
+        <span class="head-sep blk-sep" aria-hidden="true"></span>
+        <label class="txlvl" title="FT8/FT4 TX drive: audio level into the radio's DATA input, 0 … 100 % (same value as Settings ▸ Audio ▸ FT8 TX DRIVE). Set it with TUNE: full power, ALC barely moving."><span class="strip-lbl lbl-tx">TX</span><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"></path><path d="M8.5 7.5a5 5 0 0 1 7 0"></path><path d="M5.5 4.5a9 9 0 0 1 13 0"></path><circle cx="12" cy="10" r="1.5"></circle></svg><input type="range" id="dg-tx-level" min="0" max="100" step="1"><b id="dg-tx-level-val">—</b></label>
         <button class="btn sm tune" id="tune" title="Steady tone on the TX frequency (max. 10 s) — for tuner and ALC/power adjustment">TUNE</button>
       </div>
 
@@ -457,18 +460,22 @@
         <span id="f-grid" hidden>—</span>
         <span id="f-dial">— kHz</span>
         <span id="f-pwr">— W</span>
+        <span class="head-sep blk-sep" aria-hidden="true"></span>
         <span id="f-mode" hidden>—</span>
         <div class="seg" id="digi-depth" title="jt9 decode depth: D1 fast, D2 normal (default), D3 deep (subtraction + a-priori, slowest). AUTO picks the depth from the measured run time."></div>
         <span class="lamp" id="l-ovl" title="Codec overload (peak > −1 dBFS)">OVL</span>
+        <span class="head-sep blk-sep" aria-hidden="true"></span>
         <span class="txoff" title="TX offset (click in the waterfall)">TX <b id="f-tx">—</b> Hz</span>
         <button class="btn sm toggle" id="af" title="Adopt Frequency: clicking a station also moves the TX window to its frequency, and Auto Answer / Auto Hunt answer on the partner's frequency">Adopt Frequency</button>
         <span class="spacer"></span>
+        <span class="head-sep blk-sep" aria-hidden="true"></span>
         <label>Palette <select id="wf-cmap"><option>Purple</option><option>Rainbow</option><option>Blue</option></select></label>
         <label>Contrast <input type="range" id="wf-contrast" min="0" max="100" value="55"><b class="wf-val" id="wf-contrast-val">55</b></label>
         <label>Brightness <input type="range" id="wf-bright" min="0" max="100" value="45"><b class="wf-val" id="wf-bright-val">45</b></label>
         <!-- HF band conditions for this locator, as iDigi shows them: sun or
              moon for the station's own day/night, four band pairs in green /
              yellow / red. Computed by VOACAP on the Pi (/api/propagation). -->
+        <span class="head-sep blk-sep" aria-hidden="true"></span>
         <span class="prop" id="prop" hidden>
           <span class="prop-lbl">VOACAP</span>
           <button class="prop-dn" id="prop-dn" type="button" aria-pressed="false">

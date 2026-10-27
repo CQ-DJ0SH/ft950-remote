@@ -1099,12 +1099,14 @@ function applyDigiStatus(s) {
 }
 // ---------------------------------------------------------------- auto-sequencer
 let selectedDecode = null, seqState = null, selSession = null, lastTxShown = null;
+let jumpToCall = null;                        // after a double-click: select that station's session once it shows
 const prompted = new Set();
 const sessErrSeen = new Set();                // "started|error" already toasted
 let sessErrInit = false;
 const markedWorked = new Set();               // sessions whose rows were turned "worked"
 async function answer(d) {
   if (!d?.from) return;
+  jumpToCall = d.from.toUpperCase();
   try { renderSeq(await api("/api/seq/answer", { decode: d, tx_hz: boxes.tx })); toast(`Calling ${d.from} …`); } catch { /* toast */ }
 }
 // Marked session: QRZ.com lookup and world map, each in its own popup window
@@ -1224,7 +1226,7 @@ function renderSeq(s) {
     lastTxShown = JSON.stringify(s.last_tx);
     const tr = document.createElement("tr");
     tr.className = "tx-row";
-    tr.innerHTML = `<td>${esc(s.last_tx.utc)}</td><td class="arrow-tx">▶ TX</td><td class="n"></td><td class="n">${s.last_tx.start_offset ?? ""}</td>` +
+    tr.innerHTML = `<td>${esc(s.last_tx.utc)}</td><td class="arrow-tx">TX ▶</td><td class="n"></td><td class="n">${s.last_tx.start_offset ?? ""}</td>` +
       `<td class="n">${Math.round(s.last_tx.df)}</td><td class="msg">${esc(s.last_tx.msg)}</td><td></td>`;
     $("my-body").appendChild(tr);
     followMine();
@@ -1258,6 +1260,16 @@ function renderSeq(s) {
     selSession = x.started; renderSeq(seqState);
     if (e) toast(`${x.call}: ${e}`, true);
   };
+  // a double-clicked station: select its (newest) session, scroll it into view
+  if (jumpToCall) {
+    const i = s.sessions.map((x) => (x.call || "").toUpperCase()).lastIndexOf(jumpToCall);
+    if (i >= 0) {
+      jumpToCall = null;
+      selSession = s.sessions[i].started;
+      for (const tr of $("sess-body").children) tr.classList.toggle("sel", +tr.dataset.i === i);
+      $("sess-body").querySelector(`tr[data-i="${i}"]`)?.scrollIntoView({ block: "nearest" });
+    }
+  }
   const marked = s.sessions.find((x) => x.started === selSession) || null;
   $("sess-qrz").disabled = $("sess-map").disabled = !marked;
   $("sess-qrz").onclick = () => marked && openQrz(marked.call);
@@ -1265,7 +1277,7 @@ function renderSeq(s) {
   const cur = s.sessions.find((x) => x.started === selSession) || s.session || s.sessions[0];
   $("sessmsg-call").textContent = cur ? cur.call : "";
   $("sessmsg-body").innerHTML = (cur?.msgs || []).map((m) => `<tr class="${m.dir === "tx" ? "tx-row" : ""}"><td>${esc((m.utc || "").slice(0, 8))}</td>` +
-    `<td class="${m.dir === "tx" ? "arrow-tx" : "arrow-rx"}">${m.dir === "tx" ? "▶ TX" : "◀ RX"}</td><td class="n">${m.snr ?? ""}</td>` +
+    `<td class="${m.dir === "tx" ? "arrow-tx" : "arrow-rx"}">${m.dir === "tx" ? "TX ▶" : "◀ RX"}</td><td class="n">${m.snr ?? ""}</td>` +
     `<td class="n">${m.dt != null ? m.dt.toFixed(1) : ""}</td><td class="n">${Math.round(m.df ?? 0)}</td><td class="msg">${esc(m.msg)}</td></tr>`).join("");
   followSessMsg();
   // finished QSOs: every row of that station turns red now — Received and
@@ -1391,7 +1403,8 @@ function tick() {
   $("parity").classList.toggle("odd", !even);
   // RX / TX and the time into the period, e.g. "RX 7.3 / 15 s"
   const into = now - n * p, txt = `${radio.tx ? "TX" : "RX"} ${into.toFixed(1)} / ${p} s`;
-  if ($("cycle-txt").textContent !== txt) $("cycle-txt").textContent = txt;
+  if ($("cycle-txt").textContent !== txt)            // RX green, TX red
+    $("cycle-txt").innerHTML = `<b class="${radio.tx ? "lbl-tx" : "lbl-rx"}">${radio.tx ? "TX" : "RX"}</b>${txt.slice(2)}`;
   requestAnimationFrame(tick);
 }
 
@@ -3993,3 +4006,30 @@ applyAccents();
 // at load, once everything is defined: the PO/SWR/ALC/ID digit places with their
 // dimmed 8s (the HTML has plain text until the first write)
 txVals(0, 0, 0, 0);
+
+// Segment bars (PO … VDD, the S meter): equal columns at 90 % zoom land on
+// fractions of a pixel, so the screen rounds the gaps to 1 or 2 pixels and they
+// look uneven. Size segment and gap in whole screen pixels instead, centred.
+function snapSegBars() {
+  const dpr = window.devicePixelRatio || 1;
+  for (const el of document.querySelectorAll(".lbar, .dsm-bar")) {
+    const n = el.children.length;
+    if (!n || !el.offsetWidth) continue;
+    const cs = getComputedStyle(el);
+    const z = el.getBoundingClientRect().width / el.offsetWidth;          // zoom of this element
+    const inner = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const px = z * dpr;                                                     // screen pixels per CSS pixel
+    const gapDev = Math.max(1, Math.round(2 * px));
+    const segDev = Math.floor((inner * px - gapDev * (n - 1)) / n);
+    if (segDev < 1) continue;
+    el.style.gridTemplateColumns = `repeat(${n}, ${segDev / px}px)`;
+    el.style.columnGap = `${gapDev / px}px`;
+    el.style.justifyContent = "center";
+  }
+}
+snapSegBars();
+{
+  const ro = new ResizeObserver(() => requestAnimationFrame(snapSegBars));
+  for (const el of document.querySelectorAll(".lbar, .dsm-bar")) ro.observe(el);
+  matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener?.("change", snapSegBars);
+}

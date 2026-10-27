@@ -1898,3 +1898,43 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .dsp-wrap .dsp-col{margin-top:-4px}   /* DNF · NR · NB a little higher */
 /* CONTOUR / NOTCH label dark while the function is off (as an unlit LCD segment) */
 .dl.off{background:none; color:var(--lb); opacity:.28; box-shadow:inset 0 0 0 1px var(--lb)}
+.pwr-big .pb-scale span::after{font-size:1.15em; line-height:1; bottom:.1em; opacity:.95; margin-left:2px}   /* the W after each TX power mark larger */
+/* cycle progress: a flat bar at the bottom, the numbers above it */
+.strip .cycle{border:0; background:none; border-radius:0; overflow:visible}
+.strip .cycle::before{content:""; position:absolute; left:0; right:0; bottom:1px; height:5px; border-radius:3px;
+  background:var(--field-bg); box-shadow:inset 0 0 0 1px var(--edge-hi)}
+.strip .cycle i{inset:auto auto 1px 0; height:5px; border-radius:3px; opacity:.9}
+.strip .cycle span{line-height:16px; margin-top:-1px}
+/* the middle strip: RX green, TX red (slider labels and the state in the cycle text) */
+.strip .lbl-rx{color:var(--ok)}
+.strip .lbl-tx{color:var(--tx)}
+.strip .cycle span b{font-weight:700}
+.strip #dg-tx-level{accent-color:var(--tx)}   /* TX drive slider red, like its label */
+/* the speaker / antenna icons in the colour of their label */
+.strip .txlvl:has(#rx-level) .mic-svg{color:var(--ok)}
+.strip .txlvl:has(#dg-tx-level) .mic-svg{color:var(--tx)}
+/* ODD in violet: clearly apart from EVEN's teal and not the green of RX / CQ */
+.chip.parity.odd{background:#4a3a8c; border-color:#8b78e6; color:#f1edff}
+.strip #tune{border-color:var(--tx)}   /* TUNE transmits: red frame */
+@media (hover:hover){.strip #tune:not(.on):not(:disabled):hover{color:var(--tx)}}   /* text red on mouse-over too */
+.strip .cycle span b.lbl-rx{color:inherit}   /* RX in the cycle text in the normal colour (TX stays red) */
+/* DIGI strip and footer: blocks divided by a thin line, as in the VFO title bar.
+   The lines take no room: each sits in the gap that was there, nothing moves. */
+.blk-sep{position:relative; flex:none; width:0; height:20px; background:none}
+.blk-sep::before{content:""; position:absolute; left:-.5px; top:0; bottom:0; width:1px; background:var(--line,#ffffff22)}
+/* strip (gap 6): EVEN/ODD 12 + 6 + 90 to DECODE; NTP · free space · RX; meter 6 + 28 to TX */
+.strip #parity{margin-right:0}
+.strip #parity + .blk-sep{margin:0 48px}
+.strip > .strip-lbl{margin-left:0}
+.strip #l-ntp + .blk-sep{margin:0 auto}
+.strip .txlvl:has(#rx-level){margin-left:0}
+.strip .lvl + .blk-sep{margin:0 11px}
+.strip .txlvl:has(#dg-tx-level){margin-left:0}
+/* footer (gap 10): W | depth; OVL 10 + 22 to TX; spacer | Palette; Brightness 10 + 6 to VOACAP */
+.foot #f-pwr + .blk-sep{margin:0 -5px}
+.foot #l-ovl + .blk-sep{margin:0 6px}
+.foot #l-ovl + .blk-sep + .txoff{margin-left:0}
+.foot .spacer{display:none}                          /* the line before Palette takes the free space instead */
+.foot .blk-sep:has(+ label #wf-cmap){margin:0 auto}  /* centred between Adopt Frequency and Palette */
+.foot .blk-sep:has(+ .prop){margin:0 5px 0 -9px}     /* centred between Brightness (its 14px margin) and VOACAP */
+.foot .prop{margin-left:0}

@@ -126,7 +126,6 @@ DE = [
         "SPLIT: Empfang auf VFO A, Senden auf VFO B.",
         "ANT 1 / ANT 2, TUNER (interner Antennentuner ein/aus), ATU TUNE (startet "
         "einen Abstimmvorgang — das Funkgerät sendet einen Träger; mit Rückfrage).",
-        "CLAR schaltet die Empfangsablage (Clarifier), CLR setzt sie auf 0.",
         "FLT · IPO · R.FLT · AGC schalten durch VRF/THRU, IPO/AMP1/AMP2, "
         "AUTO/15k/6k/3k und OFF/FAST/MID/SLOW/AUTO; das LCD zeigt den Zustand.",
         "VOICE PROFILE und FT8 PROFILE: lesen jeden Wert, schreiben nur das, was "
@@ -142,9 +141,16 @@ DE = [
           "feste Felder (nur die aktiven Werte leuchten), BUSY, die "
           "Betriebsartenlampen LSB USB CW AM FM RTTY PKT REV (bei DATA-U leuchten PKT "
           "+ USB, bei CW-R CW + REV), TX-Lampe und eingestellte Leistung, die "
-          "PO/SWR/ALC/ID/AF-Balken, die DSP-Balken, die Frequenz bis 1 Hz, die "
-          "Ablageskala (rote Marke = Ablage, ±1 kHz, ein Strich je 100 Hz) mit ihrem "
-          "Wert, VFO-B unter VFO A und ein digitales S-Meter."),
+          "PO/SWR/ALC/ID/VDD-Balken, die DSP-Balken, die Frequenz bis 1 Hz, die "
+          "CLARIFIER-Lampe, die Ablageskala (roter Zeiger = Ablage, ±1 kHz, lange "
+          "Striche an den Enden, ein kurzer je 200 Hz) mit ihrem Wert (das Vorzeichen "
+          "hat einen festen Platz), VFO-B unter VFO A und ein digitales S-Meter."),
+    ("p", "Die DSP-Balken CONTOUR · NOTCH · WIDTH · SHIFT sehen aus wie beim "
+          "FT-950: eine blaue Klammer mit rotem Zeiger in der Mitte, die leuchtenden "
+          "Segmente als grüne Striche. CONTOUR zeigt zwei Reihen mit einer V-förmigen "
+          "Lücke an der Contour-Position, NOTCH je einen Strich links und rechts der "
+          "Notch-Frequenz in zwei Reihen; ihre Beschriftung bleibt dunkel, solange "
+          "die Funktion aus ist."),
     ("p", "Das digitale S-Meter unter VFO-B ist ein Balken aus 40 Segmenten, blau "
           "bis S9 und rot darüber, mit der Skala 1 … 9, +20, +40, +60 an den S-Punkten "
           "der Nadel; beim Senden bleibt es dunkel. Wie beim LCD des FT-950 zeigt "
@@ -152,13 +158,17 @@ DE = [
           "sind abgedunkelt, und nichts wechselt die Farbe — der PWR-Kasten behält "
           "beim Senden seine Farben, das zeigt die TX-Lampe."),
     ("p", "PO und SWR arbeiten mit ungefähren Kalibrierpunkten; ID (Ampere) folgt "
-          "den 5/10/15-A-Marken des Instruments; AF zeigt bei Sprache den "
-          "Mikrofonpegel und bei FT8/TUNE die Tonansteuerung (aus FT8 TX DRIVE "
-          "berechnet, nicht gemessen). Spitzenwerte: beim Senden markiert ein "
+          "den 5/10/15-A-Marken des Instruments. VDD ist die Versorgungsspannung "
+          "(RM8, auch beim Senden gelesen), ungefähr: 13,8 V an der 13.8-Marke des "
+          "Instruments; der Balken reicht von 9,25 bis 15,25 V, 0,25 V je Segment. "
+          "Rote Zonen: die letzten drei Segmente von PO, ID und VDD, SWR ab 2:1, ALC "
+          "über seinem Bereich und die ersten drei von VDD (unter 10 V). Spitzenwerte: beim Senden markiert ein "
           "stehendes Segment den höchsten Wert jeder Anzeige; nach der Durchgabe "
           "zeigen Balken und Werte diese Spitzen — die Werte in einem grünen Kasten, "
           "daneben leuchtet PEAK HOLD — bis zum nächsten Senden (abschaltbar unter "
-          "Settings ▸ Appearance). SWR zählt nur mit etwas "
+          "Settings ▸ Appearance); bei VDD bleibt der niedrigste Wert stehen, der "
+          "Spannungseinbruch unter Last. CLEAR PH neben NAR löscht die gehaltenen "
+          "Spitzen sofort (nur sichtbar, wenn Peak Hold an ist). SWR zählt nur mit etwas "
           "Ausgangsleistung. Die Werte haben feste Stellenzahlen (SWR als 1.5:1), "
           "damit nichts springt. Die Nadel bewegt sich wie bei einem "
           "Drehspulinstrument: gedämpft, sie steigt in etwa 0,35 s an und fällt "
@@ -174,18 +184,23 @@ DE = [
         "100 Hz, 1 kHz, 10 kHz) — die Beschriftung zeigt den aktuellen Schritt.",
         "CTCSS: aus / ENC (Ton senden) / TSQ (Tonsquelch) und die 50 Töne, die das "
         "Funkgerät selbst erzeugt. MON schaltet die Mithörkontrolle. NAR wählt die "
-        "schmalen Filter.",
+        "schmalen Filter; CLEAR PH daneben löscht die gehaltenen LCD-Spitzen.",
     ]),
     ("h2", "TX POWER und RX · FILTER · LEVEL"),
     ("p", "Der rote Regler TX POWER stellt die Sendeleistung von 5–100 W ein. "
           "RX · FILTER · LEVEL öffnet die Gruppen RX (Vorverstärker, AGC, ATT), "
-          "FILTER (Bandbreite, Shift), LEVEL (HF-Verstärkung), CLAR und DSP. Das "
+          "FILTER (Bandbreite, Shift), LEVEL (HF-Verstärkung in %), CLARIFIER und "
+          "DSP; jeder Wert steht direkt neben seinem Regler. Das "
           "Roofing-Filter schaltet R.FLT in der Titelleiste."),
     ("ul", [
-        "CLAR: ON schaltet die Empfangsablage, CLR setzt sie auf 0; der Regler "
+        "CLARIFIER: ON schaltet die Empfangsablage, CLR setzt sie auf 0; der Regler "
         "stellt die Ablage ein (±2,5 kHz in 10-Hz-Schritten, Doppelklick = 0) und "
         "schaltet RX CLAR ein. Die Ablage wird vom Funkgerät zurückgelesen und geprüft.",
-        "DSP: DNF, NR und NB als Schalter.",
+        "DSP: DNF, NR und NB als Schalter in einer Reihe; darunter NOTCH (manuelles "
+        "Notch, 10–3000 Hz in 10-Hz-Schritten) und CONTOUR (Position 1–30), je mit "
+        "Schalter, Regler und Wert. Der Regler stellt nur Frequenz bzw. Position "
+        "ein, ein- und ausgeschaltet wird mit dem Schalter. Contour-Pegel und "
+        "-Breite bleiben im Menü des Funkgeräts (069/070).",
     ]),
 
     ("h1", "7  PTT · Speicher"),
@@ -263,7 +278,8 @@ DE = [
           "Farbschema, Kontrast und Helligkeit des Wasserfalls und die "
           "VOACAP-Bandbedingungen."),
     ("ul", [
-        "Klick auf eine Dekodierung legt das Empfangsfenster (grün) dorthin. Ist "
+        "Klick auf eine Dekodierung legt das Empfangsfenster (grüner Rahmen, wenn unter "
+        "Settings ▸ FT8 eingeschaltet) dorthin. Ist "
         "Adopt Frequency an (Fußzeile, neben der TX-Frequenz), wandert die TX-Box "
         "(rot) mit, und Auto Answer und Auto Hunt antworten auf der Frequenz der "
         "Gegenstation — die TX-Box folgt, solange ihr QSO läuft. Ein Klick in den "
@@ -410,9 +426,11 @@ DE = [
         "gearbeitet; Mindest-SNR; Abschaltzeit, 0 = nie; die Liste ohne Antwort "
         "als Tabelle — Sperrzeit, Rufzeichen, Land, Locator, Band, SNR, Versuche — "
         "mit fester Kopfzeile, × zum Entfernen, einem Feld zum Hinzufügen von Hand "
-        "und Clear list; diese Änderungen wirken sofort) und die Farben der "
-        "Meldungslisten mit Vorschau und "
-        "Zurücksetzen.",
+        "und Clear list; diese Änderungen wirken sofort), den Wasserfall (pro "
+        "Browser, sofort wirksam: das grüne Empfangsfenster ein/aus — Standard aus — "
+        "und das Standard-Farbschema, gewählt per Klick auf sein Farbbeispiel; die "
+        "Palette-Auswahl unter dem Wasserfall gilt dann nur bis zum Neuladen der "
+        "Seite) und die Farben der Meldungslisten mit Vorschau und Zurücksetzen.",
         "Audio: Aufnahmegerät, Codec-Pegel, FT8-Sendeansteuerung, die Audiomenüs des "
         "FT-950, Sprachaufbereitung beim Senden, WebRTC-Puffer.",
         "Log: Wavelog und QRZ.com.",
@@ -420,7 +438,7 @@ DE = [
         "Appearance (pro Browser): die Felder DIGI, CW, HackRF und Log ausblenden "
         "(VFO, PTT und Audio bleiben immer; ein ausgeblendetes HackRF stoppt den "
         "Sweep), eine Akzentfarbe pro Feld mit Reset, und Peak Hold der LCD-Anzeigen "
-        "ein/aus. Änderungen wirken sofort und bleiben mit SAVE.",
+        "(PO · SWR · ALC · ID · VDD) ein/aus. Änderungen wirken sofort und bleiben mit SAVE.",
         "Pi Hardware: Last, Temperatur, Arbeitsspeicher, Datenträger und ein "
         "24-h-Verlauf.",
     ]),

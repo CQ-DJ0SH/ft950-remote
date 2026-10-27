@@ -14,20 +14,24 @@ decoding, plus voice operation over WebRTC.
 - **VFO panel** with an LCD modelled on the FT-950's own display:
   - analog meter after the FT-950's (S, PO, COMP, ID, SWR, ALC/VDD) in its own window
   - signal path (ANT · ATT · FLT · IPO · R.FLT · AGC) as fixed cells, only the
-    active values lit; DSP bars; mode lamps (LSB USB CW AM FM RTTY PKT REV)
+    active values lit; DSP bars drawn as on the FT-950 (bracket, red pointer,
+    green dashes, CONTOUR/NOTCH in two rows); mode lamps (LSB USB CW AM FM RTTY PKT REV)
   - seven-segment frequency to 1 Hz, tunable by mouse wheel or drag on a digit;
     VFO-B under it, a digital S meter, clarifier scale; unlit segments shown
     dimmed as on the real LCD
-  - PO / SWR / ALC / ID (amps) / AF bars while transmitting, with **peak hold**
-    until the next transmission (PEAK)
-  - title bar: clickable dial LOCK, split, ANT 1/2, tuner and ATU tuning, CLAR/CLR, FLT · IPO ·
+  - PO / SWR / ALC / ID (amps) / **VDD** (supply voltage, also during TX) bars with
+    red zones, **peak hold** until the next transmission (VDD keeps the lowest
+    voltage) and CLEAR PH
+  - title bar: clickable dial LOCK, split, ANT 1/2, tuner and ATU tuning, FLT · IPO ·
     R.FLT · AGC switches, **voice profile** and **FT8 profile** (both diff-apply
     and verify every value by reading it back)
   - band and mode keys, a frequency **shuttle** (hold left/right — the further
     out, the bigger the steps), CTCSS (ENC/TSQ, 50 tones), MON, NAR
   - a dominant scaled TX power control
-  - RX · filter · level group: preamp, AGC, ATT, width/shift, RF gain, a
-    clarifier offset slider (±2.5 kHz, read back) and DNF/NR/NB switches
+  - RX · filter · level group: preamp, AGC, ATT, width/shift, RF gain (%), a
+    clarifier offset slider (±2.5 kHz, read back), DNF/NR/NB switches and
+    **manual NOTCH** (10–3000 Hz) and **CONTOUR** (position 1–30), each with
+    switch and slider
 - **PTT · Memory**:
   - push-to-talk from the browser with a watchdog lease, PTT-LOCK, roger beep,
     1750 Hz tone call; MUTE and DROP (blank the current over) with chimes

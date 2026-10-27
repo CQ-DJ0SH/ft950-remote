@@ -1814,3 +1814,6 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .foot .prop{margin-left:6px}   /* palette + contrast + brightness a little further left */
 .foot label:has(#wf-contrast){margin-right:0}   /* Brightness close to Contrast */
 .foot{gap:10px}   /* a little tighter: "Adopt Frequency" fits in one row */
+.strip .cycle{height:25px}   /* as tall as the EVEN/ODD button next to it */
+.strip .cycle span{line-height:23px}
+.strip .cycle{margin-left:14px}   /* a little room after the mode buttons */

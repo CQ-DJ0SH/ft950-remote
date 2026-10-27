@@ -1817,3 +1817,21 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .strip .cycle{height:25px}   /* as tall as the EVEN/ODD button next to it */
 .strip .cycle span{line-height:23px}
 .strip .cycle{margin-left:14px}   /* a little room after the mode buttons */
+/* CLEAR PH centred between NAR and CTCSS (a little narrower so the MODE row stays one line) */
+#pk-clr{padding-left:8px; padding-right:8px; margin:0 auto}
+.sel-row #pk-clr:not([hidden]) + .ctcss{margin-left:0}   /* peak hold off: CTCSS keeps its place on the right */
+.sel-row .row-lbl{text-align:right; padding-right:2px}   /* BAND / MODE further right, close to their buttons */
+/* Settings ▸ FT8 ▸ WATERFALL: RX window and the default palette as switches in one row */
+.wf-sw-row{display:flex; align-items:center; flex-wrap:wrap; gap:10px 18px; margin:2px 0 6px}
+.wf-sw-sep{width:1px; height:22px; background:var(--edge)}
+.wf-sw-lbl{font:600 10px var(--font-ui); letter-spacing:.16em; color:var(--text-dim)}
+.wf-cmap-sw{display:inline-flex; align-items:center; gap:18px}
+.wf-cmap-sw .cmap-opt{display:inline-flex; align-items:center; gap:8px; padding:0; background:none; border:0; cursor:pointer;
+  font:600 11px var(--font-ui); letter-spacing:.1em; color:var(--text-dim)}
+.wf-cmap-sw .cmap-chip{width:46px; height:18px; border-radius:4px; border:1px solid var(--edge-hi); outline:2px solid transparent; outline-offset:2px; transition:outline-color .12s}
+.wf-cmap-sw .cmap-opt.on{color:var(--text)}
+.wf-cmap-sw .cmap-opt.on .cmap-chip{outline-color:var(--cyan)}   /* the settings colour (tabs, SAVE) */
+@media (hover:hover){.wf-cmap-sw .cmap-opt:not(.on):hover .cmap-chip{outline-color:var(--edge-hi)}}
+.cmap-chip{display:inline-block; width:34px; height:12px; border-radius:3px; border:1px solid var(--edge-hi); flex:none}
+.digi > .panel-head #l-ptt{font:600 11px var(--font-ui); letter-spacing:.12em; padding:3px 9px; border-radius:7px; border-width:1px; box-sizing:border-box; height:24.86px; display:inline-flex; align-items:center}   /* TX lamp the size of Halt TRX */
+.digi > .panel-head #l-ptt.on{box-shadow:0 0 14px -2px var(--tx), 0 0 4px var(--tx)}   /* lit TX lamp glows */

@@ -161,6 +161,7 @@ for (const p of document.querySelectorAll(".panel")) {
 // ---------------------------------------------------------------- state
 let meta = null;
 let radio = { connected: false };
+let rxBoxOn = store.get("rxBox", false);       // green RX window in the waterfall (Settings ▸ FT8), default off
 let digiMode = "FT8";
 let digiDepthCfg = "2";                 // decode depth setting: "1".."3" or "AUTO"
 let myCall = "";
@@ -349,12 +350,17 @@ function lcdVal(id, num, unit, prefix = "") {
 // PO / SWR / ALC as segmented bars; segments past the warn mark light red
 // (SWR from 2:1 by the calibration table, ALC beyond the meter's ALC zone)
 const TXSEG = 24;
-const TX_WARN = { "m-po": 1, "m-swr": rawFrac(SWR_CAL, 2), "m-alc": 0.52, "m-id": 1, "m-af": 0.95 };
+const TX_WARN = { "m-po": (TXSEG - 3) / TXSEG, "m-swr": rawFrac(SWR_CAL, 2), "m-alc": 0.52, "m-id": (TXSEG - 3) / TXSEG,   // PO, ID: the last three segments
+  "m-vdd": (TXSEG - 3) / TXSEG };   // VDD: the last three = from 14.5 V (its own scale, see vddShow)
 // ID (final-stage current, RM7): linear along the meter's 5/10/15 A marks — approximate
 const idAmps = (raw) => raw / 255 * 16.5;
+// …and from below: the first three VDD segments = under 10 V
+const TX_WARN_LOW = { "m-vdd": 3 / TXSEG };
 for (const id of Object.keys(TX_WARN)) {
-  $(id).innerHTML = Array.from({ length: TXSEG }, (_, i) =>
-    `<i${(i + 0.5) / TXSEG >= TX_WARN[id] ? ' class="hot"' : ""}></i>`).join("");
+  $(id).innerHTML = Array.from({ length: TXSEG }, (_, i) => {
+    const f = (i + 0.5) / TXSEG;
+    return `<i${f >= TX_WARN[id] || f < (TX_WARN_LOW[id] ?? 0) ? ' class="hot"' : ""}></i>`;
+  }).join("");
 }
 // peakRaw: the held peak segment (shown while transmitting, when above the live bar)
 function txBar(id, raw, peakRaw = null) {
@@ -369,7 +375,14 @@ function txBar(id, raw, peakRaw = null) {
 // bars and values show these peaks (PEAK LED lit) until the next TX resets them.
 // SWR only counts with some power out (keying edges read nonsense at zero PO).
 const PK_SWR_MIN_PO = 13;                     // raw ≈ 5 % of the PO scale
-const pk = { tx: false, held: false, po: 0, swr: 0, alc: 0, id: 0, af: null };
+const pk = { tx: false, held: false, po: 0, swr: 0, alc: 0, id: 0, vdd: null };
+// CLEAR: drop the held peaks now (back to zero bars and values, VDD back to the supply)
+$("pk-clr").onclick = () => {
+  if (radio.tx) return;
+  Object.assign(pk, { held: false, po: 0, swr: 0, alc: 0, id: 0, vdd: null });
+  txVals(0, 0, 0, 0);
+  renderRadio(radio);
+};
 // Settings ▸ Appearance can switch peak hold off: then no held segment, no PEAK HOLD,
 // and the bars drop to zero after a transmission (the last values stay readable)
 let peakOn = store.get("peakHold", true);
@@ -385,8 +398,20 @@ function txVals(po, swr, alc, id) {
   // "≥" always takes its place (hidden below 5:1) for the same reason
   $("v-swr").innerHTML = `<small class="u"${r >= 4.95 ? "" : ' style="visibility:hidden"'}>≥</small>${seg8(Math.min(r, 5).toFixed(1))}<small class="u uu">:1</small>`;   // ratio as the unit, like W / % / A / dB
 }
-const afTxt = (db) => ("-" + Math.min(99, Math.round(Math.max(0, -db)))).padStart(3, "!");   // " -2" dB, the sign beside the digit
-const afRaw = (db) => Math.max(0, Math.min(255, (db + 60) / 60 * 255));
+// VDD (RM8, supply voltage): proportional, 13.8 V at the meter's 13.8 mark (76 % of
+// the scale, raw ≈ 194) — approximate away from 13.8 V. The bar is the raw reading.
+const VDD_138_RAW = 0.76 * 255;
+const vddVolts = (raw) => raw / VDD_138_RAW * 13.8;
+const VDD_BAR_LO = 9.25, VDD_BAR_HI = 15.25;
+let vddRx = null;                              // last reading on receive (slow poll)
+function vddShow(raw) {
+  if (raw == null) { txBar("m-vdd", 0); lcdVal("v-vdd", "!!.!", "V"); return; }
+  const v = vddVolts(raw);
+  // the bar spans 9.25 … 15.25 V, 0.25 V per segment: the first three are under 10 V,
+  // the last three from 14.5 V, 13.8 V lights 18 of 24
+  txBar("m-vdd", Math.max(0, Math.min(1, (v - VDD_BAR_LO) / (VDD_BAR_HI - VDD_BAR_LO))) * 255);
+  lcdVal("v-vdd", v.toFixed(1).padStart(4, "!"), "V");
+}
 
 // DSP bar graphs (CONTOUR · NOTCH · WIDTH · SHIFT) as on the LCD: 21 segments
 const DSEG = 21, DMID = 10;
@@ -802,7 +827,7 @@ function renderRadio(s) {
   $("ameter").setAttribute("title", m ? `PO raw ${m.po} · SWR raw ${m.swr} · ALC raw ${m.alc} · ID raw ${m.id ?? "—"}` : `S meter ${sUnits(s.smeter)} (raw ${s.smeter})`);
   $("tx-meters").classList.toggle("on", !!m);
   $("tx-read").classList.toggle("on", !!m);
-  if (s.tx && !pk.tx) Object.assign(pk, { held: false, po: 0, swr: 0, alc: 0, id: 0, af: null });   // new TX: reset
+  if (s.tx && !pk.tx) Object.assign(pk, { held: false, po: 0, swr: 0, alc: 0, id: 0, vdd: null });   // new TX: reset
   if (!s.tx && pk.tx) pk.held = peakOn;
   pk.tx = !!s.tx;
   if (m) {
@@ -814,6 +839,8 @@ function renderRadio(s) {
     txBar("m-swr", m.swr, pkv(pk.swr));
     txBar("m-id", id, pkv(pk.id));
     txVals(m.po, m.swr, m.alc, id);
+    if (m.vdd != null) pk.vdd = Math.min(pk.vdd ?? 255, m.vdd);   // VDD: the lowest is what counts
+    vddShow(m.vdd ?? vddRx);
   } else if (!s.tx && pk.held) {               // receive: the peaks of the last TX
     txBar("m-po", pk.po, pk.po); txBar("m-alc", pk.alc, pk.alc); txBar("m-swr", pk.swr, pk.swr); txBar("m-id", pk.id, pk.id);   // up to the peak (dimmed by CSS)
     txVals(pk.po, pk.swr, pk.alc, pk.id);
@@ -821,8 +848,11 @@ function renderRadio(s) {
     for (const id of ["m-po", "m-alc", "m-swr", "m-id"]) txBar(id, 0);
   }
   $("tx-meters").classList.toggle("peak", !s.tx && pk.held);   // value box + PEAK HOLD
+  $("pk-clr").disabled = !(!s.tx && pk.held);
+  $("pk-clr").hidden = !peakOn;               // no peak hold, nothing to clear
   $("tx-meters").classList.toggle("no-peak", !peakOn);
-  if (!s.tx) showTxAf({});                     // AF too, also when no level stream is open
+  if (s.vdd_raw != null) vddRx = s.vdd_raw;
+  if (!s.tx) vddShow(pk.held && pk.vdd != null ? pk.vdd : vddRx);   // receive: the supply, or the lowest of the last TX
 
   if (s.other) {                                   // slow tier present
     const [m, k, h] = fmtHzGroups(s.other.freq_hz);
@@ -1370,9 +1400,32 @@ function buildLut(name) {
     for (let c = 0; c < 3; c++) lut[i * 3 + c] = a[c] + (b[c] - a[c]) * t;
   }
 }
-$("wf-cmap").value = store.get("cmap", "Rainbow");
-buildLut($("wf-cmap").value);
-$("wf-cmap").onchange = (e) => { store.set("cmap", e.target.value); buildLut(e.target.value); };
+// The waterfall starts with the default palette (Settings ▸ FT8); the Palette choice
+// under the waterfall changes it only for this page view.
+// In the settings: the default palette as three colour samples; a click on a sample
+// picks it, the chosen one is framed.
+let cmapDefault = store.get("cmapDefault", store.get("cmap", "Rainbow"));
+if (!CMAPS[cmapDefault]) cmapDefault = "Rainbow";
+$("set-cmap-sw").innerHTML = Object.entries(CMAPS).map(([name, stops]) =>
+  `<button type="button" class="cmap-opt" data-cmap="${name}" role="radio" title="${name}"><i class="cmap-chip" style="background:linear-gradient(90deg,${
+    stops.map(([x, r, g, b]) => `rgb(${r},${g},${b}) ${x * 100}%`).join(",")})"></i>${name}</button>`).join("");
+const showCmapDefault = () => $("set-cmap-sw").querySelectorAll(".cmap-opt").forEach((b) => {
+  b.classList.toggle("on", b.dataset.cmap === cmapDefault);
+  b.setAttribute("aria-checked", b.dataset.cmap === cmapDefault);
+});
+showCmapDefault();
+$("set-cmap-sw").onclick = (e) => {
+  const b = e.target.closest(".cmap-opt");
+  if (!b || b.dataset.cmap === cmapDefault) return;
+  cmapDefault = b.dataset.cmap;
+  store.set("cmapDefault", cmapDefault);
+  showCmapDefault();
+  $("wf-cmap").value = cmapDefault;
+  buildLut(cmapDefault);
+};
+$("wf-cmap").value = cmapDefault;
+buildLut(cmapDefault);
+$("wf-cmap").onchange = (e) => buildLut(e.target.value);
 for (const id of ["wf-contrast", "wf-bright"]) {
   $(id).value = store.get(id, $(id).value);
   $(id + "-val").textContent = $(id).value;
@@ -1452,7 +1505,7 @@ function placeBoxes() {
   const at = { tx: seqTxHz ?? boxes.tx, rx: boxes.rx };
   for (const which of ["tx", "rx"]) {
     const el = $("box-" + which);
-    el.style.display = "block";
+    el.style.display = which === "rx" && !rxBoxOn ? "none" : "block";
     el.style.left = ((at[which] - F0) / (F1 - F0) * 100) + "%";
     el.style.width = (bw / (F1 - F0) * 100) + "%";
   }
@@ -1469,6 +1522,8 @@ $("wf-wrap").addEventListener("click", (e) => {
   if (afOn()) { $("af").onclick(); toast("Adopt Frequency off: TX frequency set by hand"); }
   setBox("tx", hzAt(e));
 });
+$("set-rx-box").checked = rxBoxOn;
+$("set-rx-box").onchange = (e) => { rxBoxOn = e.target.checked; store.set("rxBox", rxBoxOn); placeBoxes(); };
 $("wf-wrap").addEventListener("mousemove", (e) => {
   const tip = $("wf-tip"), r = $("wf-wrap").getBoundingClientRect();
   tip.hidden = false;
@@ -3172,25 +3227,10 @@ $("mic-test").onchange = () => setMicTest($("mic-test").checked);   // the level
 const HIST = 300, lvHist = { rx: [], tx: [] };
 const vuPct = (db) => Math.max(0, Math.min(100, (db + 60) / 60 * 100));
 const vuPk = { rx: 0, tx: 0, rxAt: 0, txAt: 0 };
-// AF bar in the LCD: transmit audio while the radio sends (−60 … 0 dBFS)
-function showTxAf(m) {
-  if (!radio.tx) {                             // receive: the peak of the last TX (PEAK LED)
-    if (pk.held && pk.af != null) { txBar("m-af", afRaw(pk.af), afRaw(pk.af)); lcdVal("v-af", afTxt(pk.af), "dB"); }
-    else txBar("m-af", 0);
-    return;
-  }
-  const db = m.ptt === "voice" ? m.tx
-    : txState?.level ? 20 * Math.log10(0.98 * txState.level / 100) : null;   // FT8/TUNE tone drive
-  if (db == null || db < -90) { txBar("m-af", 0, pk.af == null ? null : pkv(afRaw(pk.af))); return; }
-  if (pk.tx) pk.af = Math.max(pk.af ?? -120, db);
-  txBar("m-af", afRaw(db), pk.af == null ? null : pkv(afRaw(pk.af)));
-  lcdVal("v-af", afTxt(db), "dB");
-}
 function onLevels(m) {
   if (m.agc_gain != null && $("tx-auto").checked) showTxAuto(true, m.agc_gain);
   m.tx = (myPeer && m.mics?.[myPeer]) ?? -120;   // my own mic, not another browser's
   dropWatch(m.rx);
-  showTxAf(m);
   for (const k of ["rx", "tx"]) {
     lvHist[k].push(m[k]);
     if (lvHist[k].length > HIST) lvHist[k].shift();
@@ -3916,6 +3956,7 @@ $("peak-hold").onchange = (e) => {
   peakOn = e.target.checked;
   if (!peakOn) pk.held = false;                 // a held display goes at once
   $("tx-meters").classList.toggle("no-peak", !peakOn);
+  $("pk-clr").hidden = !peakOn;                 // nothing to clear without peak hold
 };
 $("appearance-save").onclick = () => {
   store.set("panelsOff", [...panelsOff]);

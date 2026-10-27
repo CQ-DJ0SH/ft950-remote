@@ -596,7 +596,8 @@ class FT950:
                  "busy": self.busy(), "tx": tx}
             if tx:
                 d["meters"] = {"po": self.meter(5), "alc": self.meter(4),
-                               "swr": self.meter(6), "id": self.meter(7)}
+                               "swr": self.meter(6), "id": self.meter(7),
+                               "vdd": self.meter(8)}             # supply voltage: the sag under TX
             return d
 
     def read_slow(self, mode: str) -> dict:

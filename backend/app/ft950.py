@@ -440,6 +440,29 @@ class FT950:
         hz = max(-1000, min(1000, hz))
         self.set_verified(f"IS0{'-' if hz < 0 else '+'}{abs(hz):04d}", "IS0")
 
+    # -- manual notch / contour (BP / CO): on/off and frequency -----------------
+    def set_notch(self, on: Optional[bool] = None, hz: Optional[int] = None) -> None:
+        """BP00 on/off (000/001), BP01 notch frequency 001-300 × 10 Hz."""
+        if hz is not None:
+            v = max(1, min(300, round(hz / 10)))
+            self.set_verified(f"BP01{v:03d}", "BP01")
+        if on is not None:
+            self.set_verified(f"BP00{int(on):03d}", "BP00")
+
+    def _p3(self, read_cmd: str, value: int) -> str:
+        """The set command with P3 as wide as the radio's own answer: the CAT book
+        shows CO's P3 as two digits but lists 000/001, so ask the radio."""
+        width = max(2, len(self.query(read_cmd)) - len(read_cmd))
+        return f"{read_cmd}{value:0{width}d}"
+
+    def set_contour(self, on: Optional[bool] = None, pos: Optional[int] = None) -> None:
+        """CO00 on/off, CO01 contour frequency 01-30."""
+        with self._lock:
+            if pos is not None:
+                self.set_verified(self._p3("CO01", max(1, min(30, pos))), "CO01")
+            if on is not None:
+                self.set_verified(self._p3("CO00", int(on)), "CO00")
+
     def get_agc(self) -> str:
         return AGC_READ.get(self._num("GT0", 3), "?")
 

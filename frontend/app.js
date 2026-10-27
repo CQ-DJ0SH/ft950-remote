@@ -335,10 +335,10 @@ function meterSet(raw, label) {
 }
 
 // number in the 7-segment font, unit in the UI font (DSEG7 has no real W, A or %)
-// clarifier scale in the LCD: a tick every 100 Hz over ±1 kHz (5 … 95 % of the box),
-// long ones every 500 Hz, the longest at 0
-$("tune-mark").insertAdjacentHTML("beforebegin", Array.from({ length: 21 }, (_, i) =>
-  `<b class="ts-t${i === 10 ? " zero" : i % 5 === 0 ? " major" : ""}" style="left:${5 + i * 4.5}%"></b>`).join(""));
+// clarifier scale in the LCD over ±1 kHz (5 … 95 % of the box), as on the FT-950:
+// tall ticks at the ends, small ones every 200 Hz hanging below the line
+$("tune-mark").insertAdjacentHTML("beforebegin", Array.from({ length: 11 }, (_, k) =>
+  `<b class="ts-t${k === 0 || k === 10 ? " end" : ""}" style="left:${5 + k * 9}%"></b>`).join(""));
 // every digit place of a 7-segment readout gets a dimmed "8" behind it (unlit segments,
 // as on the FT-950's LCD); "!" is DSEG's blank digit, "-" takes a digit place too
 function seg8(str) { return String(str).replace(/[0-9!\-]/g, (d) => `<span class="s8">${d}</span>`); }
@@ -418,8 +418,11 @@ const DSEG = 21, DMID = 10;
 for (const id of ["bar-contour", "bar-notch", "bar-width", "bar-shift"]) {
   $(id).innerHTML = "<i></i>".repeat(DSEG);
 }
-function setBar(id, lit) {
-  [...$(id).children].forEach((seg, i) => seg.classList.toggle("on", lit(i)));
+// CONTOUR and NOTCH show two rows of dashes, as on the FT-950's LCD
+for (const id of ["bar-contour", "bar-notch"]) $(id).classList.add("dual");
+// lit(i): the (upper) row; lit2(i): the lower row of a two-row bar
+function setBar(id, lit, lit2 = lit) {
+  [...$(id).children].forEach((seg, i) => { seg.classList.toggle("on", lit(i)); seg.classList.toggle("on2", lit2(i)); });
 }
 
 // ---------------------------------------------------------------- title bar
@@ -698,13 +701,12 @@ const setShift = slider("ifshift", (v) => (v > 0 ? "+" : "") + v + " Hz", (v) =>
 // to hear the offset. The label shows what the radio holds, also beyond the
 // slider's +-2.5 kHz.
 const fmtClar = (v) => (v > 0 ? "+" : "") + v + " Hz";
-const clarLit = (on) => {                 // both CLAR switches at once, ahead of the next poll
-  touched.set("hq-clar", Date.now());
-  $("hq-clar").classList.toggle("on", on);
+const clarLit = (on) => {                 // the CLAR switch at once, ahead of the next poll
+  touched.set("clar-rx", Date.now());
   $("clar-rx").classList.toggle("on", on);
 };
 const setClarOff = slider("clar-off", fmtClar, (v) => { clarLit(true); return api("/api/clar/offset", { hz: v, rx_on: true }); });
-const setRf = slider("rfgain", String, (v) => api("/api/level", { cmd: "RG0", value: v }));
+const setRf = slider("rfgain", (v) => Math.round(v / 255 * 100) + " %", (v) => api("/api/level", { cmd: "RG0", value: v }));   // the radio counts 0-255; shown in %
 const setSqlRaw = slider("squelch", String, (v) => api("/api/level", { cmd: "SQ0", value: v }));
 const sqlFill = () => { const el = $("squelch"); el.style.setProperty("--sqlpct", (el.value / 255 * 100) + "%"); };
 $("squelch").addEventListener("input", sqlFill);
@@ -722,6 +724,16 @@ for (const b of document.querySelectorAll("[data-toggle]")) {
   };
 }
 const setDsp = (id, on) => { if (Date.now() - (touched.get(id) || 0) > 1500) $(id).checked = on; };
+// Manual notch (BP) and contour (CO): a switch and a slider each. The slider only
+// sets the frequency / position; on and off is the switch alone.
+const setNotchHz = slider("notch-hz", (v) => v + " Hz", (v) => api("/api/notch", { hz: v }));
+const setContourPos = slider("contour-pos", (v) => String(v), (v) => api("/api/contour", { pos: v }));
+for (const [id, url] of [["t-notch", "/api/notch"], ["t-contour", "/api/contour"]]) {
+  $(id).onchange = (e) => {
+    touched.set(id, Date.now());
+    api(url, { on: e.target.checked }).catch(() => { touched.delete(id); });
+  };
+}
 $("narrow").onclick = () => api("/api/narrow", { on: !$("narrow").classList.contains("on") });
 // LOCK in the title bar: shows the radio's dial lock and switches it (LK0/LK1,
 // verified by reading LK back). Lit at once; the poll takes over after 1.5 s.
@@ -805,13 +817,12 @@ function renderRadio(s) {
   $("memmode").textContent = v.mem_mode + (v.mem_mode !== "VFO" ? " " + String(v.channel).padStart(3, "0") : "");
   const clarOn = v.rx_clar || v.tx_clar;
   $("ind-clar").classList.toggle("on", clarOn);
-  if (Date.now() - (touched.get("hq-clar") || 0) > 2000) $("hq-clar").classList.toggle("on", !!v.rx_clar);
   $("clar-lbl").textContent = v.tx_clar && !v.rx_clar ? "TX" : v.tx_clar ? "R/T" : "RX";
   const [ci, cf] = (Math.abs(v.clar_hz) / 1000).toFixed(3).split(".");   // clear decimal point (DSEG's is tiny)
-  $("clar-val").innerHTML = `${v.clar_hz > 0 ? "+" : v.clar_hz < 0 ? "-" : ""}${seg8(ci)}<i class="cdot"></i>${seg8(cf)}`;
+  $("clar-val").innerHTML = `<span class="csign">${v.clar_hz > 0 ? "+" : v.clar_hz < 0 ? "−" : ""}</span>${seg8(ci)}<i class="cdot"></i>${seg8(cf)}`;
   $("tune-mark").style.left = (50 + Math.max(-1000, Math.min(1000, v.clar_hz)) * 0.045) + "%";   // ±1 kHz on 5 … 95 %
   setClarOff(v.clar_hz);
-  if (Date.now() - (touched.get("hq-clar") || 0) > 2000) $("clar-rx").classList.toggle("on", !!v.rx_clar);
+  if (Date.now() - (touched.get("clar-rx") || 0) > 2000) $("clar-rx").classList.toggle("on", !!v.rx_clar);
   segSet($("modes"), v.mode);
   segSet($("bands"), bandOf(v.freq_hz));
 
@@ -876,6 +887,10 @@ function renderRadio(s) {
     setDsp("t-dnf", !!s.dnf);
     setDsp("t-nr", !!s.nr);
     setDsp("t-nb", !!s.nb && s.nb !== "0");
+    setDsp("t-notch", !!s.notch);
+    setDsp("t-contour", !!s.contour);
+    if (s.notch_hz) setNotchHz(s.notch_hz);
+    setContourPos(s.contour_pos);
     if (Date.now() - (touched.get("lamp-lock") || 0) > 1500) {
       $("lamp-lock").classList.toggle("on", !!s.lock);
       $("lamp-lock").setAttribute("aria-pressed", String(!!s.lock));
@@ -900,9 +915,11 @@ function renderRadio(s) {
     setBar("bar-width", (i) => Math.abs(i - sh) < wN / 2);
     setBar("bar-shift", (i) => i === sh);
     const np = Math.round(Math.min(3000, s.notch_hz || 0) / 3000 * (DSEG - 1));
-    setBar("bar-notch", (i) => !!s.notch && Math.abs(i - np) <= 0);
+    $("dl-notch").classList.toggle("off", !s.notch);       // label dark while the function is off
+    $("dl-contour").classList.toggle("off", !s.contour);
+    setBar("bar-notch", (i) => !!s.notch && Math.abs(i - np) === 1);   // a dash each side of the notch, both rows
     const cp = Math.round(((s.contour_pos || 1) - 1) / 29 * (DSEG - 1));
-    setBar("bar-contour", (i) => !!s.contour && Math.abs(i - cp) > 1);
+    setBar("bar-contour", (i) => !!s.contour && Math.abs(i - cp) > 2, (i) => !!s.contour && Math.abs(i - cp) > 1);   // a V-shaped gap at the position
     highlightMem(v);
     $("lamp-pll").classList.toggle("on", !!s.pll_unlock);
     if (s.power) $("f-pwr").textContent = s.power + " W";
@@ -2675,16 +2692,13 @@ function headQuick(id, values, current, send) {
   const next = values[(values.indexOf(current) + 1) % values.length];
   send(next).then(() => toast(`${$(id).textContent.trim()} → ${next}`)).catch(() => {});
 }
-$("hq-clar").onclick = () => {
-  const on = !$("hq-clar").classList.contains("on");
-  touched.set("hq-clar", Date.now());
-  $("hq-clar").classList.toggle("on", on);
-  api("/api/clar", { on }).catch(() => { touched.delete("hq-clar"); });
+// the CLAR group: ON switches the RX clarifier, CLR and a double-click on the
+// slider return the offset to 0
+$("clar-rx").onclick = () => {
+  const on = !$("clar-rx").classList.contains("on");
+  clarLit(on);
+  api("/api/clar", { on }).catch(() => { touched.delete("clar-rx"); });
 };
-$("hq-clr").onclick = () => api("/api/clar/clear", {}).then(() => toast("Clarifier offset 0")).catch(() => {});
-// the CLAR group: ON mirrors the title bar's CLAR (same touched key, so the two
-// never fight), CLR and a double-click on the slider return to 0
-$("clar-rx").onclick = () => { $("hq-clar").click(); clarLit($("hq-clar").classList.contains("on")); };
 const clarZero = () => {
   touched.set("clar-off", Date.now());
   $("clar-off").value = 0;

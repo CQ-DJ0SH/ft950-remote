@@ -260,3 +260,42 @@ def test_set_clar_raises_when_the_radio_ignores_it():
     r._serial = _ClarRig(deaf=True, start=480)
     with pytest.raises(FT950Error):
         r.set_clar(100)
+
+
+class _StateSerial(_FakeSerial):
+    """A set command changes what the matching read answers, as on the radio."""
+    def __init__(self, answers, reads):
+        super().__init__(answers)
+        self.reads, self.sent = reads, []
+    def write(self, data):
+        cmd = data.decode().rstrip(";")
+        for rd in self.reads:
+            if cmd.startswith(rd) and len(cmd) > len(rd):     # a set: store it
+                self.answers[rd] = cmd + ";"
+                self.sent.append(cmd)
+                self.out = b""
+                return
+        self.out = self.answers.get(cmd, "").encode()
+
+
+def test_set_notch_formats_bp():
+    from app.ft950 import FT950
+    r = FT950("fake", timeout=0.1)
+    r._serial = _StateSerial({"BP00": "BP00000;", "BP01": "BP01150;"}, ["BP00", "BP01"])
+    r.set_notch(on=True, hz=1234)
+    assert r._serial.sent == ["BP01123", "BP00001"]
+    r.set_notch(on=False)
+    assert r._serial.sent[-1] == "BP00000"
+
+
+def test_set_contour_follows_answer_width():
+    from app.ft950 import FT950
+    r = FT950("fake", timeout=0.1)
+    # the radio answers P3 with three digits (000/001) for CO00 and two for CO01
+    r._serial = _StateSerial({"CO00": "CO00000;", "CO01": "CO0115;"}, ["CO00", "CO01"])
+    r.set_contour(on=True, pos=7)
+    assert r._serial.sent == ["CO0107", "CO00001"]
+    # a four-digit answer gets a four-digit set
+    r._serial = _StateSerial({"CO00": "CO000000;", "CO01": "CO010015;"}, ["CO00", "CO01"])
+    r.set_contour(on=True, pos=30)
+    assert r._serial.sent == ["CO010030", "CO000001"]

@@ -73,9 +73,6 @@
       <span class="head-sep"></span>
       <button class="btn toggle split-btn" id="tuner" title="Internal antenna tuner in line / bypassed (AC001 / AC000)">TUNER</button>
       <span class="head-sep"></span>
-      <button class="btn toggle split-btn" id="hq-clar" title="RX clarifier on/off (RT) — like the radio's CLAR key; the offset shows under the frequency">CLAR</button>
-      <button class="btn split-btn" id="hq-clr" title="Clarifier offset to 0 (RC)">CLR</button>
-      <span class="head-sep"></span>
       <button class="btn split-btn hq" id="hq-flt" title="FLT: VRF in line / THRU — click to switch">FLT</button>
       <button class="btn split-btn hq" id="hq-ipo" title="Preamp: IPO → AMP1 → AMP2 — click for the next">IPO</button>
       <button class="btn split-btn hq" id="hq-rflt" title="Roofing filter: AUTO → 15k → 6k → 3k — click for the next">R.FLT</button>
@@ -131,8 +128,8 @@
         <div class="dsp">
           <div class="dsp-tags"><span class="ind blue-o">DSP</span><span class="ind blue-o" id="ind-dnr">DNR</span><span class="ind blue-o" id="ind-dnf">DNF</span></div>
           <div class="dsp-bars">
-            <span class="dl">CONTOUR</span><div class="dbars" id="bar-contour"></div>
-            <span class="dl">NOTCH</span><div class="dbars" id="bar-notch"></div>
+            <span class="dl off" id="dl-contour">CONTOUR</span><div class="dbars" id="bar-contour"></div>
+            <span class="dl off" id="dl-notch">NOTCH</span><div class="dbars" id="bar-notch"></div>
             <span class="dl">WIDTH</span><div class="dbars" id="bar-width"></div>
             <span class="dl">SHIFT</span><div class="dbars" id="bar-shift"></div>
           </div>
@@ -151,8 +148,8 @@
         <div class="vfo-b" title="VFO B (OI)"><span class="lbl">VFO-B</span><span class="freq-b" id="freq-b">—</span><span class="freq-unit small">MHz</span><span class="mode-b" id="mode-b"></span></div>
         <div class="dsm" title="S meter (receive), as the needle shows it"><div class="dsm-scale" id="dsm-scale"></div><div class="dsm-bar" id="dsm-bar"></div></div>
         <div class="lf-bottom">
+          <span class="ind green" id="ind-clar">CLARIFIER</span>
           <div class="tune-scale" title="Clarifier offset (±1 kHz)"><i id="tune-mark"></i></div>
-          <span class="ind green" id="ind-clar">CLAR</span>
           <div class="clar-box"><span id="clar-lbl">RX</span><span class="clar-val" id="clar-val">0<i class="cdot"></i>000</span></div>
         </div>
       </div>
@@ -219,30 +216,40 @@
         <legend>LEVEL</legend>
         <div class="g-row"><span class="g-lbl">ATT</span><div class="seg" id="att"></div></div>
         <label class="g-row slider"><span class="g-lbl">RF</span><input type="range" id="rfgain" min="0" max="255"><b id="rfgain-val">—</b></label>
-        <div class="g-row g-scale" aria-hidden="true"><span></span><span class="gs-ends"><span>0</span><span>255</span></span><b></b></div>
       </fieldset>
       <!-- the clarifier as a slider: RX off the dial without touching VFO A,
            like the radio's CLAR knob after pressing CLAR -->
       <fieldset class="group">
-        <legend>CLAR</legend>
-        <div class="g-row"><span class="g-lbl"></span>
+        <legend>CLARIFIER</legend>
+        <div class="g-row"><span class="g-lbl">CLAR</span>
           <div class="seg">
             <button class="sg" id="clar-rx" title="RX clarifier on/off (RT) — the offset is heard only while this is on">ON</button>
             <button class="sg" id="clar-zero" title="Clarifier offset to 0 (RC)">CLR</button>
           </div>
         </div>
         <label class="g-row slider" title="RX clarifier offset, ±2.5 kHz in 10 Hz steps (arrow keys for single steps). Moving it switches RX CLAR on; double-click: back to 0."><span class="g-lbl">RX</span><input type="range" id="clar-off" min="-2500" max="2500" step="10" value="0"><b id="clar-off-val">—</b></label>
-        <!-- the ends of the slider in the LCD's kHz notation (0.120 = 120 Hz) -->
-        <div class="g-row g-scale" aria-hidden="true"><span></span><span class="gs-ends"><span>−2.500</span><span>+2.500</span></span><b></b></div>
       </fieldset>
       <!-- the radio's DSP functions in a group of their own: three independent
            on/off switches, one under the other, the same switch as MIC TEST -->
       <fieldset class="group dsp-group">
         <legend>DSP</legend>
-        <div class="dsp-col">
-          <label class="switch-label" title="Auto Notch (DNF)"><input type="checkbox" class="switch dsp-sw" data-toggle="BC0" id="t-dnf"><span>DNF</span></label>
-          <label class="switch-label" title="Noise Reduction"><input type="checkbox" class="switch dsp-sw" data-toggle="NR0" id="t-nr"><span>NR</span></label>
-          <label class="switch-label" title="Noise Blanker"><input type="checkbox" class="switch dsp-sw" data-toggle="NB0" id="t-nb"><span>NB</span></label>
+        <div class="dsp-wrap">
+          <div class="dsp-col">
+            <label class="switch-label" title="Auto Notch (DNF)"><input type="checkbox" class="switch dsp-sw" data-toggle="BC0" id="t-dnf"><span>DNF</span></label>
+            <label class="switch-label" title="Noise Reduction"><input type="checkbox" class="switch dsp-sw" data-toggle="NR0" id="t-nr"><span>NR</span></label>
+            <label class="switch-label" title="Noise Blanker"><input type="checkbox" class="switch dsp-sw" data-toggle="NB0" id="t-nb"><span>NB</span></label>
+          </div>
+          <!-- manual notch (BP) and contour (CO): a switch, the frequency slider and its value -->
+          <div class="dsp-sl">
+            <div class="dsp-row" title="Manual notch (BP): cuts one frequency out of the passband, 10 … 3000 Hz in 10 Hz steps. The slider only sets the frequency; the switch turns it on and off.">
+              <input type="checkbox" class="switch dsp-sw" id="t-notch" aria-label="Notch on/off"><span class="g-lbl">NOTCH</span>
+              <input type="range" id="notch-hz" min="10" max="3000" step="10" value="1500" aria-label="Notch frequency"><b id="notch-hz-val">—</b>
+            </div>
+            <div class="dsp-row" title="Contour (CO): lifts or dips a part of the passband (gain and width in menu 069/070), position 1 … 30. The slider only sets the position; the switch turns it on and off.">
+              <input type="checkbox" class="switch dsp-sw" id="t-contour" aria-label="Contour on/off"><span class="g-lbl">CONTOUR</span>
+              <input type="range" id="contour-pos" min="1" max="30" step="1" value="15" aria-label="Contour position"><b id="contour-pos-val">—</b>
+            </div>
+          </div>
         </div>
       </fieldset>
     </div>

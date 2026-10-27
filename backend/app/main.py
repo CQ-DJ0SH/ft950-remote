@@ -33,7 +33,7 @@ from .digi import DECODERS as DIGI_DECODERS, MODES as DIGI_MODES, DigiService, d
 from .ft950 import (AGC_SET, ATT, BANDS, MODES, PREAMP, ROOF_SET, WIDTHS,
                     FT950Error, width_column)
 from .models import (zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
-                     ClarReq, IfShiftReq, LevelReq, LogConfigReq, MemoryReq, MenuResetReq,
+                     ClarReq, ContourReq, IfShiftReq, LevelReq, NotchReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
                      RadioAudioReq, HuntBlockReq, SeqAnswerReq, SeqCallReq, SeqCqReq, SettingsReq,
@@ -477,6 +477,18 @@ async def set_preamp(req: LevelReq):
     if req.level not in PREAMP:
         return _bad("preamp 0 IPO, 1 AMP1, 2 AMP2")
     await service.run(service.radio.set_preamp, req.level)
+    return {"ok": True}
+
+
+@app.post("/api/notch")
+async def set_notch(req: NotchReq) -> dict:
+    await service.run(service.radio.set_notch, req.on, req.hz)
+    return {"ok": True}
+
+
+@app.post("/api/contour")
+async def set_contour(req: ContourReq) -> dict:
+    await service.run(service.radio.set_contour, req.on, req.pos)
     return {"ok": True}
 
 

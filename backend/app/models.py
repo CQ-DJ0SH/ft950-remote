@@ -1,7 +1,7 @@
 """Pydantic request bodies for the REST API."""
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, BeforeValidator, Field
 
@@ -39,6 +39,16 @@ class OnOffReq(BaseModel):
 
 class IfShiftReq(BaseModel):
     hz: int = Field(ge=-1000, le=1000)
+
+
+class NotchReq(BaseModel):
+    on: Optional[bool] = None
+    hz: Optional[int] = Field(default=None, ge=10, le=3000)    # 10 Hz steps
+
+
+class ContourReq(BaseModel):
+    on: Optional[bool] = None
+    pos: Optional[int] = Field(default=None, ge=1, le=30)
 
 
 class ClarReq(BaseModel):

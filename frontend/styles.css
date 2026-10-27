@@ -1835,3 +1835,66 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .cmap-chip{display:inline-block; width:34px; height:12px; border-radius:3px; border:1px solid var(--edge-hi); flex:none}
 .digi > .panel-head #l-ptt{font:600 11px var(--font-ui); letter-spacing:.12em; padding:3px 9px; border-radius:7px; border-width:1px; box-sizing:border-box; height:24.86px; display:inline-flex; align-items:center}   /* TX lamp the size of Halt TRX */
 .digi > .panel-head #l-ptt.on{box-shadow:0 0 14px -2px var(--tx), 0 0 4px var(--tx)}   /* lit TX lamp glows */
+.panel-head .chip.seq-tx{width:260px}   /* the longest FT8 message ("TX ▸ <VK2ESE/P> DJ0SH RR73") fits with margin */
+/* CQ and its target as one split button: shared frame, a thin divider between */
+.digi .seq-block #seq-cq{border-top-right-radius:0; border-bottom-right-radius:0; margin-right:0}
+.digi .seq-block #cq-to{margin-left:-6px; border-radius:0 7px 7px 0;
+  border-left:1px solid color-mix(in srgb, var(--sw-edge) 60%, transparent)}
+.digi .seq-block #cq-to.on{border-left-color:color-mix(in srgb, #06222a 35%, var(--accent))}
+/* clarifier sign in a fixed slot, so the RX box does not grow with + / − */
+.clar-val .csign{display:inline-block; width:.62em; text-align:center; font:700 .8em var(--font-ui); font-style:normal; vertical-align:.08em}
+/* CLAR LED, then the clarifier scale, then the RX box */
+.lcd .lf-bottom .tune-scale{margin-right:0}
+/* RX chain: the four groups as wide as their content, DSP takes the rest;
+   values right beside their sliders */
+.rx-chain{grid-template-columns:repeat(4, auto) minmax(0,1fr)}
+.rx-chain .g-row{grid-template-columns:44px 150px auto; gap:8px}
+.rx-chain .g-row.slider b{min-width:0; width:7ch; text-align:left}
+/* DSP: DNF/NR/NB, then NOTCH and CONTOUR with switch, slider and value */
+.dsp-wrap{display:flex; align-items:flex-start; gap:22px}
+.dsp-sl{display:flex; flex-direction:column; gap:8px; margin-top:6px; flex:1; min-width:0}
+.dsp-row{display:grid; grid-template-columns:auto 62px minmax(80px,1fr) 7ch; align-items:center; gap:8px}
+.dsp-row input[type=range]{width:100%; min-width:0}
+.dsp-row b{font:500 12px var(--font-mono); color:var(--text); text-align:left}
+.rx-chain .g-row > .seg{grid-column:2 / 4; flex-wrap:nowrap}   /* PRE / AGC / ATT stay in one line */
+.rx-chain .g-row.g-scale > .gs-ends{width:150px}
+.rx-chain .g-row{grid-template-columns:40px 120px auto}
+.rx-chain .g-row.slider b{width:6.5ch}
+.rx-chain .g-row.g-scale > .gs-ends{width:120px}
+.dsp-wrap{gap:16px}
+.dsp-row{grid-template-columns:auto 58px minmax(70px,1fr) 6.5ch; gap:7px}
+.rx-chain .g-row.slider b{width:7ch; white-space:nowrap}
+.rx-chain .g-row{grid-template-columns:40px 116px auto}
+.rx-chain .g-row.g-scale > .gs-ends{width:116px}
+/* DSP: DNF · NR · NB in one line above the NOTCH / CONTOUR sliders */
+.dsp-wrap{flex-direction:column; align-items:stretch; gap:6px}
+.dsp-wrap .dsp-col{flex-direction:row; gap:18px; margin-top:4px}
+.dsp-sl{margin-top:2px; gap:6px}
+.dsp-wrap .dsp-col{justify-content:center}   /* DNF · NR · NB centred over the sliders */
+/* ---- DSP bars as on the FT-950's LCD: a blue bracket with a red pointer in the
+   middle, lit segments as green dashes (unlit ones not shown), CONTOUR and NOTCH
+   in two rows ---- */
+.dsp-bars .dbars{height:15px; padding:5px 6px 0; gap:3px; box-sizing:border-box;
+  border:1.5px solid var(--lb); border-bottom:0; border-radius:2px 2px 0 0}
+.dsp-bars .dbars::after{left:50%; top:-1.5px; bottom:auto; width:0; height:0; margin-left:-4px; background:none;
+  border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid var(--lr)}
+.dsp-bars .dbars i, .dsp-bars .dbars i:not(.on), :root[data-theme="light"] .dsp-bars .dbars i:not(.on),
+.dsp-bars .dbars i.on{position:relative; background:none; opacity:1; box-shadow:none}
+.dsp-bars .dbars i::before, .dsp-bars .dbars i::after{content:""; position:absolute; left:1px; right:1px; height:3px;
+  border-radius:1px; background:var(--lg); box-shadow:0 0 4px #7fd36a88; opacity:0}
+.dsp-bars .dbars i::before{top:2px}
+.dsp-bars .dbars.dual i::before{top:0}
+.dsp-bars .dbars.dual i::after{top:5px}
+.dsp-bars .dbars i.on::before{opacity:1}
+.dsp-bars .dbars.dual i.on2::after{opacity:1}
+/* ---- clarifier scale as on the FT-950: line, tall end ticks, small ticks below,
+   the red pointer above the line and again below the small ticks ---- */
+.lcd .tune-scale::before{opacity:1; height:1.5px; margin-top:-3px}
+.lcd .tune-scale .ts-t{top:calc(50% - 3px); transform:none; height:5px; width:1.5px; margin-left:-.75px; margin-top:3px; opacity:.85}
+.lcd .tune-scale .ts-t.end{height:14px; margin-top:-6px; opacity:1}
+.lcd .tune-scale i{top:3px; bottom:3px; width:2.5px; margin-left:-1.25px; box-shadow:0 0 5px var(--lr);
+  background:linear-gradient(var(--lr) 0 47%, transparent 47% 72%, var(--lr) 72% 100%)}
+.dsp-bars .dbars:not(.dual) i::before{top:1px; height:5px}   /* WIDTH / SHIFT: one row, a little taller */
+.dsp-wrap .dsp-col{margin-top:-4px}   /* DNF · NR · NB a little higher */
+/* CONTOUR / NOTCH label dark while the function is off (as an unlit LCD segment) */
+.dl.off{background:none; color:var(--lb); opacity:.28; box-shadow:inset 0 0 0 1px var(--lb)}

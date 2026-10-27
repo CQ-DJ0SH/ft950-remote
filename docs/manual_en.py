@@ -262,7 +262,8 @@ EN = [
         "the TX box follows while their QSO runs. A click in the waterfall sets "
         "TX by hand and switches Adopt Frequency off, so the next station does "
         "not pull it away; Shift+click moves only the RX window. "
-        "double-click answers the station — in Received and in My Messages. "
+        "double-click answers the station — in Received and in My Messages — and "
+        "selects its session in Sessions, so Session Messages shows that QSO. "
         "A double-click within the first ~1.7 s of your own TX period still "
         "transmits in that period (start at once, the partner sees a slightly "
         "positive DT); later it goes out in the next one.",

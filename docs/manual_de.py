@@ -286,7 +286,8 @@ DE = [
         "Wasserfall setzt TX von Hand und schaltet Adopt Frequency aus, damit die "
         "nächste Station es nicht wieder wegzieht; Umschalt+Klick verschiebt nur "
         "das Empfangsfenster. Doppelklick antwortet der Station — in Received und in My "
-        "Messages. Ein Doppelklick in den ersten etwa 1,7 s der eigenen "
+        "Messages — und wählt ihre Session in Sessions aus, so dass Session "
+        "Messages dieses QSO zeigt. Ein Doppelklick in den ersten etwa 1,7 s der eigenen "
         "Sendeperiode sendet noch in dieser Periode (sofortiger Start, die "
         "Gegenstation sieht ein leicht positives DT); später geht es in der "
         "nächsten hinaus.",

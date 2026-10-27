@@ -360,7 +360,7 @@
       <span class="panel-stat" id="digi-head-stat" hidden></span>
       <span class="spacer"></span>
       <span class="chip seq-tx" id="seq-tx" title="Next sequencer transmission">TX —</span>
-      <button class="btn sm halt" id="halt" disabled title="Stop transmitting immediately (PTT off), stop the sequencer and switch Auto Hunt off — active during an FT8/FT4 transmission, while a sequence runs or while Auto Hunt is on">Halt TRX</button>
+      <button class="btn sm halt" id="halt" disabled title="Stop transmitting immediately (PTT off), stop the sequencer and switch Auto Hunt off — active during an FT8/FT4 transmission, while a sequence runs or while Auto Hunt is on"><svg class="halt-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8l6 6v8l-6 6H8l-6-6V8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><rect x="8.5" y="8.5" width="7" height="7" rx="1" fill="currentColor"/></svg>Halt TRX</button>
       <span class="lamp" id="l-ptt" title="Transmitter active (PTT)">TX</span>
       <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
     </div>
@@ -594,7 +594,7 @@
 
   <section class="panel hackrf hrf-off" id="hackrf">
     <div class="panel-head">
-      <h2>HACKRF · WATERFALL<span class="hrf-src" id="hrf-src" title="The HackRF is attached to TM-V71 Remote; this station proxies its stream">via .155</span></h2>
+      <h2>HACKRF · WATERFALL</h2>
       <button class="hrf-power" id="hrf-power" type="button" aria-pressed="false" title="Start / stop the HackRF">OFF</button>
       <span class="panel-stat" id="hrf-stat"></span>
       <span class="spacer"></span>
@@ -627,6 +627,7 @@
         <div class="hrf-tip" id="hrf-tip" hidden></div>
       </div>
       <div class="hrf-axis"><span id="hrf-f0">—</span><span id="hrf-fc">—</span><span id="hrf-f1">—</span></div>
+      <div class="hrf-foot"><span class="hrf-src" id="hrf-src" title="Where the HackRF stream comes from (Settings ▸ General ▸ HackRF source); this station relays it">—</span></div>
     </div>
   </section>
 
@@ -867,14 +868,15 @@
           <span class="update-status" id="qrz-status">not tested</span>
           <button type="button" id="qrz-test" class="mini-btn">Test connection</button>
         </div>
-        <p class="pane-hint">Username + password: callsign lookup (name, locator, QTH) via the QRZ XML service — requires a QRZ XML subscription. Logbook API key (QRZ.com → My Logbook → Settings): every QSO is additionally uploaded to the QRZ logbook.</p>
+        <p class="pane-hint">Username + password: callsign lookup (name, locator, QTH) via the QRZ XML service — requires a QRZ XML subscription. Logbook API key (QRZ.com → My Logbook → Settings): QSOs go to the QRZ logbook with LOG QRZ.COM in the log form, or automatically with "Auto-log to the QRZ.com logbook" below.</p>
       </div>
 
       <div class="logsec">
         <span class="logo-label">AUTOMATION</span>
         <div class="form-grid">
           <label class="check-label span-2"><input type="checkbox" id="qrz-before"> QRZ lookup before every log (fills name, QTH, locator)</label>
-          <label class="check-label span-2"><input type="checkbox" id="auto-log"> Auto-log: log completed QSOs automatically</label>
+          <label class="check-label span-2"><input type="checkbox" id="auto-log"> Auto-log to Wavelog: log completed QSOs automatically (as Auto-log in Sessions)</label>
+          <label class="check-label span-2" title="Independent of the Wavelog auto-log; needs the QRZ.com logbook API key"><input type="checkbox" id="auto-log-qrz"> Auto-log to the QRZ.com logbook as well</label>
         </div>
         <p class="pane-hint">Worked-before check as in iDigi: CQ red = station already in the log on this band, green = new; NEW = DXCC entity never worked. The index is reloaded from Wavelog at start-up and every 10 minutes. Auto-log kicks in as soon as the auto-sequencer completes QSOs.</p>
       </div>

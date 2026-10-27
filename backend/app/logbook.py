@@ -46,7 +46,7 @@ WORKED_FILE = DATA / "worked.json"
 RECENT_MAX = 100
 
 CONFIG_KEYS = ("wavelog_url", "wavelog_key", "wavelog_station_id",
-               "qrz_username", "qrz_password", "qrz_api_key", "auto_log", "qrz_before_log")
+               "qrz_username", "qrz_password", "qrz_api_key", "auto_log", "auto_log_qrz", "qrz_before_log")
 SECRETS = ("wavelog_key", "qrz_password", "qrz_api_key")
 
 
@@ -439,7 +439,8 @@ class LogBook:
                                rt.get("wavelog_station_id", ""))
         self.qrz = Qrz(rt.get("qrz_username", ""), rt.get("qrz_password", ""),
                        rt.get("qrz_api_key", ""))
-        self.auto_log = bool(rt.get("auto_log", True))      # default on (Sessions ▸ Auto-log)
+        self.auto_log = bool(rt.get("auto_log", True))      # default on (Sessions ▸ Auto-log): Wavelog
+        self.auto_log_qrz = bool(rt.get("auto_log_qrz", False))   # QRZ.com logbook, separately (Settings ▸ Log)
         self.qrz_before_log = bool(rt.get("qrz_before_log", True))
         self.worked = WorkedIndex(dxcc)
         self.dxcc = dxcc
@@ -456,7 +457,8 @@ class LogBook:
                 "wavelog_key_set": bool(self.wavelog.key),
                 "qrz_username": self.qrz.username, "qrz_password_set": bool(self.qrz.password),
                 "qrz_api_key_set": bool(self.qrz.api_key), "qrz_upload_ready": self.qrz.upload_ready(),
-                "auto_log": self.auto_log, "qrz_before_log": self.qrz_before_log,
+                "auto_log": self.auto_log, "auto_log_qrz": self.auto_log_qrz,
+                "qrz_before_log": self.qrz_before_log,
                 "wavelog_ready": self.wavelog.configured() and bool(self.wavelog.station_id),
                 "qrz_ready": self.qrz.configured()}
 
@@ -484,6 +486,8 @@ class LogBook:
             self.qrz.api_key = upd["qrz_api_key"]
         if "auto_log" in upd:
             self.auto_log = bool(upd["auto_log"])
+        if "auto_log_qrz" in upd:
+            self.auto_log_qrz = bool(upd["auto_log_qrz"])
         if "qrz_before_log" in upd:
             self.qrz_before_log = bool(upd["qrz_before_log"])
         runtime.save(upd)

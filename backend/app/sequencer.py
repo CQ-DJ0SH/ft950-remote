@@ -334,6 +334,13 @@ class Sequencer:
                     if not self._known(d):
                         self._log_rx(d)
                         self._advance(d)
+            # the partner's other messages (their CQ, their QSO with someone
+            # else): into Session Messages too, for the picture - they do not
+            # count as an answer and change nothing in the sequence
+            for d in decodes:
+                if ((d.get("from") or "").upper() == them and (d.get("to") or "").upper() != self.me
+                        and not self._known(d)):
+                    self._log_rx(d, other=True)
         elif self.kind == "cq" and mine:
             callers = [d for d in mine if d.get("kind") in ("grid", "report", "call")]
             if callers:
@@ -513,11 +520,15 @@ class Sequencer:
         key = (d.get("t0"), d.get("msg"))
         return any((m.get("t0"), m.get("msg")) == key for m in self.session["msgs"] if m["dir"] == "rx")
 
-    def _log_rx(self, d: dict) -> None:
+    def _log_rx(self, d: dict, other: bool = False) -> None:
         if self.session:
-            self.session["msgs"].append({"dir": "rx", "t0": d.get("t0"), "utc": d.get("period_utc"),
-                                         "snr": d.get("snr"), "dt": d.get("dt"), "df": d.get("df"),
-                                         "msg": d.get("msg")})
+            m = {"dir": "rx", "t0": d.get("t0"), "utc": d.get("period_utc"),
+                 "snr": d.get("snr"), "dt": d.get("dt"), "df": d.get("df"), "msg": d.get("msg")}
+            if other:                        # the partner, but not to me: shown, nothing else
+                m["other"] = True
+                self.session["msgs"].append(m)
+                return
+            self.session["msgs"].append(m)
             self.session["snr"] = d.get("snr", self.session["snr"])
             self.session["my_report"] = report(self.session["snr"])
             if d.get("grid"):
@@ -558,19 +569,30 @@ class Sequencer:
             self.logbook.worked.add(s["call"], band)
         except Exception as exc:  # noqa: BLE001 — colouring only
             log.warning("worked mark for %s failed: %s", s["call"], exc)
-        if self.logbook.auto_log:
+        # auto-log: Wavelog (Sessions ▸ Auto-log) and the QRZ.com logbook
+        # (Settings ▸ Log), each on its own
+        to = tuple(t for t, on in (("wavelog", self.logbook.auto_log),
+                                   ("qrz", getattr(self.logbook, "auto_log_qrz", False))) if on)
+        if to:
             s["logged"] = "running"
-            asyncio.create_task(self._autolog(s, q))
+            asyncio.create_task(self._autolog(s, q, to))
         else:
             s["logged"] = False                 # offered to the log form
 
-    async def _autolog(self, s: dict, q: dict) -> None:
+    async def _autolog(self, s: dict, q: dict, to: tuple = ("wavelog",)) -> None:
         try:
-            # auto-log goes to Wavelog only; the QRZ.com logbook by hand (LOG QRZ)
             r = await asyncio.to_thread(self.logbook.log_qso, q, station_callsign=self.me,
-                                        my_grid=self.settings.my_grid, automatic=True, to=("wavelog",))
-            s["logged"] = bool(r.get("ok"))
-            s["log_message"] = r.get("message")
+                                        my_grid=self.settings.my_grid, automatic=True, to=to)
+            oks, msgs = [], []
+            if "wavelog" in to:
+                oks.append(bool(r.get("ok")))
+                msgs.append(f"Wavelog: {r.get('message')}")
+            if "qrz" in to:
+                qr = r.get("qrz")
+                oks.append(bool(qr and qr.get("ok")))
+                msgs.append(qr["message"] if qr else "QRZ.com logbook not set up (Settings ▸ Log: API key)")
+            s["logged"] = all(oks)
+            s["log_message"] = " · ".join(msgs)
         except LogError as exc:
             s["logged"], s["log_message"] = False, str(exc)
         await self.publish()

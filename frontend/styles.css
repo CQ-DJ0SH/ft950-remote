@@ -1007,9 +1007,9 @@ body.transmitting::after{content:""; position:fixed; inset:0; pointer-events:non
 .tx-read{opacity:1}
 
 /* ---------------- HACKRF waterfall (ported from TM-V71 Remote) ---------------- */
-.hackrf{--accent:#2ec4c9; --accent-glow:#1fb3b8; --hrf-vfo:var(--amber)}
+.hackrf{--accent:#c9d4dc; --accent-glow:#aebfcc; --hrf-vfo:var(--amber)}
 .hackrf::before{box-shadow:0 0 9px -2px var(--accent-glow)}
-:root[data-theme="light"] .hackrf{--accent:#0b8389; --accent-glow:#12a2a8}
+:root[data-theme="light"] .hackrf{--accent:#5f6f7c; --accent-glow:#8a9aa6}
 .hrf-src{margin-left:10px; font:500 10px var(--font-mono); letter-spacing:.08em; color:var(--text-dim); text-transform:none}
 .hrf-power{font:700 12px var(--font-mono); letter-spacing:.08em; padding:5px 14px; border-radius:7px; cursor:pointer; transition:.15s;
   color:var(--text-dim); background:var(--ctrl-bg); border:1px solid var(--sw-edge)}
@@ -1301,8 +1301,8 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .ind.ml{flex:0 0 auto; font-size:var(--ml-fs, 11px); padding:3px 3px; letter-spacing:.03em}
 @media (min-width:1700px){ .ind.ml{--ml-fs:12px} }
 /* ===== CW skimmer panel ===== */
-.cwp{--accent:#c9d4dc; --accent-glow:#aebfcc}
-:root[data-theme="light"] .cwp{--accent:#5f6f7c; --accent-glow:#8a9aa6}
+.cwp{--accent:#2ec4c9; --accent-glow:#1fb3b8}
+:root[data-theme="light"] .cwp{--accent:#0b8389; --accent-glow:#12a2a8}
 .cwp .panel-head{flex-wrap:wrap; row-gap:6px}
 .cw-ctl{display:flex; align-items:center; gap:6px; font:600 11px var(--font-ui); letter-spacing:.12em; color:var(--text-dim)}
 .cw-ctl input{width:56px; font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:4px 6px}
@@ -1939,10 +1939,27 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 .foot .blk-sep:has(+ .prop){margin:0 5px 0 -9px}     /* centred between Brightness (its 14px margin) and VOACAP */
 .foot .prop{margin-left:0}
 .dec-graph canvas{height:210px}   /* two panels: CPU and memory of the decoder */
-/* RTTY panel: the CW panel's layout, its own accent (teal) */
-.rttyp{--accent:#4fd1c5; --accent-glow:#4fd1c5}
-:root[data-theme="light"] .rttyp{--accent:#16877d; --accent-glow:#3fb3a8}
+/* RTTY panel: the CW panel's layout, its own accent (rose) */
+.rttyp{--accent:#d65b98; --accent-glow:#d65b98}   /* rose: apart from HackRF's cyan and every other panel */
+:root[data-theme="light"] .rttyp{--accent:#9c2f66; --accent-glow:#b8477f}
 .rt-text{font-size:15px; letter-spacing:.04em}
 .rttyp .panel-stat.rt-sending{color:var(--tx); font-weight:700}
 .rttyp .cw-call input#rt-txhz{width:70px}
 .rttyp .rt-send{border-color:var(--tx)}
+/* Session Messages: the partner's messages to others (their CQ, other QSOs) in grey */
+#sessmsg-body tr.sess-other td, #sessmsg-body tr.sess-other td.arrow-rx{color:#7d848a}
+:root[data-theme="light"] #sessmsg-body tr.sess-other td{color:#8a9097}
+/* HackRF ready: a green LED, not the panel accent */
+.hrf-ready .dot{background:var(--ok); box-shadow:0 0 7px 1px color-mix(in srgb, var(--ok) 70%, transparent)}
+/* HackRF source in the panel's footer, written out in full */
+.hrf-foot{display:flex; justify-content:flex-end; margin-top:6px; padding-top:6px; border-top:1px solid var(--edge)}
+.hrf-foot .hrf-src{margin:0; font:500 11px var(--font-mono); letter-spacing:.04em; color:var(--text-dim)}
+/* "NTP" behind the lamp, laid over the free space: nothing in the strip moves */
+.strip #l-ntp{position:relative}
+.strip #l-ntp::after{content:"NTP"; position:absolute; left:calc(100% + 6px); top:50%; transform:translateY(-50%);
+  font:600 10px var(--font-ui); letter-spacing:.14em; color:var(--text-dim); white-space:nowrap; pointer-events:none}
+/* Halt TRX as tall as the TX field beside it, with a stop icon; the TX lamp keeps its size */
+.digi > .panel-head #halt{height:30px; box-sizing:border-box; display:inline-flex; align-items:center; gap:7px;
+  padding:0 13px; font-size:12px}
+.digi > .panel-head #halt .halt-ico{width:15px; height:15px; flex:none}
+.digi > .panel-head #l-ptt{height:30px; font-size:12px; padding:0 12px}

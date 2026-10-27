@@ -22,7 +22,7 @@ KEYS = {"my_call", "my_grid", "serial_port", "audio_device",
         "auto_power_off", "auto_power_off_s",
         # Settings ▸ Log (holds the Wavelog key and QRZ password: file is 0600)
         "wavelog_url", "wavelog_key", "wavelog_station_id",
-        "qrz_username", "qrz_password", "qrz_api_key", "auto_log", "qrz_before_log",
+        "qrz_username", "qrz_password", "qrz_api_key", "auto_log", "auto_log_qrz", "qrz_before_log",
         "mem_labels",                    # {"4": "FT8 20m"}: memory key names (radio has no CAT tag)
         "mem_extra",                     # {"7": {"split": true, "vfo_b_hz": 29540000}}: not in a radio memory
         # Hunt: {"K1ABC": {"t": 1761480000.0, "dxcc": …, "snr": …, "band": …}}: the no-reply list

@@ -349,3 +349,53 @@ def test_directed_cq():
     assert s._next_message() == "CQ DX DJ0SH JO62" and s.status()["cq_to"] == "DX"
     asyncio.run(s.start_cq(1500))
     assert s._next_message() == "CQ DJ0SH JO62"
+
+
+def test_partner_messages_to_others_are_shown_but_change_nothing():
+    s = _seq()
+    s.session = s._new_session(_d("CQ OH6IH KP13", snr=-10)); s.step = "call"
+    asyncio.run(s.on_decodes([_d("DL1ABC OH6IH -07", snr=-3), _d("CQ OH6IH KP13", t0=30.0),
+                              _d("DJ0SH K1ABC -01")], 30.0, "FT8", True))
+    assert s.step == "call" and not s.session.get("answered")
+    other = [m for m in s.session["msgs"] if m.get("other")]
+    assert [m["msg"] for m in other] == ["DL1ABC OH6IH -07", "CQ OH6IH KP13"]   # only the partner's
+    assert s.session["snr"] == -10                       # their messages to others leave my report alone
+    asyncio.run(s.on_decodes([_d("DL1ABC OH6IH -07", snr=-3)], 30.0, "FT8", False))   # full pass again
+    assert len([m for m in s.session["msgs"] if m.get("other")]) == 2
+
+
+class _LogBoth:
+    def __init__(self, wl, qrz):
+        self.auto_log, self.auto_log_qrz, self.calls = wl, qrz, []
+        class _W:
+            def add(self, *a): pass
+        self.worked = _W()
+    def log_qso(self, q, **kw):
+        self.calls.append(kw["to"])
+        return {"ok": True if "wavelog" in kw["to"] else None, "message": "ok",
+                "qrz": {"ok": True, "message": "QRZ-Log #7"} if "qrz" in kw["to"] else None}
+
+
+def _done_session(lb):
+    s = Sequencer(_Digi(), _Tx(), lb, _Mgr(), _Set())
+    s.kind, s.mode = "answer", "FT8"
+    s.session = s._new_session(_d("CQ OH6IH KP13"))
+    s.session["freq_hz"] = 14_075_200
+    return s
+
+
+def test_autolog_targets_are_separate():
+    async def run(lb):
+        s = _done_session(lb)
+        s._complete()
+        for _ in range(20):
+            await asyncio.sleep(0.01)
+            if s.session["logged"] != "running":
+                break
+        return s.session
+    for wl, qrz, want in ((True, False, [("wavelog",)]), (False, True, [("qrz",)]),
+                          (True, True, [("wavelog", "qrz")]), (False, False, [])):
+        lb = _LogBoth(wl, qrz)
+        sess = asyncio.run(run(lb))
+        assert lb.calls == want
+        assert sess["logged"] is (True if want else False)

@@ -404,12 +404,13 @@ const VDD_138_RAW = 0.76 * 255;
 const vddVolts = (raw) => raw / VDD_138_RAW * 13.8;
 const VDD_BAR_LO = 9.25, VDD_BAR_HI = 15.25;
 let vddRx = null;                              // last reading on receive (slow poll)
-function vddShow(raw) {
+function vddShow(raw, held = false) {
   if (raw == null) { txBar("m-vdd", 0); lcdVal("v-vdd", "!!.!", "V"); return; }
   const v = vddVolts(raw);
   // the bar spans 9.25 … 15.25 V, 0.25 V per segment: the first three are under 10 V,
   // the last three from 14.5 V, 13.8 V lights 18 of 24
-  txBar("m-vdd", Math.max(0, Math.min(1, (v - VDD_BAR_LO) / (VDD_BAR_HI - VDD_BAR_LO))) * 255);
+  const bar = Math.max(0, Math.min(1, (v - VDD_BAR_LO) / (VDD_BAR_HI - VDD_BAR_LO))) * 255;
+  txBar("m-vdd", bar, held ? bar : null);        // held: its last segment lit as the peak, like PO … ID
   lcdVal("v-vdd", v.toFixed(1).padStart(4, "!"), "V");
 }
 
@@ -863,7 +864,7 @@ function renderRadio(s) {
   $("pk-clr").hidden = !peakOn;               // no peak hold, nothing to clear
   $("tx-meters").classList.toggle("no-peak", !peakOn);
   if (s.vdd_raw != null) vddRx = s.vdd_raw;
-  if (!s.tx) vddShow(pk.held && pk.vdd != null ? pk.vdd : vddRx);   // receive: the supply, or the lowest of the last TX
+  if (!s.tx) { const h = pk.held && pk.vdd != null; vddShow(h ? pk.vdd : vddRx, h); }   // receive: the supply, or the lowest of the last TX
 
   if (s.other) {                                   // slow tier present
     const [m, k, h] = fmtHzGroups(s.other.freq_hz);
@@ -1107,7 +1108,7 @@ const markedWorked = new Set();               // sessions whose rows were turned
 async function answer(d) {
   if (!d?.from) return;
   jumpToCall = d.from.toUpperCase();
-  try { renderSeq(await api("/api/seq/answer", { decode: d, tx_hz: boxes.tx })); toast(`Calling ${d.from} …`); } catch { /* toast */ }
+  try { renderSeq(await api("/api/seq/answer", { decode: d, tx_hz: boxes.tx })); toast(`Calling ${d.from} …`); } catch { jumpToCall = null; /* toast */ }
 }
 // Marked session: QRZ.com lookup and world map, each in its own popup window
 const baseCall = (c) => (c || "").toUpperCase().split("/").filter((p) => /\d/.test(p) && /[A-Z]/.test(p))
@@ -1260,9 +1261,12 @@ function renderSeq(s) {
     selSession = x.started; renderSeq(seqState);
     if (e) toast(`${x.call}: ${e}`, true);
   };
-  // a double-clicked station: select its (newest) session, scroll it into view
-  if (jumpToCall) {
-    const i = s.sessions.map((x) => (x.call || "").toUpperCase()).lastIndexOf(jumpToCall);
+  // a double-clicked station: select the session the sequencer now runs for it,
+  // scroll it into view. Wait for that one: the first update after the click
+  // only shows the old sequence halted (older, aborted sessions of the same
+  // call must not be taken).
+  if (jumpToCall && s.session && (s.session.call || "").toUpperCase() === jumpToCall) {
+    const i = s.sessions.findIndex((x) => x.started === s.session.started);
     if (i >= 0) {
       jumpToCall = null;
       selSession = s.sessions[i].started;
@@ -1276,7 +1280,7 @@ function renderSeq(s) {
   $("sess-map").onclick = () => marked && openMap(marked);
   const cur = s.sessions.find((x) => x.started === selSession) || s.session || s.sessions[0];
   $("sessmsg-call").textContent = cur ? cur.call : "";
-  $("sessmsg-body").innerHTML = (cur?.msgs || []).map((m) => `<tr class="${m.dir === "tx" ? "tx-row" : ""}"><td>${esc((m.utc || "").slice(0, 8))}</td>` +
+  $("sessmsg-body").innerHTML = (cur?.msgs || []).map((m) => `<tr class="${m.dir === "tx" ? "tx-row" : m.other ? "sess-other" : ""}"${m.other ? ' title="From the station, not to you"' : ""}><td>${esc((m.utc || "").slice(0, 8))}</td>` +
     `<td class="${m.dir === "tx" ? "arrow-tx" : "arrow-rx"}">${m.dir === "tx" ? "TX ▶" : "◀ RX"}</td><td class="n">${m.snr ?? ""}</td>` +
     `<td class="n">${m.dt != null ? m.dt.toFixed(1) : ""}</td><td class="n">${Math.round(m.df ?? 0)}</td><td class="msg">${esc(m.msg)}</td></tr>`).join("");
   followSessMsg();
@@ -2508,6 +2512,8 @@ async function loadLogSettings() {
   $("qrz-key").placeholder = s.qrz_api_key_set ? "saved — leave empty to keep" : "";
   $("qrz-before").checked = s.qrz_before_log;
   $("auto-log").checked = s.auto_log;
+  $("auto-log-qrz").checked = !!s.auto_log_qrz;
+  $("auto-log-qrz").disabled = !s.qrz_upload_ready && !s.auto_log_qrz;   // no API key: nothing to log to
   await loadStations(s.wavelog_station_id);
 }
 async function loadStations(selected) {
@@ -2530,6 +2536,7 @@ function logSettingsBody() {
     wavelog_station_id: $("wl-station").value, qrz_username: $("qrz-user").value.trim(),
     qrz_password: $("qrz-pass").value, qrz_api_key: $("qrz-key").value,
     qrz_before_log: $("qrz-before").checked, auto_log: $("auto-log").checked,
+    auto_log_qrz: $("auto-log-qrz").checked,
   };
 }
 function setStatusLine(id, ok, text) {
@@ -3538,9 +3545,10 @@ function hrfFrame(m) {
   }
 }
 
+// the source in full, in the panel's footer: "HackRF via https://192.168.201.155:8443"
 function hrfSrcLabel(src) {
-  try { const h = new URL(src).hostname; const m = h.match(/\.(\d+)$/); return "via " + (m ? "." + m[1] : h); }
-  catch { return "via .155"; }
+  try { const u = new URL(src); return `HackRF via ${u.protocol}//${u.host}`; }
+  catch { return `HackRF via ${src}`; }
 }
 function applyHrfStatus(s) {
   if (!s) return;

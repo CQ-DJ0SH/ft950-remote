@@ -148,6 +148,7 @@ class LogConfigReq(BaseModel):
     qrz_password: str | None = None         # "" = keep the stored password
     qrz_api_key: str | None = None          # QRZ.com logbook upload; "" = keep
     auto_log: bool | None = None
+    auto_log_qrz: bool | None = None
     qrz_before_log: bool | None = None
 
 

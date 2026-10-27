@@ -225,21 +225,33 @@ EN = [
           "the CW skimmer). Decoding runs every period with WSJT-X's jt9 — or a "
           "faster build chosen in Settings ▸ FT8 ▸ Decoder (see below); the WSJT-X plate in "
           "the title bar shows the one that runs (2.7, 2.7 fast, 3.3 MT). The passband is split "
-          "over three cores. D1/D2/D3/AUTO in the strip pick the depth: D2 "
+          "over three cores. D1/D2/D3/AUTO in the footer pick the depth: D2 "
           "(default) puts the decodes on screen about 1.5–2 s after the period on a "
           "Pi 5, D3 finds a few more weak signals in about 3 s, AUTO follows the "
           "measured run time. Received messages list SNR, time offset, "
           "frequency, message and DXCC, with worked-before colouring."),
+    ("p", "Title bar: DECODE, CQ with its target, Auto Answer, Auto Hunt, the "
+          "WSJT-X plate, the next transmission, Halt TRX and the TX lamp. Strip "
+          "under the tables: mode (AUTO · FT8, FT8, FT4), the cycle bar (RX or TX "
+          "and the seconds into the period), EVEN/ODD, DECODE with the run time "
+          "and the number of decodes of the last pass and the NTP LED, then RX "
+          "with the receive level and TX with TUNE. Footer: dial frequency and "
+          "power, decode depth, OVL (codec overload), the TX frequency with "
+          "Adopt Frequency, palette, contrast and brightness of the waterfall, "
+          "and the VOACAP band conditions."),
     ("ul", [
-        "Click a decode to put the RX window there (AF — adopt frequency — also "
-        "moves TX; Auto Answer and Auto Hunt then answer on the partner's "
-        "frequency, and the TX box follows while their QSO runs); "
+        "Click a decode to put the RX window (green) there. With Adopt "
+        "Frequency on (footer, next to the TX frequency) the TX box (red) moves "
+        "too, and Auto Answer and Auto Hunt answer on the partner's frequency — "
+        "the TX box follows while their QSO runs. A click in the waterfall sets "
+        "TX by hand and switches Adopt Frequency off, so the next station does "
+        "not pull it away; Shift+click moves only the RX window. "
         "double-click answers the station — in Received and in My Messages. "
         "A double-click within the first ~1.7 s of your own TX period still "
         "transmits in that period (start at once, the partner sees a slightly "
         "positive DT); later it goes out in the next one.",
         "The filters above Received Messages show all, CQ only, RR73 (with RRR) "
-        "only or 73 only. follow keeps the newest row of each list in view, Session "
+        "only or 73 only. The arrow icon ↓ in each list head (follow) keeps the newest row in view, Session "
         "Messages included.",
         "A failed session shows just error in the list; the reason comes as a "
         "toast (when it happens and on a click on the row) and as the tooltip.",
@@ -247,8 +259,14 @@ EN = [
         "page and Map Display a world map: position from the locator (without one, the "
         "centre of the DXCC entity), great circle, distance and bearing from your "
         "locator. Both open a popup window.",
-        "CQ calls CQ; Auto Answer: while idle, a station calling you is answered "
-        "automatically.",
+        "CQ calls CQ — to everyone (–) or directed with the choice next to it: "
+        "DX, EU, NA, SA, AF, AS, OC, POTA or SOTA (CQ DX DJ0SH JO62). Auto "
+        "Answer: while idle, a station calling you is answered automatically.",
+        "DX Call in the My Messages head calls a station typed in: call, grid "
+        "(optional; 6 characters are cut to 4, an invalid one is dropped), period "
+        "auto / even / odd, then Call DX. auto answers the station's last decode "
+        "if it was heard, otherwise it calls in the next period. Your own call "
+        "is refused; a click on a decode fills the fields.",
         "Auto Hunt calls new stations by itself: while no QSO runs, after every "
         "full decode pass it calls the best new CQ (a plain CQ, not CQ DX/NA/…; new "
         "DXCC first, then the strongest) and waits for the QSO to end. A station "
@@ -267,11 +285,12 @@ EN = [
         "reply within ~0.1 s of the period end, so the next message usually starts "
         "0.5–1 s into our period; without a reply there it repeats at once. It can send RRR instead of RR73 "
         "(Settings ▸ FT8).",
-        "The slider with the speaker sets the DIGI RX level on the Pi (the meter "
-        "for it, target −40 … −20 dBFS, is in the footer next to the dial "
-        "frequency), the one with "
-        "the antenna next to it the FT8/FT4 TX drive (as FT8 TX DRIVE in Settings ▸ Audio); TUNE sends "
-        "a steady tone. Halt TRX, right in the title bar, is active during an "
+        "RX in the strip sets the DIGI RX level on the Pi (software gain "
+        "−20 … +20 dB, double-click: 0 dB); the meter right of it shows the "
+        "receive level, target −40 … −20 dBFS. TX sets the FT8/FT4 TX drive (as "
+        "FT8 TX DRIVE in Settings ▸ Audio); TUNE next to it sends a steady tone "
+        "on the TX frequency and counts down the seconds left. "
+        "Halt TRX, right in the title bar, is active during an "
         "FT8/FT4 transmission, a sequence or while Auto Hunt is on (dimmed "
         "otherwise); it stops at once and switches Auto Hunt off. NTP in the strip "
         "is an LED: green with the clock synchronised, red without (no decoding).",

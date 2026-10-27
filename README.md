@@ -43,11 +43,15 @@ decoding, plus voice operation over WebRTC.
     partner passes, the passband split over three CPU cores); the decoder is
     chosen in Settings ▸ FT8 — see [FT8 decoder performance](#ft8-decoder-performance-pi-5)
   - received / my messages / sessions tables with DXCC and worked-before flags
-  - waterfall with TX/RX markers, DIGI RX level on the Pi
+  - waterfall with TX (red) and RX (green) markers; **Adopt Frequency** moves TX
+    onto the station clicked, a TX frequency set by hand switches it off;
+    DIGI RX level and TX drive in one strip with the receive meter
   - a WSJT-X style QSO sequencer (CQ, answer, reports, RR73/73) with
     Auto Answer and **Auto Hunt** (calls new stations' CQs one after the
     other; a station that never answers is not called again; switches itself
-    off, default 180 min); FT8/FT4 waveform generation for transmit
+    off, default 180 min); **directed CQ** (CQ DX, EU, … POTA, SOTA) and
+    **DX Call** for a station typed in; FT8/FT4 waveform generation for
+    transmit
   - **HF band conditions** under the waterfall, as iDigi shows them:
     80-40 · 30-20 · 17-15 · 12-10 · 6m in green / yellow / red, computed by
     real **VOACAP** for your own locator; the sun/moon shows day or night at

@@ -296,8 +296,15 @@ EN = [
         "(default 180 min, 0 = never) and the no-reply list are in Settings ▸ FT8.",
         "The sequencer follows WSJT-X: call, report, R-report, RR73, 73; it can "
         "log automatically: Auto-log in the Sessions header (default on) logs every "
-        "completed QSO to Wavelog (the QRZ.com logbook by hand, LOG QRZ.COM), "
-        "otherwise it is offered in the log form. A reply that comes in while our "
+        "completed QSO to Wavelog, and Settings ▸ Log can send it to the QRZ.com "
+        "logbook as well (its own switch, default off); with neither it is offered "
+        "in the log form. A session counts as logged when every target accepted it. "
+        "A new QSO the sequencer starts by itself (Auto Hunt, Auto Answer, a caller "
+        "to our CQ) is selected in Sessions, so Session Messages follows it; a "
+        "session clicked afterwards stays until the next one starts. While a QSO "
+        "runs, Session Messages also lists the partner's messages to others (their "
+        "CQ, their QSO with someone else) in grey — they change nothing in the "
+        "sequence. "A reply that comes in while our "
         "older message is still on the air is answered next period — the QSO is not "
         "closed before our own 73. While a QSO runs, a narrow decode around the "
         "partner (FT8 ±200 Hz, FT4 ±300 Hz — FT4 needs the wider margin) has their "
@@ -437,7 +444,9 @@ EN = [
         "the colours of the message lists with preview and reset.",
         "Audio: capture device, codec level, FT8 TX drive, the FT-950 audio menus, "
         "voice TX processing, WebRTC buffers.",
-        "Log: Wavelog and QRZ.com.",
+        "Log: Wavelog and QRZ.com; automation: QRZ lookup before every log, "
+        "auto-log to Wavelog (as Auto-log in Sessions) and, separately, auto-log to "
+        "the QRZ.com logbook (needs its API key).",
         "Memories: the 32 memory keys with CTCSS, split and VFO B.",
         "Appearance (per browser): hide the DIGI, RTTY, CW, HackRF and Log panels (VFO, "
         "PTT and Audio always stay; hiding the HackRF stops its sweep), an accent "

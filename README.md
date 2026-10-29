@@ -74,7 +74,7 @@ decoding, plus voice operation over WebRTC.
   power-off plate, auto power-off when no browser is connected
 - **Log**:
   - Wavelog upload (auto-log or log form)
-  - QRZ.com XML lookup and logbook upload
+  - QRZ.com XML lookup and logbook upload (by hand, or its own auto-log)
   - worked-before index downloaded from Wavelog
 - **Settings**:
   - station data, serial port and baud rate, decoder range, HackRF source,

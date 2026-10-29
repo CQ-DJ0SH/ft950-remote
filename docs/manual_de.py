@@ -323,8 +323,15 @@ DE = [
         "0 = nie) und die Liste stehen unter Settings ▸ FT8.",
         "Die Ablaufsteuerung folgt WSJT-X: Anruf, Rapport, R-Rapport, RR73, 73; "
         "mit Auto-log im Kopf der Sessions (Standard an) wird jedes fertige QSO "
-        "automatisch nach Wavelog geloggt (ins QRZ.com-Logbuch von Hand mit LOG "
-        "QRZ.COM), sonst landet es im Logformular. Kommt eine Antwort, während unsere "
+        "automatisch nach Wavelog geloggt, und unter Settings ▸ Log kann es "
+        "zusätzlich ins QRZ.com-Logbuch gehen (eigener Schalter, Standard aus); ist "
+        "beides aus, landet es im Logformular. Eine Session gilt als geloggt, wenn "
+        "jedes Ziel sie angenommen hat. Ein neues QSO, das die Ablaufsteuerung selbst "
+        "beginnt (Auto Hunt, Auto Answer, ein Anrufer auf unseren CQ), wird in "
+        "Sessions ausgewählt, so dass Session Messages ihm folgt; eine danach "
+        "angeklickte Session bleibt, bis das nächste beginnt. Während eines QSOs "
+        "zeigt Session Messages auch die Meldungen der Gegenstation an andere (ihr "
+        "CQ, ihr QSO mit jemand anderem) in Grau — sie ändern nichts am Ablauf. "Kommt eine Antwort, während unsere "
         "ältere Nachricht noch gesendet wird, geht die passende Antwort in der "
         "nächsten Periode hinaus — das QSO endet nicht vor unserem eigenen 73. "
         "Während eines QSOs liefert eine schmale Dekodierung um die Gegenstation "
@@ -474,7 +481,9 @@ DE = [
         "Seite) und die Farben der Meldungslisten mit Vorschau und Zurücksetzen.",
         "Audio: Aufnahmegerät, Codec-Pegel, FT8-Sendeansteuerung, die Audiomenüs des "
         "FT-950, Sprachaufbereitung beim Senden, WebRTC-Puffer.",
-        "Log: Wavelog und QRZ.com.",
+        "Log: Wavelog und QRZ.com; Automatik: QRZ-Abfrage vor jedem Log, Auto-log "
+        "nach Wavelog (wie Auto-log in Sessions) und, davon getrennt, Auto-log ins "
+        "QRZ.com-Logbuch (braucht dessen API-Key).",
         "Memories: die 32 Speichertasten mit CTCSS, Split und VFO B.",
         "Appearance (pro Browser): die Felder DIGI, RTTY, CW, HackRF und Log ausblenden "
         "(VFO, PTT und Audio bleiben immer; ein ausgeblendetes HackRF stoppt den "

@@ -1100,6 +1100,7 @@ function applyDigiStatus(s) {
 }
 // ---------------------------------------------------------------- auto-sequencer
 let selectedDecode = null, seqState = null, selSession = null, lastTxShown = null;
+let lastSessStarted;                          // the running session last seen (new one: select it)
 let jumpToCall = null;                        // after a double-click: select that station's session once it shows
 const prompted = new Set();
 const sessErrSeen = new Set();                // "started|error" already toasted
@@ -1261,6 +1262,18 @@ function renderSeq(s) {
     selSession = x.started; renderSeq(seqState);
     if (e) toast(`${x.call}: ${e}`, true);
   };
+  // a new session started by the sequencer itself (Auto Hunt, Auto Answer, a caller
+  // to our CQ): select it, so Sessions and Session Messages follow the running QSO
+  if (s.session && s.session.started !== lastSessStarted) {
+    const first = lastSessStarted === undefined;          // page load: keep what is there
+    lastSessStarted = s.session.started;
+    const i = s.sessions.findIndex((x) => x.started === s.session.started);
+    if (!first && i >= 0 && s.session.state === "running") {
+      selSession = s.session.started;
+      for (const tr of $("sess-body").children) tr.classList.toggle("sel", +tr.dataset.i === i);
+      $("sess-body").querySelector(`tr[data-i="${i}"]`)?.scrollIntoView({ block: "nearest" });
+    }
+  }
   // a double-clicked station: select the session the sequencer now runs for it,
   // scroll it into view. Wait for that one: the first update after the click
   // only shows the old sequence halted (older, aborted sessions of the same

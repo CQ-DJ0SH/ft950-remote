@@ -528,6 +528,8 @@ class Sequencer:
                 m["other"] = True
                 self.session["msgs"].append(m)
                 return
+            if (d.get("to") or "").upper() != self.me:
+                m["other"] = True            # the decode that started it (their CQ, their RR73 to someone)
             self.session["msgs"].append(m)
             self.session["snr"] = d.get("snr", self.session["snr"])
             self.session["my_report"] = report(self.session["snr"])

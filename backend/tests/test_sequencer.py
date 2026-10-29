@@ -399,3 +399,11 @@ def test_autolog_targets_are_separate():
         sess = asyncio.run(run(lb))
         assert lb.calls == want
         assert sess["logged"] is (True if want else False)
+
+
+def test_start_line_to_someone_else_is_grey():
+    s = _seq()
+    d = _d("SP9DPI GU4WRP RR73", snr=-1)
+    s.session = s._new_session(d); s._log_rx(d)
+    s._log_rx(_d("DJ0SH GU4WRP -16", t0=30.0))
+    assert [m.get("other", False) for m in s.session["msgs"]] == [True, False]

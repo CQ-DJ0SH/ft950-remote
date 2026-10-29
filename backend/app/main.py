@@ -844,6 +844,8 @@ async def radio_menus_snapshot() -> dict:
 async def get_system() -> dict:
     d = await asyncio.to_thread(system_info.collect)
     d["decoder"] = dec_history.live()          # the WSJT-X decoder: last pass, last minute
+    d["audio"] = {**capture.stats(), "rx_gaps": hub.rx_gaps, "rx_drops": hub.rx_drops,
+                  "peers": hub.peers}         # RX dropout counters since the service started
     return d
 
 

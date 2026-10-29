@@ -2165,6 +2165,10 @@ async function loadSystem() {
   $("sys-disk").textContent = `${fmtBytes(s.disk_used)} / ${fmtBytes(s.disk_total)}${pct(s.disk_used, s.disk_total)}`;
   $("sys-app").textContent = s.app_rss ? `${fmtBytes(s.app_rss)} · ${s.app_threads} Threads` : "—";
   $("sys-uptime").textContent = fmtUptime(s.uptime_sec);
+  // RX dropout counters of the audio path (since the service started)
+  const au = s.audio;
+  $("sys-audio-card").textContent = au ? `${au.overruns} overruns · ${au.slow} slow (max ${au.max_ms} ms)${au.restarts ? ` · ${au.restarts} restarts` : ""}` : "—";
+  $("sys-audio-web").textContent = au ? `${au.rx_gaps} gaps · ${au.rx_drops} drops · ${au.peers} listening` : "—";
   // the WSJT-X decoder (jt9): its last pass and the last minute
   const d = s.decoder || {};
   const ago = d.last_age_s != null ? ` · ${Math.round(d.last_age_s)} s ago` : "";

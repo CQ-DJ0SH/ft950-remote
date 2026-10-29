@@ -70,6 +70,15 @@ class AudioCapture:
         self._stop = threading.Event()
         self.error: Optional[str] = None
         self.level = {"rms_dbfs": None, "peak_dbfs": None}
+        # RX dropout diagnostics (Settings ▸ Pi Hardware), since the service
+        # started: arecord's overruns (the codec's buffer overflowed: samples
+        # lost), chunks whose subscribers took more than 15 ms of their 20 ms,
+        # and the longest such pass
+        self.overruns = 0
+        self.slow = 0
+        self.max_ms = 0.0
+        self.restarts = 0
+        self._stderr: deque[str] = deque(maxlen=20)
         # DIGI RX level (software, dB): applied by the FT8/FT4 decoder, the
         # waterfall and the DIGI meter only (digi_level). Browser audio and the
         # recorder get the codec signal as is; the radio is never touched.
@@ -122,12 +131,35 @@ class AudioCapture:
             if not self._stop.is_set():
                 time.sleep(2)              # device unplugged / busy: retry
 
+    def stats(self) -> dict:
+        return {"overruns": self.overruns, "slow": self.slow,
+                "max_ms": round(self.max_ms, 1), "restarts": self.restarts}
+
+    def _read_stderr(self, proc: subprocess.Popen) -> None:
+        """arecord reports every overrun on stderr ("overrun!!! (at least … ms
+        long)"); count them, keep the last lines for an error message."""
+        assert proc.stderr is not None
+        for raw in proc.stderr:
+            line = raw.decode(errors="replace").strip()
+            if not line:
+                continue
+            self._stderr.append(line)
+            if "overrun" in line.lower():
+                self.overruns += 1
+                if self.overruns == 1 or self.overruns % 50 == 0:
+                    log.warning("RX audio: %s (%d so far)", line, self.overruns)
+
     def _capture(self) -> None:
+        # no -q: arecord then reports overruns, counted by _read_stderr
         self._proc = subprocess.Popen(
-            ["arecord", "-q", "-D", self.device, "-f", "S16_LE",
+            ["arecord", "-D", self.device, "-f", "S16_LE",
              "-r", str(RATE), "-c", str(CHANNELS), "-t", "raw",
              "--buffer-time=40000"],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self._stderr.clear()
+        err_reader = threading.Thread(target=self._read_stderr, args=(self._proc,),
+                                      name="arecord-stderr", daemon=True)
+        err_reader.start()
         with self._lock:                   # a restart is a new timeline
             self._total, self._anchor = 0, None
             self._est.clear()
@@ -139,7 +171,9 @@ class AudioCapture:
             if len(raw) < nbytes:
                 if self._stop.is_set():
                     return
-                err = (self._proc.stderr.read() or b"").decode(errors="replace")
+                err_reader.join(timeout=1)
+                self.restarts += 1
+                err = " · ".join(l for l in self._stderr if not l.startswith("Recording"))
                 raise RuntimeError(f"arecord ended: {err.strip() or 'EOF'}")
             mono = np.frombuffer(raw, "<i2").reshape(-1, CHANNELS)[:, 0]
             with self._lock:
@@ -149,12 +183,18 @@ class AudioCapture:
                 self._update_anchor(now)
                 t_chunk = self._anchor + (self._total - CHUNK) / RATE
             self.error = None
+            t0 = time.perf_counter()
             self._update_level(mono)
             for fn in self._subs:
                 try:
                     fn(mono, t_chunk)
                 except Exception as exc:  # noqa: BLE001
                     log.warning("audio subscriber failed: %s", exc)
+            dt = (time.perf_counter() - t0) * 1000.0
+            if dt > self.max_ms:
+                self.max_ms = dt
+            if dt > 15.0:                  # of the 20 ms a chunk lasts
+                self.slow += 1
 
     def _update_anchor(self, now: float) -> None:
         """Sliding-minimum anchor that also survives clock steps.

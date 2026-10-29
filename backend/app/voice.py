@@ -200,6 +200,9 @@ class VoiceHub:
         self.rx_gain, self.tx_gain = rx_gain, tx_gain
         self.rx_buffer_ms, self.tx_buffer_ms, self.ptt_tail_ms = rx_buffer_ms, tx_buffer_ms, ptt_tail_ms
         self.peers = 0                       # connected browsers
+        # RX to the browsers, since the service started: gaps (a browser's queue
+        # ran dry: a short silence) and drops (it fell behind: oldest discarded)
+        self.rx_gaps = self.rx_drops = 0
         # Every browser's mic is metered, but only ONE feeds the transmitter
         # and the echo test: the browser that keyed (``active``). Measured: two
         # connected browsers used to interleave their mics block by block.
@@ -309,6 +312,8 @@ class VoiceHub:
             subs = dict(self._subs)
         data = x.tobytes()
         for peer, q in subs.items():
+            if len(q) == q.maxlen:                   # full: the append drops the oldest
+                self.rx_drops += 1
             # every other listener keeps hearing the radio
             q.append(own.tobytes() if own is not None and peer == self.active else data)
 
@@ -497,6 +502,7 @@ class RadioRxTrack(MediaStreamTrack):
             self._fill = False
         if not q:
             self._fill = True
+            self._hub.rx_gaps += 1                   # ran dry: an audible gap follows
             return None
         return q.popleft()
 

@@ -944,6 +944,8 @@
         <dt>Decoder memory</dt><dd id="sys-decmem">—</dd>
         <dt>Decoder CPU (1 min)</dt><dd id="sys-deccpu">—</dd>
         <dt>Uptime</dt><dd id="sys-uptime">—</dd>
+        <dt title="Since the last service start. Overruns: the sound card's buffer overflowed and samples were lost (an RX dropout for the decoder, the waterfall and the browser). Slow: 20 ms chunks whose processing took over 15 ms — harmless while the overruns stay put.">Audio · sound card</dt><dd id="sys-audio-card">—</dd>
+        <dt title="Since the last service start. Gaps: a browser's RX buffer ran dry (a short silence). Drops: a browser fell behind and the oldest audio was discarded — a few right after (re)connecting are normal.">Audio · to browser</dt><dd id="sys-audio-web">—</dd>
       </dl>
       <figure class="sys-graph">
         <div class="sys-graph-head">

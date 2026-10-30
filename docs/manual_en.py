@@ -31,7 +31,8 @@ EN = [
         "Two-way audio over WebRTC/Opus: RX/TX gain, mic AGC, compressor, "
         "pre-emphasis, mic echo test, RX recorder with WAV download.",
         "FT8/FT4 decoding with jt9 on three CPU cores, WSJT-X style sequencer with "
-        "auto-answer, waterfall, DXCC and worked-before flags.",
+        "auto-answer, a queue for several callers to one CQ, waterfall, DXCC and "
+        "worked-before flags; spots of the stations heard to PSK Reporter.",
         "HF band conditions under the waterfall from real VOACAP for your locator: "
         "80-40, 30-20, 17-15, 12-10 and 6m in green / yellow / red, with a sun/moon "
         "switch for day and night.",
@@ -251,9 +252,9 @@ EN = [
           "WSJT-X plate, the next transmission, Halt TRX and the TX lamp. Strip "
           "under the tables: mode (AUTO · FT8, FT8, FT4), the cycle bar (RX or TX "
           "and the seconds into the period), EVEN/ODD, DECODE with the run time "
-          "and the number of decodes of the last pass and the NTP LED, then RX "
-          "with the receive level and TX with TUNE. Footer: dial frequency and "
-          "power, decode depth, OVL (codec overload), the TX frequency with "
+          "and the number of decodes of the last pass, the NTP LED and the PSK "
+          "Reporter LED, then RX with the receive level and TX with TUNE. Footer: "
+          "dial frequency and power (framed), decode depth, OVL (codec overload), the TX frequency with "
           "Adopt Frequency, palette, contrast and brightness of the waterfall, "
           "and the VOACAP band conditions."),
     ("ul", [
@@ -304,7 +305,11 @@ EN = [
         "session clicked afterwards stays until the next one starts. While a QSO "
         "runs, Session Messages also lists the partner's messages to others (their "
         "CQ, their QSO with someone else) in grey — they change nothing in the "
-        "sequence. "
+        "sequence; so is the decode that started the session when it was not "
+        "addressed to you. Our own lines appear as soon as the next message is "
+        "decided, about a second before the radio keys: TX ▷ dimmed while "
+        "pending, TX ▶ once on the air, TX ✕ struck through if it did not go out "
+        "(too late for the period, or halted). "
         "A reply that comes in while our "
         "older message is still on the air is answered next period — the QSO is not "
         "closed before our own 73. While a QSO runs, a narrow decode around the "
@@ -312,6 +317,28 @@ EN = [
         "reply within ~0.1 s of the period end, so the next message usually starts "
         "0.5–1 s into our period; without a reply there it repeats at once. It can send RRR instead of RR73 "
         "(Settings ▸ FT8).",
+        "Several callers to one CQ: the first goes to a QSO, the others wait in a "
+        "queue and are answered one after the other when the QSO ends, instead of "
+        "the next CQ. Order: new DXCC, DXCC new on this band, not worked on this "
+        "band, then the strongest. A waiting station drops out after 2 minutes "
+        "without a new call, or as soon as it is heard with someone else or "
+        "calling CQ; one just worked does not queue again. Waiting stations are "
+        "listed in italics at the end of Sessions (next, waiting 2, …; the tooltip "
+        "shows their message and SNR); a click puts one at the front.",
+        "A caller decoded while our CQ is already on the air: the CQ is cut and "
+        "the answer goes out in the same period, as long as it can still start in "
+        "time (FT8 up to 1.7 s into the period, FT4 1.2 s); later it goes out in "
+        "the next period. A cut CQ does not count towards the CQ limit.",
+        "Calls FT8 cannot carry in full (DL1ABC/QRP, W1AW/4, PA/DJ0SH — only /P "
+        "and /R fit) go out as WSJT-X sends them, in short (hashed) form: "
+        "<DL1ABC/QRP> DJ0SH JO62. The other station recognises its own call; "
+        "your call, grid and reports stay in full.",
+        "PSK Reporter (Settings ▸ FT8): every station decoded here is reported to "
+        "pskreporter.info, with your call and locator as the receiver. The PSK "
+        "Reporter LED in the strip is green after a good upload, red when the last "
+        "one failed, dark until the first; its tooltip has the details. While the "
+        "reporting is off the LED is hidden, its place kept. Below 1450 px window "
+        "width the label shortens to PSK.",
         "RX in the strip sets the DIGI RX level on the Pi (software gain "
         "−20 … +20 dB, double-click: 0 dB); the meter right of it shows the "
         "receive level, target −40 … −20 dBFS. TX sets the FT8/FT4 TX drive (as "
@@ -434,7 +461,14 @@ EN = [
         "a Rust OSD: about 6 % more decodes, ready about 2.4 s after the period; "
         "it sets its own depth). Builds not installed are greyed out. Then decode "
         "depth (as D1/D2/D3/AUTO in the panel) and range, closing message RR73 or "
-        "RRR, Auto Hunt (whom to call: not worked on this band, never worked, DXCC "
+        "RRR, PSK Reporter (switch, off by default, with the destination "
+        "report.pskreporter.info:4739 (UDP) beside it; an optional antenna "
+        "description; links to the PSK Reporter map — stations heard by you and "
+        "stations that hear you, last hour; statistics since the service started: "
+        "uploads, spots, different stations, waiting, last upload, spots per band. "
+        "Uploads every 5 minutes, each station at most once an hour per band and "
+        "mode, sooner only when its locator becomes known; unsure decodes and your "
+        "own call are not reported), Auto Hunt (whom to call: not worked on this band, never worked, DXCC "
         "new on this band, DXCC never worked; minimum SNR; switch-off time, 0 = "
         "never; the no-reply list as a table — blocked time, call, country, grid, "
         "band, SNR, tries — with fixed column heads, × to take a call off, a field "
@@ -459,7 +493,13 @@ EN = [
         "parts), its memory (the parallel parts added up, peak) and the CPU of the "
         "last minute as a share of the Pi, with its own 24 h graph of CPU share and "
         "memory. CPU time comes from the kernel when a jt9 run ends; the memory is "
-        "jt9's own peak, read while it runs.",
+        "jt9's own peak, read while it runs. "
+        "Two rows count audio dropouts since the service started: Audio · sound card "
+        "shows the codec's overruns (samples lost — the decoder, waterfall and browser "
+        "all miss them), slow 20 ms chunks (more than 15 ms to process) with the longest "
+        "one, and arecord restarts; Audio · to browser shows gaps (a browser's buffer "
+        "ran dry: a short silence), drops (a browser fell behind and the oldest audio "
+        "was discarded) and how many browsers are listening. All at 0 means clean audio.",
     ]),
     ("img", "manual/set-ft8.png", 120),
     ("img", "manual/set-appearance.png", 120),

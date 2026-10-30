@@ -31,8 +31,9 @@ DE = [
         "Kompressor, Höhenanhebung (Pre-Emphasis), Mikrofon-Echotest, "
         "Empfangsrekorder mit WAV-Download.",
         "FT8/FT4-Dekodierung mit jt9 auf drei CPU-Kernen, Ablaufsteuerung wie in "
-        "WSJT-X mit automatischem Antworten, Wasserfall, DXCC- und "
-        "Worked-before-Markierung.",
+        "WSJT-X mit automatischem Antworten, einer Warteschlange für mehrere "
+        "Anrufer auf einen CQ, Wasserfall, DXCC- und Worked-before-Markierung; "
+        "Spots der gehörten Stationen an PSK Reporter.",
         "KW-Ausbreitung unter dem Wasserfall, mit echtem VOACAP für den eigenen "
         "Locator berechnet: 80-40, 30-20, 17-15, 12-10 und 6m in Grün / Gelb / Rot, "
         "mit Sonne/Mond-Schalter für Tag und Nacht.",
@@ -275,8 +276,9 @@ DE = [
           "unter den Tabellen: Betriebsart (AUTO · FT8, FT8, FT4), der "
           "Zyklusbalken (RX oder TX und die Sekunden in der Periode), EVEN/ODD, "
           "DECODE mit Laufzeit und Anzahl der Dekodierungen des letzten "
-          "Durchlaufs und der NTP-LED, dann RX mit dem Empfangspegel und TX mit "
-          "TUNE. Fußzeile: Frequenz und Leistung, Dekodiertiefe, OVL "
+          "Durchlaufs, der NTP-LED und der PSK-Reporter-LED, dann RX mit dem "
+          "Empfangspegel und TX mit TUNE. Fußzeile: Frequenz und Leistung "
+          "(eingerahmt), Dekodiertiefe, OVL "
           "(Übersteuerung des Codecs), die TX-Frequenz mit Adopt Frequency, "
           "Farbschema, Kontrast und Helligkeit des Wasserfalls und die "
           "VOACAP-Bandbedingungen."),
@@ -331,7 +333,12 @@ DE = [
         "Sessions ausgewählt, so dass Session Messages ihm folgt; eine danach "
         "angeklickte Session bleibt, bis das nächste beginnt. Während eines QSOs "
         "zeigt Session Messages auch die Meldungen der Gegenstation an andere (ihr "
-        "CQ, ihr QSO mit jemand anderem) in Grau — sie ändern nichts am Ablauf. "
+        "CQ, ihr QSO mit jemand anderem) in Grau — sie ändern nichts am Ablauf; "
+        "ebenso die Dekodierung, mit der die Session begann, wenn sie nicht an Sie "
+        "ging. Die eigenen Zeilen erscheinen, sobald die nächste Nachricht "
+        "feststeht, etwa eine Sekunde vor dem Tasten: TX ▷ abgeblendet, solange "
+        "sie wartet, TX ▶ sobald sie gesendet wird, TX ✕ durchgestrichen, wenn sie "
+        "nicht hinausging (zu spät für die Periode oder angehalten). "
         "Kommt eine Antwort, während unsere "
         "ältere Nachricht noch gesendet wird, geht die passende Antwort in der "
         "nächsten Periode hinaus — das QSO endet nicht vor unserem eigenen 73. "
@@ -340,6 +347,32 @@ DE = [
         "etwa 0,1 s nach Periodenende, die nächste Nachricht startet meist 0,5–1 s "
         "nach Beginn unserer Periode; ohne Antwort dort wird sofort wiederholt. Statt RR73 kann sie RRR "
         "senden (Settings ▸ FT8).",
+        "Mehrere Anrufer auf einen CQ: der erste kommt ins QSO, die anderen warten "
+        "in einer Warteschlange und werden nach dem QSO der Reihe nach "
+        "beantwortet, statt des nächsten CQ. Reihenfolge: neues DXCC, DXCC neu auf "
+        "diesem Band, auf diesem Band nicht gearbeitet, dann der stärkste. Eine "
+        "wartende Station fällt nach 2 Minuten ohne neuen Anruf heraus, oder sobald "
+        "sie mit jemand anderem oder mit CQ zu hören ist; eine gerade gearbeitete "
+        "reiht sich nicht wieder ein. Wartende Stationen stehen kursiv am Ende von "
+        "Sessions (next, waiting 2, …; der Tooltip zeigt Nachricht und SNR); ein "
+        "Klick setzt eine nach vorn.",
+        "Ein Anrufer, der dekodiert wird, während unser CQ schon läuft: der CQ wird "
+        "abgebrochen und die Antwort geht in derselben Periode hinaus, solange sie "
+        "noch rechtzeitig starten kann (FT8 bis 1,7 s, FT4 bis 1,2 s in die "
+        "Periode); später in der nächsten Periode. Ein abgebrochener CQ zählt "
+        "nicht zum CQ-Limit.",
+        "Rufzeichen, die FT8 nicht vollständig übertragen kann (DL1ABC/QRP, "
+        "W1AW/4, PA/DJ0SH — nur /P und /R passen), gehen wie bei WSJT-X in "
+        "Kurzform (Hash) hinaus: <DL1ABC/QRP> DJ0SH JO62. Die Gegenstation erkennt "
+        "ihr eigenes Rufzeichen; Ihr Rufzeichen, Locator und Rapporte bleiben "
+        "vollständig.",
+        "PSK Reporter (Settings ▸ FT8): jede hier dekodierte Station wird an "
+        "pskreporter.info gemeldet, mit Ihrem Rufzeichen und Locator als Empfänger. "
+        "Die PSK-Reporter-LED in der Leiste ist nach einem erfolgreichen Upload "
+        "grün, rot wenn der letzte fehlschlug, dunkel bis zum ersten; ihr Tooltip "
+        "zeigt die Einzelheiten. Ist das Melden aus, ist die LED unsichtbar, ihr "
+        "Platz bleibt frei. Unter 1450 px Fensterbreite verkürzt sich die "
+        "Beschriftung auf PSK.",
         "RX in der Leiste stellt den DIGI-Empfangspegel auf dem Pi ein "
         "(Software-Verstärkung −20 … +20 dB, Doppelklick: 0 dB); die Anzeige rechts "
         "daneben zeigt den Empfangspegel, Ziel −40 … −20 dBFS. TX stellt den "
@@ -470,7 +503,15 @@ DE = [
         "MTft8 mit Rust-OSD: etwa 6 % mehr Dekodierungen, etwa 2,4 s nach "
         "Periodenende fertig; wählt seine Tiefe selbst). Nicht installierte Builds "
         "sind ausgegraut. Dann Dekodiertiefe (wie D1/D2/D3/AUTO im Feld) und "
-        "-bereich, Abschluss RR73 oder RRR, Auto Hunt (wen anrufen: auf diesem "
+        "-bereich, Abschluss RR73 oder RRR, PSK Reporter (Schalter, Standard aus, "
+        "daneben das Ziel report.pskreporter.info:4739 (UDP); eine optionale "
+        "Antennenbeschreibung; Links zur PSK-Reporter-Karte — von Ihnen gehörte "
+        "Stationen und Stationen, die Sie hören, letzte Stunde; Statistik seit dem "
+        "Start des Dienstes: Uploads, Spots, verschiedene Stationen, wartend, "
+        "letzter Upload, Spots je Band. Upload alle 5 Minuten, jede Station "
+        "höchstens einmal pro Stunde je Band und Betriebsart, früher nur, wenn ihr "
+        "Locator neu bekannt wird; unsichere Dekodierungen und das eigene "
+        "Rufzeichen werden nicht gemeldet), Auto Hunt (wen anrufen: auf diesem "
         "Band nicht gearbeitet, nie gearbeitet, DXCC neu auf diesem Band, DXCC nie "
         "gearbeitet; Mindest-SNR; Abschaltzeit, 0 = nie; die Liste ohne Antwort "
         "als Tabelle — Sperrzeit, Rufzeichen, Land, Locator, Band, SNR, Versuche — "
@@ -496,7 +537,14 @@ DE = [
         "Teile zusammengezählt, Spitze) und die CPU der letzten Minute als Anteil am "
         "Pi, mit eigenem 24-h-Verlauf von CPU-Anteil und Speicher. Die CPU-Zeit "
         "meldet der Kernel, wenn ein jt9-Lauf endet; der Speicher ist jt9s eigene "
-        "Spitze, gelesen während er läuft.",
+        "Spitze, gelesen während er läuft. "
+        "Zwei Zeilen zählen Audio-Aussetzer seit dem Start des Dienstes: Audio · sound "
+        "card zeigt die Überläufe der Soundkarte (Samples verloren — Decoder, Wasserfall "
+        "und Browser fehlen sie gleichermaßen), langsame 20-ms-Blöcke (mehr als 15 ms "
+        "Verarbeitung) mit dem längsten, und Neustarts von arecord; Audio · to browser "
+        "zeigt Lücken (der Puffer eines Browsers lief leer: kurze Stille), Verwürfe "
+        "(ein Browser kam nicht nach, das älteste Audio wurde verworfen) und wie viele "
+        "Browser zuhören. Überall 0 heißt sauberes Audio.",
     ]),
     ("img", "manual/set-ft8.png", 120),
     ("img", "manual/set-appearance.png", 120),

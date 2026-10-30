@@ -56,6 +56,13 @@ decoding, plus voice operation over WebRTC.
     off, default 180 min); **directed CQ** (CQ DX, EU, … POTA, SOTA) and
     **DX Call** for a station typed in; FT8/FT4 waveform generation for
     transmit
+  - several callers to one CQ wait in a **queue** (new DXCC first) and are
+    answered one after the other; a caller decoded while our CQ is on the air
+    cuts it and is answered in the same period; non-standard calls
+    (DL1ABC/QRP, PA/DJ0SH) go out hashed as `<CALL>`, like WSJT-X
+  - **PSK Reporter**: spots of the stations heard (every 5 min, each station
+    once an hour per band and mode), with an LED in the DIGI strip and map
+    links and statistics in Settings ▸ FT8
   - **HF band conditions** under the waterfall, as iDigi shows them:
     80-40 · 30-20 · 17-15 · 12-10 · 6m in green / yellow / red, computed by
     real **VOACAP** for your own locator; the sun/moon shows day or night at
@@ -84,6 +91,8 @@ decoding, plus voice operation over WebRTC.
   - WebRTC buffers, logbook accounts, memories (with FT8/FT4 defaults)
   - Pi hardware graphs, and the WSJT-X decoder's CPU time and memory (table
     and its own 24 h graph)
+  - audio dropout counters: sound card overruns, slow chunks and arecord
+    restarts; gaps and drops of the audio to the browsers
 
 ## Hardware
 

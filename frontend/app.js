@@ -1065,10 +1065,46 @@ function showDecoderTag(tag) {
   const el = $("db-ver");
   if (el && tag && el.textContent !== tag) el.textContent = tag;
 }
+// Settings ▸ FT8 ▸ PSK Reporter: map links for my call and the counts since the service start
+function pskStats(p) {
+  const call = encodeURIComponent(myCall || "");
+  const map = (dir) => `https://pskreporter.info/pskmap.html?preset&callsign=${call}&txrx=${dir}&timerange=3600`;
+  $("psk-map-rx").href = map("rx");
+  $("psk-map-tx").href = map("tx");
+  if (!p) return;
+  const hm = (t) => new Date(t * 1000).toISOString().slice(11, 16) + " UTC";
+  const day = (t) => new Date(t * 1000).toISOString().slice(0, 10) + " " + hm(t);
+  const set = (id, v) => { if ($(id).textContent !== v) $(id).textContent = v; };
+  set("pss-since", p.since ? day(p.since) + (p.enabled ? "" : " · off") : "—");
+  set("pss-up", `${p.uploads ?? 0} (${p.datagrams ?? 0} datagrams${p.errors ? `, ${p.errors} failed` : ""})`);
+  set("pss-spots", String(p.total ?? 0));
+  set("pss-calls", String(p.stations ?? 0));
+  set("pss-wait", String(p.pending ?? 0));
+  set("pss-last", p.last_t ? `${hm(p.last_t)} · ${p.error ? "failed: " + p.error : (p.last_spots ?? 0) + " spots"}` : "—");
+  const b = Object.entries(p.bands || {});
+  set("pss-bands", b.length ? b.map(([k, v]) => `${k} ${v}`).join(" · ") : "—");
+}
+
+// PSK Reporter lamp in the DIGI strip (after NTP): hidden when off; green after
+// a good upload, red when the last one failed, dark until the first
+function showPsk(p) {
+  pskStats(p);
+  const el = $("l-psk");
+  el.hidden = !p?.enabled;
+  if (!p?.enabled) return;
+  const hm = (t) => new Date(t * 1000).toISOString().slice(11, 16);
+  el.classList.toggle("online", !!p.last_t && !p.error);
+  el.classList.toggle("fault", !!p.error);
+  el.title = "PSK Reporter\n" + (p.error ? `Last upload failed: ${p.error}\n` : "") +
+    (p.last_t ? `Last upload ${hm(p.last_t)} UTC: ${p.last_spots} stations\n` : "No upload yet (every 5 minutes)\n") +
+    `Waiting for the next upload: ${p.pending} · reported since start: ${p.total}`;
+}
+
 function applyDigiStatus(s) {
   showDecoderTag(s.decoder);
   digiMode = s.mode || digiMode;
   myCall = (s.config?.my_call || "").toUpperCase();
+  showPsk(s.psk);                      // after myCall: the map links use it
   $("my-empty").textContent = myCall ? `No messages to ${myCall} yet.`
     : "No callsign set (Settings ▸ General).";
   segSet($("digi-mode"), s.config?.mode);
@@ -1255,9 +1291,21 @@ function renderSeq(s) {
       `<td>${new Date(x.started * 1000).toISOString().slice(11, 19)}</td><td>${fmtDur(x.duration_s)}</td>` +
       `<td class="n">${x.df ?? ""}</td><td>${esc(x.band || "")}</td><td class="n">${x.tries}</td>` +
       `<td class="${cls}"${err ? ` title="${esc(err)}"` : ""}>${esc(st)}</td><td class="dx">${esc(x.dxcc || "")}</td></tr>`;
+  }).join("") +
+  // CQ callers waiting for their turn (answered after the running QSO, front first);
+  // a click puts one at the front
+  (s.queue || []).map((q, k) => {
+    const wait = Math.max(0, Math.round(Date.now() / 1000 - q.first));
+    return `<tr class="sess-wait" data-q="${esc(q.call)}" title="${esc(q.msg || "")} · ${q.snr ?? ""} dB · heard ${q.age_s} s ago — click: answer next">` +
+      `<td class="msg">${esc(q.call)}</td><td>${new Date(q.first * 1000).toISOString().slice(11, 19)}</td><td>${fmtDur(wait)}</td>` +
+      `<td class="n">${q.df ?? ""}</td><td></td><td class="n"></td>` +
+      `<td class="sess-run">${k === 0 ? "next" : `waiting ${k + 1}`}</td><td class="dx">${esc(q.dxcc || "")}</td></tr>`;
   }).join("");
   followSess();
-  for (const tr of $("sess-body").children) tr.onclick = () => {
+  for (const tr of $("sess-body").querySelectorAll("tr.sess-wait")) tr.onclick = async () => {
+    try { renderSeq(await api("/api/seq/queue/front", { call: tr.dataset.q })); toast(`${tr.dataset.q} is next`); } catch { /* toast */ }
+  };
+  for (const tr of $("sess-body").querySelectorAll("tr[data-i]")) tr.onclick = () => {
     const x = s.sessions[+tr.dataset.i], e = errOf(x);
     selSession = x.started; renderSeq(seqState);
     if (e) toast(`${x.call}: ${e}`, true);
@@ -1293,8 +1341,13 @@ function renderSeq(s) {
   $("sess-map").onclick = () => marked && openMap(marked);
   const cur = s.sessions.find((x) => x.started === selSession) || s.session || s.sessions[0];
   $("sessmsg-call").textContent = cur ? cur.call : "";
-  $("sessmsg-body").innerHTML = (cur?.msgs || []).map((m) => `<tr class="${m.dir === "tx" ? "tx-row" : m.other ? "sess-other" : ""}"${m.other ? ' title="From the station, not to you"' : ""}><td>${esc((m.utc || "").slice(0, 8))}</td>` +
-    `<td class="${m.dir === "tx" ? "arrow-tx" : "arrow-rx"}">${m.dir === "tx" ? "TX ▶" : "◀ RX"}</td><td class="n">${m.snr ?? ""}</td>` +
+  // TX lines appear when the message is decided: "pending" until PTT, "skipped"
+  // if it never went out (too late for the period, halted)
+  const txCls = (m) => `tx-row${m.pending ? " tx-pending" : m.skipped ? " tx-skipped" : ""}`;
+  const txTip = (m) => m.pending ? ' title="Next message: goes out at the start of the period"'
+    : m.skipped ? ' title="Not sent (too late for this period, or halted)"' : "";
+  $("sessmsg-body").innerHTML = (cur?.msgs || []).map((m) => `<tr class="${m.dir === "tx" ? txCls(m) : m.other ? "sess-other" : ""}"${m.other ? ' title="From the station, not to you"' : m.dir === "tx" ? txTip(m) : ""}><td>${esc((m.utc || "").slice(0, 8))}</td>` +
+    `<td class="${m.dir === "tx" ? "arrow-tx" : "arrow-rx"}">${m.dir === "tx" ? (m.pending ? "TX ▷" : m.skipped ? "TX ✕" : "TX ▶") : "◀ RX"}</td><td class="n">${m.snr ?? ""}</td>` +
     `<td class="n">${m.dt != null ? m.dt.toFixed(1) : ""}</td><td class="n">${Math.round(m.df ?? 0)}</td><td class="msg">${esc(m.msg)}</td></tr>`).join("");
   followSessMsg();
   // finished QSOs: every row of that station turns red now — Received and
@@ -1808,6 +1861,9 @@ async function loadFt8() {
   $("set-hunt-target").value = s.hunt_target || "band";
   $("set-hunt-snr").value = s.hunt_min_snr ?? -24;
   $("set-hunt-min").value = s.hunt_minutes ?? 180;
+  $("set-psk").checked = !!s.psk_report;
+  $("set-psk-ant").value = s.psk_antenna || "";
+  $("psk-dest").textContent = s.psk_dest || "—";
   renderHuntBlocked(s.hunt_blocked || []);
   digiColors = s.digi_colors || {};
   colorDraft = {};
@@ -1832,6 +1888,8 @@ $("ft8-save").onclick = async () => {
       hunt_target: $("set-hunt-target").value,
       hunt_min_snr: Math.round(+$("set-hunt-snr").value),
       hunt_minutes: Math.max(0, Math.min(1440, Math.round(+$("set-hunt-min").value) || 0)),   // 0 = never
+      psk_report: $("set-psk").checked,
+      psk_antenna: $("set-psk-ant").value.trim(),
       digi_colors: cols,
     });
     digiColors = s.digi_colors || {};

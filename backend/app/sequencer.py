@@ -46,6 +46,15 @@ PARTNER_SPAN_MAX = 1000    # wider than this, the fast partner pass looks at the
 PARTNER_MARGIN = {"FT8": 200, "FT4": 300}
 HUNT_MAX_S = 180 * 60       # default; Settings ▸ FT8 ▸ Hunt, 0 = no switch-off
 HUNT_BLOCK_MAX = 1000       # calls kept on the no-reply list
+# CQ: callers that were not taken (two at once, or calling during a QSO) wait
+# here and are answered after the QSO instead of the next CQ - for this long
+# after they were last heard, unless heard with someone else before.
+QUEUE_MAX_AGE = 120
+QUEUE_KINDS = ("grid", "report", "call")
+# A caller decoded while our CQ is already on the air: the CQ is cut and the
+# answer goes out in the same period - if it can still start this much before
+# the latest start (FT_LATEST_START) once the CQ is stopped and PTT re-keyed.
+PREEMPT_MARGIN = 0.3
 
 
 def report(snr: int) -> str:
@@ -112,6 +121,11 @@ class Sequencer:
         self.hunt_min_snr = -24         # weaker CQs are passed over
         self.hunt_minutes = HUNT_MAX_S // 60   # 0: Hunt never switches itself off
         self._seen: dict[float, bool] = {}       # period t0 → decodes processed
+        # CQ caller queue: call -> {"d": latest decode to me, "t": last heard, "first": first heard}
+        self.queue: dict[str, dict] = {}
+        self.queue_first: Optional[str] = None   # moved to the front by hand (a click)
+        self._airing: Optional[dict] = None      # {"t0", "step"} of the message on the air
+        self._preempt: Optional[float] = None    # period whose CQ was cut for an answer
         self._event = asyncio.Event()
         self._task: Optional[asyncio.Task] = None
 
@@ -138,6 +152,7 @@ class Sequencer:
         period = MODES[self.mode]["period"]
         self.parity = (math.floor(time.time() / period) + 1) % 2    # the next period
         self.kind, self.step, self.tries, self.cq_count, self.session = "cq", "cq", 0, 0, None
+        self.queue.clear(); self.queue_first = None
         self._run()
         return await self.publish()
 
@@ -208,6 +223,7 @@ class Sequencer:
         if self.session and self.session["state"] in ("running",):
             self.session["state"] = "aborted"
         self.kind, self.step = None, None
+        self.queue.clear(); self.queue_first = None
         if stop_tx:
             await self.tx.stop()
         return await self.publish()
@@ -362,17 +378,11 @@ class Sequencer:
                 if ((d.get("from") or "").upper() == them and (d.get("to") or "").upper() != self.me
                         and not self._known(d)):
                     self._log_rx(d, other=True)
-        elif self.kind == "cq" and mine:
-            callers = [d for d in mine if d.get("kind") in ("grid", "report", "call")]
-            if callers:
-                d = max(callers, key=lambda x: x["snr"])         # strongest caller
-                self.session = self._new_session(d)
-                self.step = "rreport" if d["kind"] == "report" else "report"
-                if d["kind"] == "report":
-                    self.session["their_report"] = d["msg"].split()[-1]
-                self.tries = 0
-                self._log_rx(d)
+        if self.kind == "cq":
+            self._queue_update(decodes)
+            if not self.session and self.step == "cq" and self._take_queued():
                 relevant = True
+                await self._preempt_cq(t0)
         # A partial pass (early / partner) only settles the period when it
         # found the partner (or a caller); otherwise the full pass decides —
         # an early "nothing" must not make us repeat the old message.
@@ -411,16 +421,96 @@ class Sequencer:
         elif k == "grid" and self.step == "report":
             s["grid"] = s.get("grid") or (d.get("grid") or "")
 
+    # -- CQ caller queue -----------------------------------------------------------
+    def _queue_update(self, decodes: list[dict]) -> None:
+        """Callers to me other than the partner join (or refresh) the queue; a
+        queued call heard with anyone else (their CQ, another QSO) leaves it."""
+        them = self.session["call"] if self.session else None
+        recent = {x["call"] for x in self.sessions
+                  if x["state"] == "done" and (x["ended"] or 0) > time.time() - 600}
+        now = time.time()
+        for d in decodes:
+            frm = (d.get("from") or "").upper()
+            if not frm or frm.startswith("<") or frm == self.me or frm == them:
+                continue
+            if (d.get("to") or "").upper() == self.me:
+                if d.get("kind") in QUEUE_KINDS and frm not in recent:
+                    q = self.queue.get(frm)
+                    self.queue[frm] = {"d": d, "t": now, "first": q["first"] if q else now}
+            elif frm in self.queue:
+                log.info("queue: %s now with someone else (%s) - dropped", frm, d.get("msg"))
+                self.queue.pop(frm, None)
+                if self.queue_first == frm:
+                    self.queue_first = None
+
+    def _queue_rank(self, call: str) -> tuple:
+        """Front of the queue: picked by hand, then a new DXCC, a DXCC new on
+        this band, a call not worked on this band, then the strongest."""
+        d = self.queue[call]["d"]
+        w = d.get("worked") or {}
+        known = bool(w)
+        return (call == self.queue_first, known and not w.get("dxcc"),
+                known and not w.get("dxcc_band"), known and not w.get("call_band"), d.get("snr", -99))
+
+    def _queue_order(self) -> list[str]:
+        cut = time.time() - QUEUE_MAX_AGE
+        for c in [c for c, q in self.queue.items() if q["t"] < cut]:
+            log.info("queue: %s not heard for %d s - dropped", c, QUEUE_MAX_AGE)
+            del self.queue[c]
+        if self.queue_first not in self.queue:
+            self.queue_first = None
+        return sorted(self.queue, key=self._queue_rank, reverse=True)
+
+    def _take_queued(self) -> bool:
+        """CQ with no QSO running: start the QSO with the front caller."""
+        order = self._queue_order()
+        if not order:
+            return False
+        call = order[0]
+        d = self.queue.pop(call)["d"]
+        if self.queue_first == call:
+            self.queue_first = None
+        self.session = self._new_session(d)
+        self.step = "rreport" if d["kind"] == "report" else "report"
+        if d["kind"] == "report":
+            self.session["their_report"] = d["msg"].split()[-1]
+        self.tries = 0
+        self._log_rx(d)
+        log.info("CQ: answering %s (%s), %d more waiting", call, d.get("msg"), len(self.queue))
+        return True
+
+    async def queue_to_front(self, call: str) -> dict:
+        call = call.strip().upper()
+        if call not in self.queue:
+            raise RuntimeError(f"{call} is not waiting")
+        self.queue_first = call
+        return await self.publish()
+
+    async def _preempt_cq(self, t0_decoded: float) -> None:
+        """A caller found while our CQ is on the air: cut the CQ if the answer
+        can still go out in this period (the loop sends it at once)."""
+        a = self._airing
+        if not a or a["step"] != "cq":
+            return
+        late = time.time() - a["t0"]
+        if late > FT_LATEST_START[self.mode] - PREEMPT_MARGIN:
+            return
+        log.info("caller decoded %.2f s into our CQ: CQ cut, answer in this period", late)
+        self._preempt = a["t0"]
+        await self.tx.stop()
+
     # -- the loop ---------------------------------------------------------------
     async def _loop(self) -> None:
         try:
+            again: Optional[float] = None       # CQ cut for an answer: same period once more
             while self.kind:
                 period = MODES[self.mode]["period"]
                 latest = FT_LATEST_START[self.mode]
                 n = math.ceil((time.time() - latest + 0.3) / period)
                 if n % 2 != self.parity:
                     n += 1
-                t0 = n * period
+                t0 = again if again is not None else n * period
+                again = None
                 await asyncio.sleep(max(0.0, t0 - 0.05 - time.time()))
                 # wait until the period before (the partner's) has been decoded
                 prev = t0 - period
@@ -441,14 +531,37 @@ class Sequencer:
                     await self._finish_round()
                     continue
                 self.digi.tx_periods.add(t0)
-
-                async def on_air(offset: float, msg=msg, t0=t0) -> None:
-                    # into My/Session Messages as soon as it is on the air
-                    self._log_tx(msg, t0, {"start_offset": offset})
+                sent_step = self.step       # the step this message belongs to
+                # Session Messages: the message is entered as soon as it is
+                # decided ("pending"), before PTT; on the air it becomes a
+                # normal TX line, not sent it stays as "skipped". A CQ belongs
+                # to no session (also not to one a caller starts meanwhile).
+                entry = None
+                if self.session and sent_step != "cq":
+                    if sent_step in ("report", "rreport") and not self.session.get("report_sent"):
+                        self.session["report_sent"] = report(self.session["snr"])   # = what msg carries
+                    entry = {"dir": "tx", "t0": t0, "utc": self._utc(t0), "df": self.tx_hz,
+                             "msg": msg, "pending": True}
+                    self.session["msgs"].append(entry)
                     await self.publish()
 
-                sent_step = self.step       # the step this message belongs to
-                res = await self.tx.send_ft(msg, self.mode, self.tx_hz, t0, on_air=on_air)
+                async def on_air(offset: float, msg=msg, t0=t0, entry=entry) -> None:
+                    # into My Messages as soon as it is on the air
+                    self._log_tx(msg, t0, {"start_offset": offset}, entry=entry)
+                    await self.publish()
+
+                self._airing = {"t0": t0, "step": sent_step}
+                try:
+                    res = await self.tx.send_ft(msg, self.mode, self.tx_hz, t0, on_air=on_air)
+                finally:
+                    self._airing = None
+                    if entry is not None and entry.pop("pending", None):
+                        entry["skipped"] = True          # never keyed: too late, halted, refused
+                if self._preempt == t0:
+                    self._preempt = None
+                    if self.session and self.step != "cq":
+                        again = t0               # the cut CQ is not counted
+                        continue
                 self._after_send(sent_step, res)
                 await self.publish()
                 if self.step == "cq" and self.cq_count >= CQ_MAX:
@@ -505,6 +618,7 @@ class Sequencer:
             self.session = None
         if self.kind == "cq":
             self.step, self.tries = "cq", 0
+            self._take_queued()               # a waiting caller instead of the next CQ
         else:
             self.kind = None
 
@@ -557,17 +671,31 @@ class Sequencer:
             if d.get("grid"):
                 self.session["grid"] = d["grid"]
 
-    def _log_tx(self, msg: str, t0: float, res: dict) -> None:
-        utc = datetime.fromtimestamp(t0, timezone.utc).strftime("%H:%M:%S")
+    @staticmethod
+    def _utc(t0: float) -> str:
+        return datetime.fromtimestamp(t0, timezone.utc).strftime("%H:%M:%S")
+
+    _NEW = object()
+
+    def _log_tx(self, msg: str, t0: float, res: dict, entry=_NEW) -> None:
+        """On the air. ``entry``: the session's pending line (made a normal TX
+        line), None for a message that belongs to no session (CQ); left out,
+        a new line is added (direct calls)."""
+        utc = self._utc(t0)
         self.last_tx = {"msg": msg, "utc": utc, "df": self.tx_hz, "start_offset": res.get("start_offset")}
-        if self.session:
+        if self.session and entry is not None:
             if self.step in ("report", "rreport") and not self.session.get("report_sent"):
                 self.session["report_sent"] = report(self.session["snr"])
-            self.session["msgs"].append({"dir": "tx", "t0": t0, "utc": utc, "df": self.tx_hz, "msg": msg})
+            if entry is self._NEW:
+                self.session["msgs"].append({"dir": "tx", "t0": t0, "utc": utc, "df": self.tx_hz, "msg": msg})
+            else:
+                entry.pop("pending", None)
+                entry["start_offset"] = res.get("start_offset")
             self.session["tries"] = self.tries + 1
 
     def _last_tx_was_73(self) -> bool:
-        tx = [m for m in (self.session or {}).get("msgs", []) if m["dir"] == "tx"]
+        tx = [m for m in (self.session or {}).get("msgs", [])
+              if m["dir"] == "tx" and not m.get("pending") and not m.get("skipped")]
         return bool(tx) and tx[-1]["msg"].split()[-1] == "73"
 
     def _complete(self) -> None:
@@ -635,7 +763,18 @@ class Sequencer:
                 "hunt": self.hunt, "adopt_freq": self.adopt_freq,
                 "hunt_left_s": (None if math.isinf(self.hunt_until) else max(0, round(self.hunt_until - time.time())))
                 if self.hunt else 0,                       # None: no switch-off
-                "hunt_blocked": sorted(self.hunt_blocked)}
+                "hunt_blocked": sorted(self.hunt_blocked),
+                "queue": self._queue_view() if self.kind == "cq" else []}
+
+    def _queue_view(self) -> list[dict]:
+        now = time.time()
+        out = []
+        for c in self._queue_order():
+            q = self.queue[c]; d = q["d"]
+            out.append({"call": c, "msg": d.get("msg"), "snr": d.get("snr"), "df": d.get("df"),
+                        "dxcc": d.get("dxcc"), "first": q["first"], "age_s": round(now - q["t"]),
+                        "front": c == self.queue_first})
+        return out
 
     async def publish(self) -> dict:
         st = self.status()

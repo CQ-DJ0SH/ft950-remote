@@ -438,6 +438,7 @@
         <span class="chip" id="dec-ms" title="jt9 run time of the last cycle">— ms</span>
         <span class="chip" id="dec-n" title="Decodes in the last cycle">0</span>
         <span class="stat" id="l-ntp" title="NTP: system clock synchronised (green) — no decoding without sync (red)"><span class="led"></span></span>
+        <span class="stat" id="l-psk" hidden title="PSK Reporter"><span class="led"></span></span>
         <span class="head-sep blk-sep" aria-hidden="true"></span>
         <label class="txlvl" title="DIGI RX level: software gain on the Pi, −20 … +20 dB, for the FT8/FT4 decoder, the waterfall and the meter on the right only (browser audio and the radio's own level are not changed) — aim for −40 … −20 dBFS. Double-click: 0 dB."><span class="strip-lbl lbl-rx">RX</span><svg class="mic-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg><input type="range" id="rx-level" min="-20" max="20" step="1" value="0"><b id="rx-level-val">—</b></label>
         <span class="lvl" title="Receive level from the radio (RMS) — target −40 … −20 dBFS, adjustable on the radio (Settings ▸ Audio). Set it with the slider on the left (software gain on the Pi).">
@@ -458,9 +459,7 @@
 
       <div class="foot">
         <span id="f-grid" hidden>—</span>
-        <span id="f-dial">— kHz</span>
-        <span id="f-pwr">— W</span>
-        <span class="head-sep blk-sep" aria-hidden="true"></span>
+        <span class="dialbox" title="Dial frequency and TX power"><span id="f-dial">— kHz</span><span id="f-pwr">— W</span></span>
         <span id="f-mode" hidden>—</span>
         <div class="seg" id="digi-depth" title="jt9 decode depth: D1 fast, D2 normal (default), D3 deep (subtraction + a-priori, slowest). AUTO picks the depth from the measured run time."></div>
         <span class="lamp" id="l-ovl" title="Codec overload (peak > −1 dBFS)">OVL</span>
@@ -765,6 +764,35 @@
       <div class="form-grid">
         <label class="span-2" title="The 4th message of a QSO after the partner's R-report, as WSJT-X's &quot;RR73&quot; box: RR73 lets the partner finish without another round, RRR asks for their 73. Only the text changes.">Closing message<select id="set-closing">
           <option value="RR73">RR73 (default)</option><option value="RRR">RRR</option></select></label>
+      </div>
+      <span class="logo-label sec">PSK REPORTER</span>
+      <div class="psk-row">
+      <div class="form-grid psk-form">
+        <div class="span-2 psk-sw-row" title="Every station decoded here is reported to pskreporter.info (your call and locator as the receiver), so it shows on the PSK Reporter map. Uploads every 5 minutes, each station at most once an hour per band and mode. The PSK lamp in the DIGI strip shows the state.">
+          <label for="set-psk" class="psk-sw-title">Report received stations to PSK Reporter</label>
+          <div class="psk-sw-line">
+            <input type="checkbox" class="switch" id="set-psk">
+            <span class="psk-dest-lbl">PSK-Reporter URL</span>
+            <span class="psk-dest" id="psk-dest" title="Where the spots go (IPFIX datagrams)">—</span>
+          </div>
+        </div>
+        <label class="span-2" title="Optional, shown with your spots on PSK Reporter">Antenna<input type="text" id="set-psk-ant" maxlength="60" placeholder="e.g. Dipole 40 m"></label>
+      </div>
+      <div class="psk-box">
+        <div class="psk-links">Map:
+          <a id="psk-map-rx" target="_blank" rel="noopener" title="Stations you received and reported (last hour)">heard by me ↗</a>
+          <a id="psk-map-tx" target="_blank" rel="noopener" title="Stations that received you (last hour)">who hears me ↗</a>
+        </div>
+        <dl class="psk-stats" id="psk-stats">
+          <dt>Since</dt><dd id="pss-since">—</dd>
+          <dt>Uploads</dt><dd id="pss-up">—</dd>
+          <dt>Spots</dt><dd id="pss-spots">—</dd>
+          <dt>Stations</dt><dd id="pss-calls">—</dd>
+          <dt>Waiting</dt><dd id="pss-wait">—</dd>
+          <dt>Last upload</dt><dd id="pss-last">—</dd>
+          <dt>Bands</dt><dd id="pss-bands">—</dd>
+        </dl>
+      </div>
       </div>
       <span class="logo-label sec">HUNT (AUTO-CALL NEW STATIONS)</span>
       <div class="form-grid">

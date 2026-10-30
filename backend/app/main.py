@@ -18,6 +18,7 @@ from . import dec_history, mixer, runtime, sys_history, system_info
 from .logbook import LogBook, LogError, band_for_hz
 from .tx import Transmitter
 from .sequencer import Sequencer
+from .pskreporter import PskReporter
 from .recorder import Recorder
 from .cw import CWSkimmer, cw_duration_s
 from .rtty import RTTYSkimmer, duration_s as rtty_duration_s
@@ -37,7 +38,7 @@ from .models import (RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, Se
                      ClarReq, ContourReq, IfShiftReq, LevelReq, NotchReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
-                     RadioAudioReq, HuntBlockReq, SeqAnswerReq, SeqCallReq, SeqCqReq, SettingsReq,
+                     RadioAudioReq, HuntBlockReq, QueueFrontReq, SeqAnswerReq, SeqCallReq, SeqCqReq, SettingsReq,
                      ToggleReq, TuneReq, TuneReq2,
                      ValueReq, VoiceCfgReq, WebRTCOffer, WidthReq)
 from .radio_service import RadioService
@@ -110,7 +111,17 @@ power.configure(_rt.get("shelly_host", ""), _rt.get("shelly_channel", 0),
                 _rt.get("shelly_user", ""), _rt.get("shelly_password", ""))
 hackrf = HackRFProxy(lambda: _rt.get("hackrf_url") or HACKRF_DEFAULT, CA_CERT,
                      lambda: ((service.status.get("vfo") or {}).get("freq_hz")))
-digi.on_decodes = sequencer.on_decodes
+# PSK Reporter (Settings ▸ FT8): spots from every full decode pass, uploaded
+# every 5 minutes; off by default
+psk = PskReporter(lambda: (settings.my_call or "", settings.my_grid or ""),
+                  enabled=bool(_rt.get("psk_report", False)), antenna=_rt.get("psk_antenna") or "")
+
+
+async def _on_decodes(decodes, t0, mode, early, partner=False):
+    if not early and t0 not in digi.tx_periods:
+        psk.add(decodes, mode, settings.my_call or "")
+    await sequencer.on_decodes(decodes, t0, mode, early, partner=partner)
+digi.on_decodes = _on_decodes
 digi.early_range = sequencer.early_range
 pcs: set = set()                            # WebRTC peers
 audio_manager = ConnectionManager()         # /ws/audio level stream
@@ -170,6 +181,7 @@ async def lifespan(app: FastAPI):
     autooff = asyncio.create_task(_auto_power_off_loop())
     cwloop = asyncio.create_task(_cw_broadcast_loop())
     rttyloop = asyncio.create_task(_rtty_broadcast_loop())
+    psk.start()
     opus_mono.install()                     # before the first peer builds an encoder
     if _rt.get("codec_playback") is not None:
         # ALSA restores its own (old) mixer state at boot — measured: the codec
@@ -186,6 +198,8 @@ async def lifespan(app: FastAPI):
     autooff.cancel()
     cwloop.cancel()
     rttyloop.cancel()
+    await psk.flush()                       # what was heard since the last upload
+    await psk.stop()
     for pc in list(pcs):
         await pc.close()
     wsync.cancel()
@@ -560,7 +574,7 @@ async def profile_ft8() -> dict:
 # -- FT8 / FT4 ---------------------------------------------------------------
 @app.get("/api/digi")
 async def digi_status() -> dict:
-    return {**digi.status(), "decodes": list(digi.decodes)[-100:]}
+    return {**digi.status(), "decodes": list(digi.decodes)[-100:], "psk": psk.status()}
 
 
 @app.get("/api/dxcc/locate")
@@ -634,6 +648,7 @@ async def get_settings() -> dict:
                                "mt": bool(d.get("mt"))}
                               for d in DIGI_DECODERS],
             "ft_closing": sequencer.closing,
+            "psk_report": psk.enabled, "psk_antenna": psk.antenna, "psk_dest": psk.dest,
             "hunt_target": sequencer.hunt_target, "hunt_min_snr": sequencer.hunt_min_snr,
             "hunt_minutes": sequencer.hunt_minutes,
             "hunt_blocked": sorted(({"call": c, **v} for c, v in sequencer.hunt_blocked.items()),
@@ -672,6 +687,12 @@ async def save_settings(req: SettingsReq) -> dict:
         if k in upd:
             _rt[k] = upd[k]
             setattr(sequencer, k, upd[k])
+    if "psk_report" in upd:
+        psk.enabled = upd["psk_report"]
+        if not psk.enabled:
+            psk.pending.clear()
+    if "psk_antenna" in upd:
+        psk.antenna = upd["psk_antenna"]
     if "ft_closing" in upd:
         _rt["ft_closing"] = sequencer.closing = upd["ft_closing"]
     if "hackrf_url" in upd:
@@ -1088,6 +1109,15 @@ async def seq_call(req: SeqCallReq) -> dict:
     """DX Call: call a station typed in by hand (My Messages)."""
     try:
         return await sequencer.call_station(req.call, req.grid, req.tx_hz, req.parity)
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/seq/queue/front")
+async def seq_queue_front(req: QueueFrontReq) -> dict:
+    """A waiting CQ caller (Sessions: "waiting") is answered next."""
+    try:
+        return await sequencer.queue_to_front(req.call)
     except RuntimeError as exc:
         raise HTTPException(400, str(exc)) from exc
 

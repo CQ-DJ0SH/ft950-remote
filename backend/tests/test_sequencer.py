@@ -1,5 +1,6 @@
 """Sequencer state machine with fake decoder/transmitter — no radio, no time."""
 import asyncio
+import time
 
 import pytest
 
@@ -420,3 +421,144 @@ def test_nonstandard_call_goes_out_hashed():
     assert s._next_message() == "<DL1ABC/QRP> DJ0SH JO62"
     s.step = "report"
     assert s._next_message() == "<DL1ABC/QRP> DJ0SH -10"
+
+
+def _cq():
+    s = _seq(); s.kind, s.step = "cq", "cq"
+    return s
+
+
+def test_cq_second_caller_waits_and_is_answered_after_the_qso():
+    s = _cq()
+    asyncio.run(s.on_decodes([_d("DJ0SH IK2ZJR JN45", snr=6), _d("DJ0SH EC3A JN11", snr=-2)], 30.0, "FT8", False))
+    assert s.session["call"] == "IK2ZJR" and list(s.queue) == ["EC3A"]
+    assert [q["call"] for q in s.status()["queue"]] == ["EC3A"]
+    asyncio.run(s.on_decodes([_d("DJ0SH EC3A -17", t0=60.0)], 60.0, "FT8", False))   # still calling: refreshed
+    assert s.queue["EC3A"]["d"]["kind"] == "report"
+    s.session["state"], s.session["ended"] = "done", time.time()
+    asyncio.run(s._finish_round())
+    assert s.session["call"] == "EC3A" and s.step == "rreport" and s.session["their_report"] == "-17"
+    assert s._next_message() == "EC3A DJ0SH R-10" and not s.queue          # SNR of their latest call
+    # the QSO just worked does not queue again when it repeats its call
+    s.session = None; s.step = "cq"
+    asyncio.run(s.on_decodes([_d("DJ0SH IK2ZJR JN45", t0=90.0)], 90.0, "FT8", False))
+    assert s.session is None and not s.queue
+
+
+def test_queue_drops_callers_heard_elsewhere_or_too_old():
+    s = _cq()
+    asyncio.run(s.on_decodes([_d("DJ0SH IK2ZJR JN45", snr=6), _d("DJ0SH EC3A JN11"),
+                              _d("DJ0SH F5ABC JN03")], 30.0, "FT8", False))
+    asyncio.run(s.on_decodes([_d("SP9XYZ EC3A -05", t0=60.0)], 60.0, "FT8", False))   # with someone else
+    assert list(s.queue) == ["F5ABC"]
+    s.queue["F5ABC"]["t"] -= 200                                                      # not heard for long
+    assert s._queue_order() == [] and not s._take_queued()
+
+
+def test_queue_order_new_dxcc_first_then_by_hand():
+    s = _cq()
+    s.session = s._new_session(_d("DJ0SH IK2ZJR JN45")); s.step = "report"
+    asyncio.run(s.on_decodes([_d("DJ0SH IK2ZJR -05", t0=60.0),
+                              _d("DJ0SH DL1AAA JO40", snr=10, worked=_w(call_band=True)),
+                              _d("DJ0SH ZS6BBB KG33", snr=-15, worked=_w(dxcc=False, dxcc_band=False)),
+                              _d("DJ0SH OK1CCC JO70", snr=0, worked=_w())], 60.0, "FT8", False))
+    assert s._queue_order() == ["ZS6BBB", "OK1CCC", "DL1AAA"]
+    asyncio.run(s.queue_to_front("dl1aaa"))
+    assert s._queue_order()[0] == "DL1AAA" and s.status()["queue"][0]["front"]
+    with pytest.raises(RuntimeError):
+        asyncio.run(s.queue_to_front("G4XYZ"))
+
+
+class _StopTx(_Tx):
+    def __init__(self): self.stopped = 0
+    async def stop(self): self.stopped += 1
+
+
+def test_caller_during_cq_cuts_the_cq_only_while_there_is_time():
+    s = Sequencer(_Digi(), _StopTx(), _Log(), _Mgr(), _Set())
+    s.kind, s.step, s.mode = "cq", "cq", "FT8"
+    s._airing = {"t0": time.time() - 1.2, "step": "cq"}            # our CQ 1.2 s on the air
+    asyncio.run(s.on_decodes([_d("DJ0SH EC3A JN11")], 15.0, "FT8", False))
+    assert s.tx.stopped == 1 and s._preempt == s._airing["t0"] and s.session["call"] == "EC3A"
+    s = Sequencer(_Digi(), _StopTx(), _Log(), _Mgr(), _Set())
+    s.kind, s.step, s.mode = "cq", "cq", "FT8"
+    s._airing = {"t0": time.time() - 1.9, "step": "cq"}            # too late: answer next period
+    asyncio.run(s.on_decodes([_d("DJ0SH EC3A JN11")], 15.0, "FT8", False))
+    assert s.tx.stopped == 0 and s._preempt is None and s.session["call"] == "EC3A"
+
+
+def test_loop_sends_the_answer_in_the_same_period_after_cutting_the_cq(monkeypatch):
+    import app.sequencer as sq
+    monkeypatch.setattr(sq, "MODES", {"FT8": {"period": 1.0}})
+    monkeypatch.setattr(sq, "FT_LATEST_START", {"FT8": 0.6})
+    monkeypatch.setattr(sq, "WAIT_MARGIN", 0.0)
+    monkeypatch.setattr(sq, "PREEMPT_MARGIN", 0.1)
+
+    class _LoopTx(_Tx):
+        def __init__(self): self.sent, self.cut = [], asyncio.Event()
+        async def stop(self): self.cut.set()
+        async def send_ft(self, msg, mode, hz, t0, on_air=None):
+            self.sent.append((msg, t0))
+            if msg.startswith("CQ"):
+                try:
+                    await asyncio.wait_for(self.cut.wait(), 0.7)
+                except asyncio.TimeoutError:
+                    pass
+                self.cut.clear()
+            elif on_air:
+                await on_air(0.5)
+            return {"sent": True}
+
+    async def run():
+        s = Sequencer(_Digi(), _LoopTx(), _Log(), _Mgr(), _Set())
+        s.kind, s.step, s.mode, s.cq_to = "cq", "cq", "FT8", ""
+        s.parity = 0
+        s._seen = type("All", (dict,), {"get": lambda self, k, d=None: True})()
+        s._run()
+        while not s._airing:
+            await asyncio.sleep(0.01)
+        t0 = s._airing["t0"]
+        await s.on_decodes([_d("DJ0SH EC3A JN11", snr=-4)], t0 - 1.0, "FT8", False)
+        for _ in range(100):
+            if len(s.tx.sent) >= 2:
+                break
+            await asyncio.sleep(0.01)
+        await s.halt(stop_tx=False)
+        return s, t0
+
+    s, t0 = asyncio.run(run())
+    assert s.tx.sent[:2] == [("CQ DJ0SH JO62", t0), ("EC3A DJ0SH -04", t0)]
+    assert s.cq_count == 0                                    # the cut CQ is not counted
+    tx = [m for m in s.sessions[0]["msgs"] if m["dir"] == "tx"]
+    assert tx[0]["msg"] == "EC3A DJ0SH -04" and not tx[0].get("pending") and not tx[0].get("skipped")
+    assert not any(m["msg"].startswith("CQ") for m in s.sessions[0]["msgs"])   # the CQ is no session's
+
+
+def test_tx_line_is_entered_before_sending_and_marked_when_not_sent(monkeypatch):
+    import app.sequencer as sq
+    monkeypatch.setattr(sq, "MODES", {"FT8": {"period": 1.0}})
+    monkeypatch.setattr(sq, "FT_LATEST_START", {"FT8": 0.6})
+    monkeypatch.setattr(sq, "WAIT_MARGIN", 0.0)
+    seen_pending = []
+
+    class _LateTx(_Tx):
+        async def stop(self): pass
+        async def send_ft(self, msg, mode, hz, t0, on_air=None):
+            seen_pending.append([m.get("pending") for m in s.session["msgs"] if m["dir"] == "tx"][-1])
+            return {"sent": False, "why": "too late for this cycle"}
+
+    async def run():
+        s.session = s._new_session(_d("CQ OH6IH KP13", snr=-7)); s.step = "call"
+        s._seen = type("All", (dict,), {"get": lambda self, k, d=None: True})()
+        s._run()
+        while len(seen_pending) < 1:
+            await asyncio.sleep(0.01)
+        await asyncio.sleep(0.05)
+        await s.halt(stop_tx=False)
+
+    s = Sequencer(_Digi(), _LateTx(), _Log(), _Mgr(), _Set())
+    s.kind, s.mode, s.parity = "answer", "FT8", 0
+    asyncio.run(run())
+    assert seen_pending[0] is True                                  # in the list before PTT
+    tx = [m for m in s.sessions[0]["msgs"] if m["dir"] == "tx"]
+    assert tx[0]["msg"] == "OH6IH DJ0SH JO62" and tx[0]["skipped"] and "pending" not in tx[0]

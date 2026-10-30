@@ -94,6 +94,8 @@ class SettingsReq(BaseModel):
     hunt_target: Literal["band", "call", "dxcc", "dxcc_band"] | None = None   # whom Hunt calls
     hunt_min_snr: int | None = Field(default=None, ge=-30, le=20)
     hunt_minutes: int | None = Field(default=None, ge=0, le=1440)      # Hunt switches itself off; 0 = never
+    psk_report: bool | None = None                                     # spots to PSK Reporter
+    psk_antenna: str | None = Field(default=None, max_length=60)
     digi_colors: DigiColors | None = None
     hackrf_url: str | None = Field(default=None, pattern=r"^$|^https?://[A-Za-z0-9.\-]+(:\d+)?/?$")
     # radio power via Shelly (title-bar switch); password "" = keep the stored one
@@ -230,6 +232,10 @@ class SeqAutoReq(BaseModel):
     on: bool
     tx_hz: float | None = Field(default=None, ge=200, le=2900)
     adopt: bool | None = None               # AF: answer on the partner's frequency
+
+
+class QueueFrontReq(BaseModel):
+    call: Callsign = Field(pattern=r"^[A-Za-z0-9/]{3,12}$")
 
 
 class HuntBlockReq(BaseModel):

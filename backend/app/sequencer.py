@@ -54,6 +54,27 @@ def report(snr: int) -> str:
     return f"{'-' if snr < 0 else '+'}{abs(snr):02d}"
 
 
+def std_call(call: str) -> bool:
+    """A call FT8/FT4 can carry in full in a standard message (WSJT-X's stdcall
+    in packjt77): up to 6 characters, the call area digit at position 2 or 3
+    with at least one letter before it and at most 3 letters after; /P and /R
+    are allowed on top."""
+    c = re.sub(r"/[PR]$", "", call.upper())
+    if "/" in c or not 3 <= len(c) <= 6 or not c.isalnum():
+        return False
+    area = next((i for i in range(len(c) - 1, 0, -1) if c[i].isdigit()), -1)
+    pre, suf = c[:area], c[area + 1:]
+    return (area in (1, 2) and any(ch.isalpha() for ch in pre)
+            and sum(ch.isdigit() for ch in pre) < area and suf.isalpha() and len(suf) <= 3)
+
+
+def ft_call(call: str) -> str:
+    """The partner's call as it goes into my messages: a non-standard call
+    (DL1ABC/QRP, PA/DJ0SH) as a hash, <DL1ABC/QRP>, the way WSJT-X sends it —
+    in full it would not fit and ft8code would cut it to DL1ABC."""
+    return call if std_call(call) else f"<{call}>"
+
+
 class Sequencer:
     def __init__(self, digi, tx, logbook, manager, settings) -> None:
         self.digi, self.tx, self.logbook = digi, tx, logbook
@@ -494,7 +515,7 @@ class Sequencer:
         if not s or self.step == "done":
             return None
         # once sent, a report is fixed — repeats and the log use the same value
-        them, rep = s["call"], s.get("report_sent") or report(s["snr"])
+        them, rep = ft_call(s["call"]), s.get("report_sent") or report(s["snr"])
         return {"call": f"{them} {me} {self.grid4}", "report": f"{them} {me} {rep}",
                 "rreport": f"{them} {me} R{rep}", "rr73": f"{them} {me} {self.closing}",
                 "73": f"{them} {me} 73"}.get(self.step)

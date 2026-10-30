@@ -407,3 +407,16 @@ def test_start_line_to_someone_else_is_grey():
     s.session = s._new_session(d); s._log_rx(d)
     s._log_rx(_d("DJ0SH GU4WRP -16", t0=30.0))
     assert [m.get("other", False) for m in s.session["msgs"]] == [True, False]
+
+
+def test_nonstandard_call_goes_out_hashed():
+    from app.sequencer import ft_call, std_call
+    for c in ("DJ0SH", "K1ABC", "9H4JX", "GU4WRP", "DL1ABC/P", "DL1ABC/R"):
+        assert std_call(c) and ft_call(c) == c
+    for c in ("DL1ABC/QRP", "PA/DJ0SH", "W1AW/4", "EA8/DL1ABC"):
+        assert not std_call(c) and ft_call(c) == f"<{c}>"
+    s = _seq()
+    s.session = s._new_session(_d("CQ DL1ABC/QRP", snr=-10)); s.step = "call"
+    assert s._next_message() == "<DL1ABC/QRP> DJ0SH JO62"
+    s.step = "report"
+    assert s._next_message() == "<DL1ABC/QRP> DJ0SH -10"

@@ -105,12 +105,17 @@ code{font-family:var(--font-mono);font-size:.92em}
     0 2px 0 #0000002e, 0 24px 50px -26px #000;
 }
 .panel::before{ /* colour rail */
-  content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px;
-  border-radius:3px; background:var(--accent); box-shadow:0 0 12px var(--accent-glow);
+  content:""; position:absolute; inset:0; pointer-events:none;
+  border-radius:inherit; border:0 solid transparent; border-left:3px solid var(--accent);
+  /* the left border bends into the rounded corners and tapers there; the ends fade out */
+  -webkit-mask:linear-gradient(180deg,transparent 0,#000 9px,#000 calc(100% - 9px),transparent 100%);
+          mask:linear-gradient(180deg,transparent 0,#000 9px,#000 calc(100% - 9px),transparent 100%);
+  --rail-glow:var(--accent-glow);
+  filter:drop-shadow(0 0 2px var(--rail-glow)) drop-shadow(0 0 9px var(--rail-glow));
 }
 .vfo{--accent:var(--amber); --accent-glow:var(--amber-glow)}
 .digi{--accent:#6fd89a; --accent-glow:#6fd89a}
-.digi::before{box-shadow:0 0 9px -2px var(--accent-glow)}
+.digi::before{--rail-glow:color-mix(in srgb,var(--accent-glow) 55%,transparent)}
 
 /* recessed Inbus screws — injected by JS into every .panel, plus the nameplate */
 .screw{
@@ -144,7 +149,7 @@ code{font-family:var(--font-mono);font-size:.92em}
 .panel.collapsed > :not(.panel-head):not(.screw){display:none}
 .logp{--accent:#cdb592; --accent-glow:#cdb592}   /* sand: calm, no other panel uses it */
 :root[data-theme="light"] .logp{--accent:#8a7148; --accent-glow:#8a7148}
-.logp::before{box-shadow:0 0 9px -2px var(--accent-glow)}
+.logp::before{--rail-glow:color-mix(in srgb,var(--accent-glow) 55%,transparent)}
 .panel.collapsed .panel-head{margin-bottom:0}
 .panel-stat{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); letter-spacing:.05em}
 .panel-head h2{margin:0; font-family:var(--font-disp); font-weight:700; letter-spacing:.16em; font-size:16px; color:var(--accent)}
@@ -608,7 +613,7 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .duo > .panel{min-width:0}
 .ptt-zone{--accent:#c1392f; --accent-glow:#c1392f}
 .audio{--accent:#8b7ad6; --accent-glow:#8b7ad6}
-.audio::before{box-shadow:0 0 9px -2px var(--accent-glow)}
+.audio::before{--rail-glow:color-mix(in srgb,var(--accent-glow) 55%,transparent)}
 
 /* --- PTT panel --- */
 .ptt-body{display:flex; align-items:center; justify-content:space-between; gap:14px}
@@ -1008,7 +1013,7 @@ body.transmitting::after{content:""; position:fixed; inset:0; pointer-events:non
 
 /* ---------------- HACKRF waterfall (ported from TM-V71 Remote) ---------------- */
 .hackrf{--accent:#c9d4dc; --accent-glow:#aebfcc; --hrf-vfo:var(--amber)}
-.hackrf::before{box-shadow:0 0 9px -2px var(--accent-glow)}
+.hackrf::before{--rail-glow:color-mix(in srgb,var(--accent-glow) 55%,transparent)}
 :root[data-theme="light"] .hackrf{--accent:#5f6f7c; --accent-glow:#8a9aa6}
 .hrf-src{margin-left:10px; font:500 10px var(--font-mono); letter-spacing:.08em; color:var(--text-dim); text-transform:none}
 .hrf-power{font:700 12px var(--font-mono); letter-spacing:.08em; padding:5px 14px; border-radius:7px; cursor:pointer; transition:.15s;

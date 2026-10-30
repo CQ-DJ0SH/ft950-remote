@@ -331,6 +331,7 @@ function dsmSet(raw) {
 }
 function meterSet(raw, label) {
   needle.target = raw / 255;
+  if (uiCovered) return;                                // behind Settings: no animation, set on close
   if (!needle.raf) needle.raf = requestAnimationFrame(needleStep);
 }
 
@@ -1463,6 +1464,7 @@ async function pollDigi() {
 
 // ---------------------------------------------------------------- clock, cycle bar
 function tick() {
+  if (uiCovered) { setTimeout(() => requestAnimationFrame(tick), 250); return; }   // behind Settings: 4/s, no drawing
   const now = Date.now() / 1000;
   $("clock").textContent = new Date().toISOString().slice(11, 19) + " UTC";
   const p = PERIOD[digiMode] || 15;
@@ -1543,6 +1545,11 @@ function sizeWf() {
 }
 function onFrame(f) {
   if ($("digi").classList.contains("collapsed")) return;
+  if (uiCovered) {                                      // behind Settings: keep the rows, draw on close
+    wfBacklog.push(f);
+    if (wfBacklog.length > 240) wfBacklog.shift();      // more than the canvas holds is never seen
+    return;
+  }
   hzPerBin = f.hz_per_bin;
   const [b0, b1] = sizeWf();
   const db = f.db.slice(b0, b1);
@@ -3460,7 +3467,7 @@ function specStop() {
 }
 function specDraw(t) {
   spec.raf = requestAnimationFrame(specDraw);
-  if (t - spec.last < 33 || $("audiop").classList.contains("collapsed")) return;   // ~30 fps
+  if (t - spec.last < 33 || uiCovered || $("audiop").classList.contains("collapsed")) return;   // ~30 fps
   spec.last = t;
   const cv = $("spec-graph"), dpr = window.devicePixelRatio || 1, r = cv.getBoundingClientRect();
   const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
@@ -3586,6 +3593,11 @@ function hrfPaint() {
   hrfRaf = 0;
   const m = hrfPending; hrfPending = null;
   if (!m || !hrfVisible()) return;
+  if (uiCovered) {                                      // behind Settings: keep the rows, draw on close
+    hrfBacklog.push(m);
+    if (hrfBacklog.length > 120) hrfBacklog.shift();
+    return;
+  }
   hrfUpdateFloor(m.db);
   drawHrfWaterfall(m.db);
   drawHrfSpectrum(m.db);
@@ -3853,6 +3865,26 @@ function bindHackRF() {
   updateHrfPower(); updateHrfModeUi();
   if (hrfVisible()) sizeHrfCanvases();
 }
+
+// ---------------------------------------------------------------- Settings covers the page
+// While the Settings dialog is open the page behind it is hidden: its animations
+// pause (they cost the browser a lot of CPU, the dialog redrawn over every frame).
+// Data keeps coming in; the waterfalls keep their rows and draw them on close.
+let uiCovered = false;
+const wfBacklog = [], hrfBacklog = [];
+new MutationObserver(() => {
+  const open = $("settings").classList.contains("open");
+  if (open === uiCovered) return;
+  uiCovered = open;
+  if (open) return;
+  for (const f of wfBacklog.splice(0)) onFrame(f);
+  const rows = hrfBacklog.splice(0);
+  if (rows.length && hrfVisible()) {
+    for (const m of rows.slice(0, -1)) { hrfUpdateFloor(m.db); drawHrfWaterfall(m.db); }
+    hrfPending = rows[rows.length - 1]; hrfPaint();     // the last one with its spectrum
+  }
+  if (!needle.raf) needle.raf = requestAnimationFrame(needleStep);
+}).observe($("settings"), { attributes: true, attributeFilter: ["class"] });
 
 // ---------------------------------------------------------------- start
 (async function main() {

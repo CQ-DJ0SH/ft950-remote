@@ -387,7 +387,7 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 
 /* ---------------- settings modal (TM-V71 Remote) ---------------- */
 .modal{position:fixed; inset:0; z-index:40; display:none; align-items:flex-start; justify-content:center; padding:20px;
-  background:#04070acc; backdrop-filter:blur(4px)}
+  background:#04070ae6}            /* no blur: it was recomputed for every frame behind the dialog */
 .modal.open{display:flex}
 .modal-card{width:min(560px,94vw); max-height:90vh; overflow:auto;
   background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--edge-hi); border-radius:14px; padding:22px;

@@ -562,3 +562,13 @@ def test_tx_line_is_entered_before_sending_and_marked_when_not_sent(monkeypatch)
     assert seen_pending[0] is True                                  # in the list before PTT
     tx = [m for m in s.sessions[0]["msgs"] if m["dir"] == "tx"]
     assert tx[0]["msg"] == "OH6IH DJ0SH JO62" and tx[0]["skipped"] and "pending" not in tx[0]
+
+
+def test_last_tx_carries_the_attempt_counter():
+    s = _cq()
+    s.cq_count = 2
+    s._log_tx("CQ DJ0SH JO62", 30.0, {}, entry=None)
+    assert (s.last_tx["n"], s.last_tx["of"], s.last_tx["cq"]) == (3, 40, True)
+    s.session = s._new_session(_d("DJ0SH EC3A JN11")); s.step, s.tries = "report", 1
+    s._log_tx("EC3A DJ0SH -10", 60.0, {})
+    assert (s.last_tx["n"], s.last_tx["of"], s.last_tx["cq"]) == (2, 5, False)

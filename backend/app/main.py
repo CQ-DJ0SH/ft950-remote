@@ -171,7 +171,8 @@ async def _sys_history_loop() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await service.start()
-    Waterfall(capture, wf_manager, asyncio.get_running_loop())
+    Waterfall(capture, wf_manager, asyncio.get_running_loop(),
+              active=lambda: bool(digi.config.get("enabled")))      # DECODE off: no waterfall
     capture.start()
     await digi.start()
     hist = asyncio.create_task(_sys_history_loop())

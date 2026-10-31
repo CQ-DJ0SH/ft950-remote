@@ -1114,6 +1114,9 @@ function applyDigiStatus(s) {
   const autoTxt = s.config?.mode === "AUTO" && s.mode ? `AUTO · ${s.mode}` : "AUTO";
   if (autoBtn && autoBtn.textContent !== autoTxt) autoBtn.textContent = autoTxt;
   $("digi-on").classList.toggle("on", !!s.config?.enabled);
+  // DECODE off: the Pi sends no waterfall frames - stop and clear it (also on page load)
+  if (!s.config?.enabled && decodeWasOn !== false) clearWf();
+  decodeWasOn = !!s.config?.enabled;
   $("f-grid").textContent = s.config?.my_grid || "—";
   myGrid = s.config?.my_grid || "";
   $("f-mode").textContent = digiMode;
@@ -1266,7 +1269,11 @@ function renderSeq(s) {
     const tr = document.createElement("tr");
     tr.className = "tx-row";
     tr.innerHTML = `<td>${esc(s.last_tx.utc)}</td><td class="arrow-tx">TX ▶</td><td class="n"></td><td class="n">${s.last_tx.start_offset ?? ""}</td>` +
-      `<td class="n">${Math.round(s.last_tx.df)}</td><td class="msg">${esc(s.last_tx.msg)}</td><td></td>`;
+      `<td class="n">${Math.round(s.last_tx.df)}</td><td class="msg">${esc(s.last_tx.msg)}</td>` +
+      // attempt n of the limit: the sequence gives up after it without a reply
+      (s.last_tx.of ? `<td class="tx-try${s.last_tx.n >= s.last_tx.of ? " last" : ""}" title="${s.last_tx.cq
+        ? `CQ ${s.last_tx.n} of ${s.last_tx.of}: CQ stops after ${s.last_tx.of} calls`
+        : `Try ${s.last_tx.n} of ${s.last_tx.of}: without a reply after ${s.last_tx.of} the sequence stops`}">${s.last_tx.n}/${s.last_tx.of}</td>` : "<td></td>");
     $("my-body").appendChild(tr);
     followMine();
   }
@@ -1484,6 +1491,13 @@ function tick() {
 const F0 = 100, F1 = 3000;
 const wfCanvas = $("wf"), wfCtx = wfCanvas.getContext("2d");
 let wfFloor = null, lastFramePeriod = null, hzPerBin = 48000 / 16384;
+let decodeWasOn = null;                                  // last DECODE state seen (null: none yet)
+function clearWf() {
+  wfCtx.fillStyle = "#06043a";                            // the empty waterfall's colour (as sizeWf)
+  wfCtx.fillRect(0, 0, wfCanvas.width, wfCanvas.height);
+  wfFloor = null; lastFramePeriod = null;
+  if (typeof wfBacklog !== "undefined") wfBacklog.length = 0;
+}
 const CMAPS = {
   Purple: [[0, 6, 4, 58], [0.35, 40, 10, 120], [0.6, 150, 40, 190], [0.8, 235, 90, 230], [1, 255, 235, 255]],
   Rainbow: [[0, 0, 0, 80], [0.25, 0, 90, 255], [0.45, 0, 220, 200], [0.62, 90, 240, 40], [0.8, 255, 210, 0], [1, 255, 40, 20]],
@@ -2537,8 +2551,8 @@ async function loadRecent() {
   try { list = await api("/api/log/recent"); } catch { return; }
   $("recent-body").innerHTML = list.map((e) => `<tr data-ts="${esc(e.ts)}"${e.ts === selRecent ? ' class="sel"' : ""}>
     <td>${esc(e.ts.slice(11, 16))}</td><td class="msg">${esc(e.call)}</td><td>${esc(e.band)}</td>
-    <td>${esc(e.mode)}</td><td>${esc(e.rst_sent)}</td><td>${esc(e.rst_rcvd)}</td><td>${esc(e.name)}</td>
-    <td class="dx">${esc(e.country)}</td>
+    <td>${esc(e.mode)}</td><td>${esc(e.rst_sent)}</td><td>${esc(e.rst_rcvd)}</td><td class="cut nm" title="${esc(e.name)}"><span>${esc(e.name)}</span></td>
+    <td class="dx cut ct" title="${esc(e.country)}"><span>${esc(e.country)}</span></td>
     <td class="${e.wavelog == null ? "" : e.wavelog ? "ok" : "bad"}" title="${esc(e.message)}${e.auto ? " (Auto-Log)" : ""}">${e.wavelog == null ? "—" : e.wavelog ? "✓" : "✗"}${e.auto ? " A" : ""}</td>
     <td class="${e.qrz == null ? "" : e.qrz ? "ok" : "bad"}" title="${esc(e.qrz_message || "no QRZ logbook key")}">${e.qrz == null ? "—" : e.qrz ? "✓" : "✗"}</td>
     <td><button class="del" data-ts="${esc(e.ts)}" title="Remove from the local list (not from Wavelog)">✕</button></td></tr>`).join("");

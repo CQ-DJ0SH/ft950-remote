@@ -682,7 +682,11 @@ class Sequencer:
         line), None for a message that belongs to no session (CQ); left out,
         a new line is added (direct calls)."""
         utc = self._utc(t0)
-        self.last_tx = {"msg": msg, "utc": utc, "df": self.tx_hz, "start_offset": res.get("start_offset")}
+        # attempt counter for My Messages: this message's repeat n of the limit
+        # after which the sequence gives up (CQ: CQ_MAX calls)
+        n, of = (self.cq_count + 1, CQ_MAX) if self.step == "cq" else (self.tries + 1, MAX_TRIES)
+        self.last_tx = {"msg": msg, "utc": utc, "df": self.tx_hz, "start_offset": res.get("start_offset"),
+                        "n": n, "of": of, "cq": self.step == "cq"}
         if self.session and entry is not None:
             if self.step in ("report", "rreport") and not self.session.get("report_sent"):
                 self.session["report_sent"] = report(self.session["snr"])

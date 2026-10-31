@@ -548,7 +548,7 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
   letter-spacing:.1em; background:var(--newdx, var(--amber)); color:var(--newdx-ink, #1a1000); vertical-align:1px}
 
 /* ---------------- LOG panel ---------------- */
-.log-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); gap:16px}
+.log-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.8fr); gap:16px}   /* table wider, form narrower */
 .qso-form{border:1px solid var(--edge); border-radius:10px; background:var(--ctrl-bg); padding:14px}
 .qf-row{display:flex; align-items:flex-end; gap:10px; margin-bottom:10px}
 .qso-form label{display:flex; flex-direction:column; gap:4px; font:600 10px var(--font-ui); letter-spacing:.14em; color:var(--text-dim)}
@@ -2025,3 +2025,21 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
   .strip #l-psk{margin-right:30px}
   .strip #l-psk::after{content:"PSK"}
 }
+
+/* Recent QSOs: long names / countries end in … (full text as tooltip), so the
+   table never gets wider than its pane and scrolls sideways */
+.recent-pane td.cut span{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.recent-pane td.nm span{max-width:200px}
+.recent-pane td.ct span{max-width:160px}
+/* QSO form: callsign narrower and the buttons a little tighter, so the top row
+   fits the narrower form; on a very narrow one the LOG buttons go to their own
+   line instead of covering QRZ LOOKUP */
+.qf-row{display:flex; flex-wrap:wrap; justify-content:space-between; row-gap:8px}
+.qf-row .qf-call{flex:0 0 120px; width:120px}
+.qf-row .qf-call input{font-size:18px; letter-spacing:.02em}
+.qf-row .log-btn{padding:0 10px; letter-spacing:.1em}
+.qf-row .qf-logs{margin-left:auto}
+
+/* My Messages: attempt counter on TX lines (2/5, CQ 3/40); the last try in amber */
+#my-body td.tx-try{color:var(--text-dim); font-family:var(--font-mono); font-size:11px; white-space:nowrap}
+#my-body td.tx-try.last{color:var(--amber)}

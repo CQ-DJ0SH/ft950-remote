@@ -2,7 +2,8 @@
 
 FT8 tones are 6.25 Hz apart, so the FFT must resolve a few Hz: 16384 points
 at 48 kHz = 2.93 Hz per bin (a 341 ms Hann window), one frame every 100 ms.
-Frames are only computed while someone is watching. The FFT runs in the
+Frames are only computed while someone is watching and DECODE is on (off, the
+waterfall stands still and the Pi saves the FFT). The FFT runs in the
 capture thread (~1 ms on the Pi 4) and is handed to the event loop.
 """
 from __future__ import annotations
@@ -23,8 +24,9 @@ _BINS = int(F_MAX * NFFT / RATE)            # 1024 bins up to 3000 Hz
 
 class Waterfall:
     def __init__(self, capture: AudioCapture, manager: ConnectionManager,
-                 loop: asyncio.AbstractEventLoop) -> None:
+                 loop: asyncio.AbstractEventLoop, active=lambda: True) -> None:
         self.manager = manager
+        self.active = active                    # DECODE on: frames; off: the waterfall stops
         self.capture = capture                  # its gain_db (DIGI RX level) shifts the spectrum
         self.loop = loop
         self._buf = np.zeros(NFFT, dtype=np.float64)
@@ -36,7 +38,7 @@ class Waterfall:
         self._buf[:-k] = self._buf[k:]
         self._buf[-k:] = mono
         self._n += 1
-        if self._n % EVERY or not self.manager.count:
+        if self._n % EVERY or not self.manager.count or not self.active():
             return
         X = np.fft.rfft(self._buf * _WIN)[:_BINS]
         db = 20 * np.log10(np.abs(X) / (NFFT * 16384) + 1e-12) + self.capture.gain_db

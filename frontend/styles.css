@@ -2043,3 +2043,38 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 /* My Messages: attempt counter on TX lines (2/5, CQ 3/40); the last try in amber */
 #my-body td.tx-try{color:var(--text-dim); font-family:var(--font-mono); font-size:11px; white-space:nowrap}
 #my-body td.tx-try.last{color:var(--amber)}
+
+/* All sliders as in TM-V71 Remote: a 5 px track filled in the accent colour up
+   to the thumb (--gpct, kept by app.js), a 14 px thumb in that colour and a thin
+   ring in it around the track. Colour: --g-accent where a slider has its own
+   (RX violet, TX red), else the panel's --accent. :where() keeps the
+   specificity at 0, so sliders with their own rules (width, SQL fill) keep them.
+   TX POWER keeps its own design and only gets the ring. */
+:where(input[type=range]:not(#pwr-big)){-webkit-appearance:none; appearance:none; height:5px; border-radius:3px;
+  cursor:pointer; outline:none; margin:6px 4px;
+  background:linear-gradient(90deg, var(--g-accent, var(--accent)) var(--gpct,0%), var(--track-empty,#26333d) var(--gpct,0%))}
+:where(input[type=range]:not(#pwr-big))::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:14px; height:14px;
+  border-radius:50%; background:var(--g-accent, var(--accent)); box-shadow:0 0 7px -1px var(--g-accent, var(--accent)); cursor:pointer}
+:where(input[type=range]:not(#pwr-big))::-moz-range-thumb{width:14px; height:14px; border:none; border-radius:50%;
+  background:var(--g-accent, var(--accent)); cursor:pointer}
+:where(:root[data-theme="light"] input[type=range]){--track-empty:#c8d2d9}
+:where(input[type=range]){box-shadow:0 0 0 2px var(--ctrl-bg), 0 0 0 3px var(--g-accent, var(--accent))}
+:where(input[type=range]:disabled){opacity:.45; cursor:default}
+/* transmit sliders red, as TX GAIN */
+#dg-tx-level, #tx-level{--g-accent:var(--tx)}
+/* sliders that fill their cell: minus the 4 px margin each side, so the ring
+   does not run into the value beside it */
+.dsp-row input[type=range], .menu-row input[type=range], .g-row.slider input[type=range]{width:calc(100% - 8px)}
+/* FILTER · LEVEL · CLARIFIER: the value a bit further from the slider ring */
+.rx-chain .g-row.slider b{margin-left:2px}
+/* RX · FILTER · LEVEL: RX as wide as its AGC buttons need, FILTER, LEVEL,
+   CLARIFIER and DSP in four equal columns - their sliders take what is left */
+.rx-chain{grid-template-columns:auto repeat(4, minmax(0,1fr))}
+.rx-chain > fieldset.group{min-width:0}
+.rx-chain .g-row{grid-template-columns:40px minmax(0,1fr) auto}
+/* every slider (TX POWER keeps its own): a fader knob as in TM-V71 Remote -
+   upright rectangle with rounded corners instead of the round dot */
+input[type=range]:not(#pwr-big)::-webkit-slider-thumb{width:10px; height:18px; border-radius:3px}
+input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; border-radius:3px}
+/* Settings: slider rows further apart - the fader knobs (18 px) nearly touched at 22 px */
+#settings .g-row.slider{margin:9px 0}

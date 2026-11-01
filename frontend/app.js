@@ -3259,7 +3259,29 @@ async function updateRate() {
   }
   lastStats = { t: now, rx, tx };
 }
-const fillPct = (el) => el.style.setProperty("--gpct", ((el.value - el.min) / (el.max - el.min) * 100) + "%");
+const fillPct = (el) => el.style.setProperty("--gpct", ((el.value - (el.min || 0)) / ((el.max || 100) - (el.min || 0)) * 100) + "%");
+// Every slider keeps its fill (--gpct, TM-V71 look) in step with its value: on
+// input, and also when the page sets .value itself (radio status, settings
+// loaded) - that fires no event, so .value is wrapped on each slider.
+(() => {
+  const VAL = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  const hook = (el) => {
+    if (el.dataset.fill) return;
+    el.dataset.fill = "1";
+    Object.defineProperty(el, "value", { configurable: true,
+      get() { return VAL.get.call(this); },
+      set(v) { VAL.set.call(this, v); fillPct(this); } });
+    fillPct(el);
+  };
+  const scan = (root) => root.querySelectorAll?.('input[type="range"]').forEach(hook);
+  document.addEventListener("input", (e) => { if (e.target.type === "range") fillPct(e.target); }, true);
+  scan(document);
+  // sliders built later (Settings ▸ Audio menus …)
+  new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) {
+    if (n.nodeType !== 1) continue;
+    if (n.matches?.('input[type="range"]')) hook(n); else scan(n);
+  } }).observe(document.body, { childList: true, subtree: true });
+})();
 function gainSlider(id, fmt, key2) {
   const el = $(id); let t2;
   el.addEventListener("input", () => {

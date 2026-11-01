@@ -156,13 +156,6 @@
       </div>
     </div>
 
-    <!-- squelch right under the signal level, as in TM-V71 Remote -->
-    <div class="sql-row">
-      <span class="sql-label">SQL</span>
-      <input type="range" class="sql-slider" id="squelch" min="0" max="255" aria-label="Squelch (SQ)">
-      <span class="sql-val" id="squelch-val">—</span>
-    </div>
-
     <!-- tuner row: frequency entry + mic UP/DN + VFO A/B -->
     <div class="tuner">
       <div class="freq-spin" id="spin" aria-label="Frequency entry"></div>
@@ -211,6 +204,7 @@
         <legend>FILTER</legend>
         <label class="g-row slider"><span class="g-lbl">WIDTH</span><input type="range" id="width" min="0" max="0" step="1"><b id="width-val">—</b></label>
         <label class="g-row slider"><span class="g-lbl">SHIFT</span><input type="range" id="ifshift" min="-1000" max="1000" step="10"><b id="ifshift-val">—</b></label>
+        <label class="g-row slider" title="Squelch (SQ), 0 … 255"><span class="g-lbl">SQL</span><input type="range" id="squelch" min="0" max="255" aria-label="Squelch (SQ)"><b id="squelch-val">—</b></label>
       </fieldset>
       <fieldset class="group">
         <legend>LEVEL</legend>

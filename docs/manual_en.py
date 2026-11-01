@@ -176,8 +176,11 @@ EN = [
     ]),
     ("h2", "TX power and RX · FILTER · LEVEL"),
     ("p", "The red TX POWER control sets 5–100 W. RX · FILTER · LEVEL opens the "
-          "groups RX (preamp, AGC, ATT), FILTER (width, shift), LEVEL (RF gain in %), "
-          "CLARIFIER and DSP; each value stands right beside its slider. The roofing filter is switched with R.FLT in the title bar."),
+          "groups RX (preamp, AGC, ATT), FILTER (width, shift, squelch SQL 0–255), "
+          "LEVEL (RF gain in %), CLARIFIER and DSP; FILTER to DSP are equally wide, "
+          "each value stands right beside its slider. All sliders look as in "
+          "TM-V71 Remote: filled in the panel colour up to a rectangular fader knob, "
+          "with a thin ring in that colour (transmit sliders red). The roofing filter is switched with R.FLT in the title bar."),
     ("ul", [
         "CLARIFIER: ON switches the RX clarifier, CLR sets the offset to 0; the slider "
         "sets the offset (±2.5 kHz in 10 Hz steps, double-click = 0) and switches "
@@ -240,7 +243,10 @@ EN = [
     ("h1", "9  DIGI — FT8 / FT4"),
     ("img", "manual/digi.png", 174),
     ("p", "DECODE in the panel's title bar switches decoding on and off (as in "
-          "the CW skimmer). Decoding runs every period with WSJT-X's jt9 — or a "
+          "the CW skimmer); off, the waterfall stops and is cleared (the Pi then "
+          "computes no waterfall either). AUTO picks FT8 or FT4 by the nearest "
+          "standard frequency — on 80 m FT8 (3.573) and FT4 (3.575 MHz) are only "
+          "2 kHz apart. Decoding runs every period with WSJT-X's jt9 — or a "
           "faster build chosen in Settings ▸ FT8 ▸ Decoder (see below); the WSJT-X plate in "
           "the title bar shows the one that runs (2.7, 2.7 fast, 3.3 MT). The passband is split "
           "over three cores. D1/D2/D3/AUTO in the footer pick the depth: D2 "
@@ -282,6 +288,9 @@ EN = [
         "CQ calls CQ — to everyone (–) or directed with the choice next to it: "
         "DX, EU, NA, SA, AF, AS, OC, POTA or SOTA (CQ DX DJ0SH JO62). Auto "
         "Answer: while idle, a station calling you is answered automatically.",
+        "My Messages: on your TX lines the last column (DXCC/CNT) counts the "
+        "attempts — 2/5 for a QSO message (five unanswered repeats end the "
+        "sequence), 3/40 for CQ; the last attempt is amber.",
         "DX Call in the My Messages head calls a station typed in: call, grid "
         "(optional; 6 characters are cut to 4, an invalid one is dropped), period "
         "auto / even / odd, then Call DX. auto answers the station's last decode "
@@ -505,7 +514,9 @@ EN = [
     ("img", "manual/set-appearance.png", 120),
     ("p", "Every tab ends with the same bar: CLOSE, plus SAVE on General, FT8, Log and Appearance. "
           "On Audio changes apply at once, on Memories each row has its own WRITE, "
-          "Pi Hardware is read only."),
+          "Pi Hardware is read only. While Settings is open, the animations behind it "
+          "pause (cycle bar, meters, spectrum, waterfalls) to save the browser's CPU; "
+          "data and decoding go on, and the waterfalls draw what came in on close."),
 
     ("h1", "15  Remote power"),
     ("p", "A Shelly relay (Gen1 or Gen2/Plus/Pro, detected automatically) "

@@ -60,6 +60,9 @@ decoding, plus voice operation over WebRTC.
     answered one after the other; a caller decoded while our CQ is on the air
     cuts it and is answered in the same period; non-standard calls
     (DL1ABC/QRP, PA/DJ0SH) go out hashed as `<CALL>`, like WSJT-X
+  - My Messages counts the attempts on each TX line (2/5, CQ 3/40); with
+    DECODE off the waterfall stops and is cleared; AUTO picks FT8/FT4 by the
+    nearest standard frequency
   - **PSK Reporter**: spots of the stations heard (every 5 min, each station
     once an hour per band and mode), with an LED in the DIGI strip and map
     links and statistics in Settings ▸ FT8

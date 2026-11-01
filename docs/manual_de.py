@@ -193,8 +193,11 @@ DE = [
     ("h2", "TX POWER und RX · FILTER · LEVEL"),
     ("p", "Der rote Regler TX POWER stellt die Sendeleistung von 5–100 W ein. "
           "RX · FILTER · LEVEL öffnet die Gruppen RX (Vorverstärker, AGC, ATT), "
-          "FILTER (Bandbreite, Shift), LEVEL (HF-Verstärkung in %), CLARIFIER und "
-          "DSP; jeder Wert steht direkt neben seinem Regler. Das "
+          "FILTER (Bandbreite, Shift, Squelch SQL 0–255), LEVEL (HF-Verstärkung in %), "
+          "CLARIFIER und DSP; FILTER bis DSP sind gleich breit, jeder Wert steht "
+          "direkt neben seinem Regler. Alle Regler sehen aus wie in TM-V71 Remote: "
+          "in der Feldfarbe gefüllt bis zu einem rechteckigen Fader-Knopf, mit einem "
+          "dünnen Ring in dieser Farbe (Senderegler rot). Das "
           "Roofing-Filter schaltet R.FLT in der Titelleiste."),
     ("ul", [
         "CLARIFIER: ON schaltet die Empfangsablage, CLR setzt sie auf 0; der Regler "
@@ -262,7 +265,10 @@ DE = [
     ("h1", "9  DIGI — FT8 / FT4"),
     ("img", "manual/digi.png", 174),
     ("p", "DECODE in der Titelzeile des Felds schaltet die Dekodierung ein und aus "
-          "(wie beim CW-Skimmer). Dekodiert wird in jeder Periode mit jt9 aus WSJT-X — oder mit einem "
+          "(wie beim CW-Skimmer); aus, steht der Wasserfall still und wird geleert "
+          "(der Pi berechnet dann auch keinen). AUTO wählt FT8 oder FT4 nach der "
+          "nächstgelegenen Standardfrequenz — auf 80 m liegen FT8 (3,573) und FT4 "
+          "(3,575 MHz) nur 2 kHz auseinander. Dekodiert wird in jeder Periode mit jt9 aus WSJT-X — oder mit einem "
           "schnelleren Build aus Settings ▸ FT8 ▸ Decoder (siehe unten); das WSJT-X-Schild in "
           "der Titelzeile zeigt den laufenden an (2.7, 2.7 fast, 3.3 MT). Der Durchlassbereich "
           "wird auf drei Kerne verteilt. Die Tiefe wählen D1/D2/D3/AUTO in der "
@@ -308,6 +314,9 @@ DE = [
         "CQ ruft CQ — an alle (–) oder gerichtet mit der Auswahl daneben: DX, EU, "
         "NA, SA, AF, AS, OC, POTA oder SOTA (CQ DX DJ0SH JO62). Auto Answer: Im "
         "Ruhezustand wird eine Station, die Sie anruft, automatisch beantwortet.",
+        "My Messages: auf Ihren TX-Zeilen zählt die letzte Spalte (DXCC/CNT) die "
+        "Versuche — 2/5 bei einer QSO-Nachricht (fünf Wiederholungen ohne Antwort "
+        "beenden den Ablauf), 3/40 bei CQ; der letzte Versuch ist bernsteinfarben.",
         "DX Call im Kopf von My Messages ruft eine eingetippte Station: Rufzeichen, "
         "Locator (optional; 6 Zeichen werden auf 4 gekürzt, ein ungültiger "
         "entfällt), Periode auto / even / odd, dann Call DX. auto antwortet auf "
@@ -550,7 +559,10 @@ DE = [
     ("img", "manual/set-appearance.png", 120),
     ("p", "Jeder Reiter endet mit derselben Leiste: CLOSE, bei General, FT8, Log "
           "und Appearance dazu SAVE. Unter Audio wirken Änderungen sofort, unter Memories hat jede "
-          "Zeile ihr eigenes WRITE, Pi Hardware ist nur zur Ansicht."),
+          "Zeile ihr eigenes WRITE, Pi Hardware ist nur zur Ansicht. Solange Settings "
+          "offen ist, pausieren die Animationen dahinter (Zyklusbalken, Anzeigen, "
+          "Spektrum, Wasserfälle), um die CPU des Browsers zu schonen; Daten und "
+          "Dekodierung laufen weiter, die Wasserfälle zeichnen beim Schließen nach."),
 
     ("h1", "15  Fernein- und -ausschalten"),
     ("p", "Ein Shelly-Relais (Gen1 oder Gen2/Plus/Pro, wird automatisch erkannt) "

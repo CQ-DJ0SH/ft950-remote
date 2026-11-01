@@ -2078,3 +2078,6 @@ input[type=range]:not(#pwr-big)::-webkit-slider-thumb{width:10px; height:18px; b
 input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; border-radius:3px}
 /* Settings: slider rows further apart - the fader knobs (18 px) nearly touched at 22 px */
 #settings .g-row.slider{margin:9px 0}
+/* DIGI footer in one line again: contrast / brightness sliders a little shorter
+   (VOACAP had dropped to a second line) */
+.foot input[type=range]{width:70px}

@@ -43,6 +43,9 @@ MODES = {
     "FT4": {"period": 7.5, "flag": "-5", "tr": "7"},
 }
 # Dial frequencies (Hz) that select FT4 in AUTO mode; everything else is FT8.
+# standard FT8 dials (WSJT-X defaults), so AUTO can tell the nearest one
+FT8_DIALS = [1_840_000, 3_573_000, 5_357_000, 7_074_000, 10_136_000, 14_074_000,
+             18_100_000, 21_074_000, 24_915_000, 28_074_000, 50_313_000, 50_323_000]
 FT4_DIALS = [3_575_000, 7_047_500, 10_140_000, 14_080_000, 18_104_000,
              21_140_000, 24_919_000, 28_180_000, 50_318_000]
 # Measured on the Pi 4 (FT8, ~34 signals): d1 3.8 s, d2 8.1 s, d3 14.9 s →
@@ -179,9 +182,14 @@ def clock_synced() -> bool:
 
 
 def auto_mode(dial_hz: Optional[int]) -> str:
-    if dial_hz and any(abs(dial_hz - f) <= 3_000 for f in FT4_DIALS):
-        return "FT4"
-    return "FT8"
+    """FT4 on an FT4 dial (±3 kHz), else FT8 - judged by the nearest standard
+    dial: on 80 m FT8 (3.573) and FT4 (3.575) are only 2 kHz apart, on 17 m and
+    12 m 4 kHz, so "within 3 kHz of an FT4 dial" alone took 3.573 for FT4."""
+    if not dial_hz:
+        return "FT8"
+    d4 = min(abs(dial_hz - f) for f in FT4_DIALS)
+    d8 = min(abs(dial_hz - f) for f in FT8_DIALS)
+    return "FT4" if d4 <= 3_000 and d4 < d8 else "FT8"
 
 
 # Decoders to choose from in Settings ▸ FT8. A fixed list - the browser picks an

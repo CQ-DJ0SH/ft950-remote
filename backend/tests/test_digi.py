@@ -184,3 +184,12 @@ def test_a_late_slice_is_waited_for_not_dropped():
             return None                                           # never arrives
     svc.capture = Gone()
     assert asyncio.run(svc._slice("FT8", 15.0, 15)) is None       # gives up after SLICE_WAIT
+
+
+def test_auto_mode_takes_the_nearest_dial():
+    # 80 m: FT8 3.573 and FT4 3.575 are only 2 kHz apart; 17 m and 12 m 4 kHz
+    assert auto_mode(3_573_000) == "FT8" and auto_mode(3_575_000) == "FT4"
+    assert auto_mode(18_100_000) == "FT8" and auto_mode(18_104_000) == "FT4"
+    assert auto_mode(24_915_000) == "FT8" and auto_mode(24_919_000) == "FT4"
+    assert auto_mode(7_074_000) == "FT8" and auto_mode(7_047_500) == "FT4"
+    assert auto_mode(None) == "FT8"

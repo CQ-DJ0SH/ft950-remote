@@ -166,6 +166,10 @@ class QsoReq(BaseModel):
     mode: str | None = None                 # default: current digi mode
     freq_hz: int | None = None              # default: dial + TX offset
     tx_offset_hz: int | None = None
+    # a QSO logged afterwards: its own UTC date and times (default: now)
+    qso_date: str | None = Field(default=None, pattern=r"^\d{8}$")      # YYYYMMDD
+    time_on: str | None = Field(default=None, pattern=r"^\d{6}$")       # HHMMSS
+    time_off: str | None = Field(default=None, pattern=r"^\d{6}$")
     to: list[Literal["wavelog", "qrz"]] = Field(default_factory=lambda: ["wavelog", "qrz"], min_length=1)
 
 

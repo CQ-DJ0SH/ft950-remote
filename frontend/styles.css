@@ -2081,3 +2081,8 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 /* DIGI footer in one line again: contrast / brightness sliders a little shorter
    (VOACAP had dropped to a second line) */
 .foot input[type=range]{width:70px}
+
+/* MUTE and DROP with an icon before the text, as in TM-V71 Remote:
+   speaker crossed out (MUTE), speaker with a pause sign (DROP) */
+#rx-mute, #sq-drop{display:inline-flex; align-items:center; justify-content:center; gap:5px; width:68px; padding-left:6px; padding-right:6px; box-sizing:border-box}   /* fixed: MUTE → MUTED does not jump */
+.ptt-mute .pm-ico{width:13px; height:13px; flex:none}

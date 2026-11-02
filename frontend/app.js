@@ -3197,7 +3197,7 @@ $("rx-mute").onclick = () => {
   rxMuted = !rxMuted;
   $("rx-mute").classList.toggle("armed", rxMuted);
   $("rx-mute").setAttribute("aria-pressed", String(rxMuted));
-  $("rx-mute").textContent = rxMuted ? "MUTED" : "MUTE";
+  $("rx-mute").querySelector(".pm-lbl").textContent = rxMuted ? "MUTED" : "MUTE";   // the icon stays
   applyRxMute();
   threeToneChime(rxMuted);                 // muting = descending, release = ascending
 };

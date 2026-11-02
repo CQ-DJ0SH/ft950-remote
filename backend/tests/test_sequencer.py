@@ -125,10 +125,13 @@ def test_auto_answer_takes_the_strongest_caller_when_idle():
     asyncio.run(s.on_decodes(decs, 15.0, "FT8", False))
     assert started == []                                  # switch off: nothing happens
     asyncio.run(s.set_auto(True, 1750, adopt=False))       # AF off: on the TX box
-    asyncio.run(s.on_decodes(decs, 15.0, "FT8", True))    # early/partial pass: ignored
+    asyncio.run(s.on_decodes(decs, 15.0, "FT8", True, partner=True))   # a partner pass: not for this
     assert started == []
-    asyncio.run(s.on_decodes(decs, 15.0, "FT8", False))
+    asyncio.run(s.on_decodes(decs, 15.0, "FT8", True))    # the early pass decides already
     assert started == [("SP3ABC", 1750.0)]                # strongest station calling me
+    started.clear()
+    asyncio.run(s.on_decodes(decs, 15.0, "FT8", False))   # (the full pass would as well)
+    assert started == [("SP3ABC", 1750.0)]
 
 
 def test_tx_frequency_is_kept_inside_the_radio_tx_filter():
@@ -192,9 +195,9 @@ def test_hunt_calls_when_idle_and_blocks_a_station_that_never_answers():
     assert started == []                                                   # Hunt off
     asyncio.run(s.set_hunt(True, 1600))
     assert s.auto_tx_hz == 1600.0 and s.status()["hunt"]
-    asyncio.run(s.on_decodes(decs, 15.0, "FT8", True))                     # early pass: no
+    asyncio.run(s.on_decodes(decs, 15.0, "FT8", True, partner=True))       # partner pass: no
     assert started == []
-    asyncio.run(s.on_decodes(decs, 15.0, "FT8", False))
+    asyncio.run(s.on_decodes(decs, 15.0, "FT8", True))                     # early pass: yes
     assert started == ["SP2DDD"] and s.session["hunt"]
     # the QSO ran out of tries without one answer: blocked, never called again
     s.session["state"] = "no reply"
@@ -572,3 +575,94 @@ def test_last_tx_carries_the_attempt_counter():
     s.session = s._new_session(_d("DJ0SH EC3A JN11")); s.step, s.tries = "report", 1
     s._log_tx("EC3A DJ0SH -10", 60.0, {})
     assert (s.last_tx["n"], s.last_tx["of"], s.last_tx["cq"]) == (2, 5, False)
+
+
+def test_hunt_and_auto_answer_get_the_early_pass_and_decide_on_it():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    assert s.early_range() is None                               # idle: no early pass
+    s.hunt = True
+    assert s.early_range() == (200, 3000)                        # whole band for Hunt
+    s.hunt, s.auto_answer = False, True
+    assert s.early_range() == (200, 3000)
+    s.auto_answer, s.hunt, s.hunt_until = False, True, time.time() + 600
+    s._run = lambda: None
+    asyncio.run(s.on_decodes([_d("CQ SP2DDD JO93", snr=0, worked=_w())], 15.0, "FT8", True))
+    assert s.kind == "answer" and s.session["call"] == "SP2DDD" and s.session.get("hunt")
+    assert s.parity == 0                                         # their period 15 s = odd -> we even
+
+
+def _fast_loop(monkeypatch):
+    import app.sequencer as sq
+    monkeypatch.setattr(sq, "MODES", {"FT8": {"period": 1.0}})
+    monkeypatch.setattr(sq, "FT_LATEST_START", {"FT8": 0.6})
+    monkeypatch.setattr(sq, "WAIT_MARGIN", 0.0)
+
+    class _SendTx(_Tx):
+        def __init__(self): self.sent = []
+        async def stop(self): pass
+        async def send_ft(self, msg, mode, hz, t0, on_air=None):
+            self.sent.append(msg)
+            if on_air:
+                await on_air(0.5)
+            return {"sent": True}
+    return _SendTx()
+
+
+def _rreport_session(tx):
+    s = Sequencer(_Digi(), tx, _Log(), _Mgr(), _Set())
+    s.kind, s.mode, s.parity = "answer", "FT8", 0
+    s.session = s._new_session(_d("CQ RA3Y KO73", snr=-16))
+    s.session["their_report"], s.session["report_sent"] = "-09", "-16"
+    s.step, s.tries = "rreport", sq_max()                       # the 5th R-report went out
+    s._seen = type("All", (dict,), {"get": lambda self, k, d=None: True})()
+    return s
+
+
+def sq_max():
+    from app.sequencer import MAX_TRIES
+    return MAX_TRIES
+
+
+def test_reply_to_the_last_attempt_still_counts(monkeypatch):
+    tx = _fast_loop(monkeypatch)
+    s = _rreport_session(tx)
+
+    async def run():
+        # their RR73 to our 5th R-report, decoded before the next decision
+        await s.on_decodes([_d("DJ0SH RA3Y RR73", t0=0.0)], 0.0, "FT8", False)
+        s._run()
+        for _ in range(100):
+            if tx.sent:
+                break
+            await asyncio.sleep(0.01)
+        await s.halt(stop_tx=False)
+    asyncio.run(run())
+    assert tx.sent[0] == "RA3Y DJ0SH 73" and s.sessions[0]["state"] == "done"
+
+
+def test_no_reply_is_decided_without_a_sixth_transmission(monkeypatch):
+    tx = _fast_loop(monkeypatch)
+    s = _rreport_session(tx)
+
+    async def run():
+        s._run()
+        for _ in range(100):
+            if s.sessions[0]["state"] != "running":
+                break
+            await asyncio.sleep(0.01)
+        await s.halt(stop_tx=False)
+    asyncio.run(run())
+    assert tx.sent == [] and s.sessions[0]["state"] == "no reply"
+
+
+def test_late_rr73_after_no_reply_completes_and_logs():
+    s = _seq()
+    s.session = s._new_session(_d("CQ RA3Y KO73", snr=-16))
+    s.session["their_report"], s.session["report_sent"] = "-09", "-16"
+    s.session["msgs"].append({"dir": "tx", "t0": 0.0, "utc": "", "df": 1570.0, "msg": "RA3Y DJ0SH R-16"})
+    s.session["state"], s.session["ended"] = "no reply", time.time()
+    s.session, s.kind = None, None                                # Hunt went on
+    asyncio.run(s.on_decodes([_d("DJ0SH RA3Y RR73", t0=60.0)], 60.0, "FT8", False))
+    x = s.sessions[0]
+    assert x["state"] == "done" and x["logged"] is False and x["qso"]["rst_rcvd"] == "-09"
+    assert x["msgs"][-1]["msg"] == "DJ0SH RA3Y RR73"

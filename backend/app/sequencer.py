@@ -233,9 +233,15 @@ class Sequencer:
 
     # -- decoder interface ------------------------------------------------------
     def early_range(self) -> Optional[tuple[int, int]]:
-        """Early pass only while a sequence runs; narrow once the partner's
-        frequency is known (0.4 s instead of 2-3 s)."""
+        """Early pass while a sequence runs - narrow once the partner's
+        frequency is known (0.4 s instead of 2-3 s) - and, over the whole
+        band, while Auto Hunt or Auto Answer waits for a station: picked from
+        the early pass, the call goes out at the start of the next period
+        instead of up to 30 s later (the full pass ends 1.4-1.9 s into it,
+        often past the latest start)."""
         if not self.kind:
+            if self.hunt or self.auto_answer:
+                return int(self.digi.config["low_hz"]), int(self.digi.config["high_hz"])
             return None
         if self.session and self.session.get("df"):
             df = self.session["df"]
@@ -330,19 +336,23 @@ class Sequencer:
 
     async def on_decodes(self, decodes: list[dict], t0: float, mode: str, early: bool,
                          partner: bool = False) -> None:
-        if not self.kind and self.auto_answer and not early and t0 not in self.digi.tx_periods:
+        if not partner:
+            self._late_close(decodes)
+        # Auto Answer / Auto Hunt also decide on the early pass (when it ran
+        # for them, partner=False); what it missed, the full pass still finds
+        if not self.kind and self.auto_answer and not partner and t0 not in self.digi.tx_periods:
             callers = [d for d in decodes if (d.get("to") or "").upper() == self.me
                        and d.get("kind") in ("grid", "report", "rreport") and d.get("from")
                        and not d["from"].startswith("<")]
             if callers:
                 d = max(callers, key=lambda x: x["snr"])                 # strongest caller
-                log.info("auto answer: %s (%s)", d["from"], d["msg"])
+                log.info("auto answer: %s (%s)%s", d["from"], d["msg"], " - early pass" if early else "")
                 try:
                     await self.answer(d, self._auto_hz(d))
                 except RuntimeError as exc:
                     log.warning("auto answer %s: %s", d["from"], exc)
                 return
-        if not self.kind and self.hunt and not early and t0 not in self.digi.tx_periods:
+        if not self.kind and self.hunt and not partner and t0 not in self.digi.tx_periods:
             if time.time() > self.hunt_until:
                 self.hunt = False
                 log.info("hunt: %d min over, off", self.hunt_minutes)
@@ -350,7 +360,7 @@ class Sequencer:
             elif getattr(self.manager, "count", 1) and mode == self.digi.current_mode():
                 d = self.hunt_pick(decodes)
                 if d:
-                    log.info("hunt: calling %s (%s)", d["from"], d["msg"])
+                    log.info("hunt: calling %s (%s)%s", d["from"], d["msg"], " - early pass" if early else "")
                     try:
                         await self.answer(d, self._auto_hz(d))
                         self.session["hunt"] = True
@@ -527,6 +537,13 @@ class Sequencer:
                 log.info("TX decision %+.2f s into the period, partner period %s: %s",
                          time.time() - t0, "decoded" if self._seen.get(prev) else "NOT decoded (deadline)",
                          msg or "-")
+                # No reply is decided here, after the period that answers our last
+                # attempt was decoded - not right after sending it: RA3Y's RR73 to
+                # the 5th R-report came in that very period, and the session had
+                # already been given up (no 73, not logged).
+                if self.step not in ("cq", "done") and self.tries >= MAX_TRIES:
+                    await self._give_up()
+                    continue
                 if msg is None:
                     await self._finish_round()
                     continue
@@ -567,16 +584,6 @@ class Sequencer:
                 if self.step == "cq" and self.cq_count >= CQ_MAX:
                     log.info("CQ limit (%d) reached", CQ_MAX)
                     self.kind = None
-                elif self.step not in ("cq", "done") and self.tries >= MAX_TRIES:
-                    self.session["state"] = "no reply"
-                    s = self.session
-                    if s.get("hunt") and not s.get("answered"):
-                        vfo = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
-                        self._hunt_block(s["call"], {
-                            "dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",
-                            "df": s.get("df"), "mode": s.get("mode"), "tries": self.tries,
-                            "band": band_for_hz(s.get("freq_hz") or vfo)})
-                    await self._finish_round()
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001
@@ -609,6 +616,39 @@ class Sequencer:
                 # our RR73), which puts the step back to "rr73".
                 self._complete()
                 self.step = "done"
+
+    async def _give_up(self) -> None:
+        """MAX_TRIES without the step moving on: the session ends as no reply."""
+        s = self.session
+        log.info("%s: no reply after %d tries", s["call"], self.tries)
+        s["state"], s["ended"] = "no reply", time.time()
+        if s.get("hunt") and not s.get("answered"):
+            vfo = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
+            self._hunt_block(s["call"], {
+                "dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",
+                "df": s.get("df"), "mode": s.get("mode"), "tries": self.tries,
+                "band": band_for_hz(s.get("freq_hz") or vfo)})
+        await self._finish_round()
+
+    def _late_close(self, decodes: list[dict]) -> None:
+        """RR73 / RRR / 73 from a station whose session already ended as no
+        reply (last 10 min) after both reports went across: the QSO is
+        complete after all - logged like any other (no 73 is sent back)."""
+        now = time.time()
+        for d in decodes:
+            if (d.get("to") or "").upper() != self.me or d.get("kind") not in ("RR73", "RRR", "73"):
+                continue
+            frm = (d.get("from") or "").upper()
+            for s in self.sessions:
+                if (s is not self.session and s["call"] == frm and s["state"] == "no reply"
+                        and s.get("their_report") and s.get("report_sent")
+                        and now - (s.get("ended") or now) < 600 and s.get("logged") is None):
+                    s["msgs"].append({"dir": "rx", "t0": d.get("t0"), "utc": d.get("period_utc"),
+                                      "snr": d.get("snr"), "dt": d.get("dt"), "df": d.get("df"),
+                                      "msg": d.get("msg")})
+                    log.info("%s: %s after the session had ended - QSO complete, logged", frm, d.get("kind"))
+                    self._complete(s)
+                    break
 
     async def _finish_round(self) -> None:
         """Session over: CQ goes on calling, Answer stops."""
@@ -702,14 +742,16 @@ class Sequencer:
               if m["dir"] == "tx" and not m.get("pending") and not m.get("skipped")]
         return bool(tx) and tx[-1]["msg"].split()[-1] == "73"
 
-    def _complete(self) -> None:
-        s = self.session
+    def _complete(self, s: Optional[dict] = None) -> None:
+        late = s is not None                       # a session that had already ended (_late_close)
+        s = s or self.session
         if not s or s.get("logged") is not None:
             return
         s["ended"] = time.time()
         s["state"] = "done"
         dial = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
-        s["freq_hz"] = int(dial + self.tx_hz) if dial else None
+        tx_df = next((m["df"] for m in reversed(s["msgs"]) if m["dir"] == "tx"), None) if late else self.tx_hz
+        s["freq_hz"] = int(dial + (tx_df or self.tx_hz)) if dial else None
         q = {"call": s["call"], "gridsquare": s["grid"], "rst_sent": s.get("report_sent") or s["my_report"],
              "rst_rcvd": s["their_report"] or "", "mode": s["mode"], "freq_hz": s["freq_hz"],
              "tx_pwr": self.tx.service.status.get("power"),

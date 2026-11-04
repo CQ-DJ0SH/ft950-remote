@@ -1151,6 +1151,19 @@ async function answer(d) {
   jumpToCall = d.from.toUpperCase();
   try { renderSeq(await api("/api/seq/answer", { decode: d, tx_hz: boxes.tx })); toast(`Calling ${d.from} …`); } catch { jumpToCall = null; /* toast */ }
 }
+// The globe popup (globe.html): a double-click on a station there answers it
+// exactly as a double-click in Received Messages - RX window, Adopt Frequency,
+// log form and DX Call fields, then the call. Only this page calls; the popup
+// never transmits by itself.
+window.globeAnswer = (d) => {
+  if (!d?.from || !d.msg || d.t0 == null) return false;
+  setBox("rx", d.df);
+  if ($("af").classList.contains("on")) setBox("tx", d.df);
+  fillQso(d);
+  if (!isMine(d)) { $("dx-call").value = d.from.toUpperCase(); $("dx-grid").value = (d.grid || "").toUpperCase(); }
+  answer(d);
+  return true;
+};
 // Marked session: QRZ.com lookup and world map, each in its own popup window
 const baseCall = (c) => (c || "").toUpperCase().split("/").filter((p) => /\d/.test(p) && /[A-Z]/.test(p))
   .sort((a, b) => b.length - a.length)[0] || (c || "").toUpperCase();
@@ -1160,6 +1173,8 @@ function popup(url, name, w, h) {
   else win.focus();
 }
 function openQrz(call) { popup("https://www.qrz.com/db/" + encodeURIComponent(baseCall(call)), "qrz", 1100, 850); }
+// DIGI ▸ Received Messages ▸ Globe: the stations heard on a turning globe (popup)
+$("rx-globe").onclick = () => popup("globe.html", "ft950globe", 1320, 800);
 function openMap(x) {
   const q = new URLSearchParams({ call: x.call, grid: x.grid || "", my: myGrid });
   popup("map.html?" + q, "dxmap", 960, 640);

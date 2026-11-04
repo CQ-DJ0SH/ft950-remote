@@ -358,6 +358,32 @@ EN = [
         "otherwise); it stops at once and switches Auto Hunt off. NTP in the strip "
         "is an LED: green with the clock synchronised, red without (no decoding).",
     ]),
+    ("h2", "Globe"),
+    ("img", "manual/globe.jpg", 174),
+    ("p", "Globe, beside the title of Received Messages, opens a popup with the "
+          "stations heard on a slowly turning, see-through hologram globe; your "
+          "own station stands out in amber with call and locator. Stations of the "
+          "last 30 minutes are points with their call (where they would overlap, "
+          "the important ones win): magenta a new DXCC, green new on this band, red "
+          "worked; a hollow ring sits at the centre of the DXCC entity when the "
+          "station sent no locator. A call that appears for the first time draws a "
+          "line out from you that fades after about 20 s; stations calling CQ now "
+          "(last 45 s) have a dashed line, the QSO in progress an amber line with "
+          "pulses running along it."),
+    ("ul", [
+        "The table beside it has your call as its title, the frequency with band "
+        "and mode, a TX lamp (red and glowing while transmitting, with the message "
+        "that goes out) and HALT TRX, as on the main page. Columns: UTC, call (with "
+        "a CQ tag while it calls), locator, km, bearing, SNR, DXCC.",
+        "A click on a row (or a point) turns the globe to the station and stops it "
+        "there; RESUME, bottom left, turns it on again - also after turning it by "
+        "hand with the mouse. The wheel zooms.",
+        "A double-click on a row calls the station - through the main page, exactly "
+        "as a double-click in Received Messages (RX window, Adopt Frequency, log "
+        "form, then the call). Without the main page the popup does not call.",
+        "A small audio spectrum (0-3 kHz, from the DIGI waterfall's data) sits at "
+        "the bottom; with DECODE off it is empty.",
+    ]),
     ("h2", "Band conditions (VOACAP)"),
     ("p", "At the bottom right of the panel a sun or a moon and five chips — "
           "80-40, 30-20, 17-15, 12-10, 6m — show how the bands are open from your "

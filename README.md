@@ -9,6 +9,8 @@ decoding, plus voice operation over WebRTC.
 
 ![DIGI panel: FT8 decodes, sessions and waterfall](docs/screenshots/digi.png)
 
+![Globe popup: the stations heard on a turning hologram globe, with the table beside it](docs/screenshots/globe.jpg)
+
 ## Features
 
 - **VFO panel** with an LCD modelled on the FT-950's own display:
@@ -63,6 +65,11 @@ decoding, plus voice operation over WebRTC.
   - My Messages counts the attempts on each TX line (2/5, CQ 3/40); with
     DECODE off the waterfall stops and is cleared; AUTO picks FT8/FT4 by the
     nearest standard frequency
+  - **Globe** (popup from Received Messages): the stations heard on a turning,
+    see-through hologram globe - new DXCC / new on band / worked in colour, a
+    line out to each new call, dashed lines to stations calling CQ, the QSO in
+    progress in amber; a table beside it with TX lamp and HALT TRX; a
+    double-click calls the station through the main page
   - **PSK Reporter**: spots of the stations heard (every 5 min, each station
     once an hour per band and mode), with an LED in the DIGI strip and map
     links and statistics in Settings ▸ FT8

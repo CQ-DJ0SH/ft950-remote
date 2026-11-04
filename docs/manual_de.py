@@ -393,6 +393,34 @@ DE = [
         "aus. NTP in der Leiste ist eine LED: grün bei synchroner Uhr, rot ohne "
         "(dann wird nicht dekodiert).",
     ]),
+    ("h2", "Globus"),
+    ("img", "manual/globe.jpg", 174),
+    ("p", "Globe neben dem Titel von Received Messages öffnet ein Popup mit den "
+          "gehörten Stationen auf einem sich langsam drehenden, durchscheinenden "
+          "Hologramm-Globus; die eigene Station hebt sich in Bernstein mit Rufzeichen "
+          "und Locator ab. Stationen der letzten 30 Minuten sind Punkte mit ihrem "
+          "Rufzeichen (wo sie sich überdecken würden, gewinnen die wichtigen): "
+          "magenta ein neues DXCC, grün neu auf diesem Band, rot gearbeitet; ein "
+          "hohler Ring sitzt in der Mitte des DXCC-Gebiets, wenn die Station keinen "
+          "Locator gesendet hat. Ein Rufzeichen, das zum ersten Mal erscheint, zieht "
+          "eine Linie von Ihnen aus, die nach etwa 20 s verblasst; Stationen, die "
+          "gerade CQ rufen (letzte 45 s), haben eine gestrichelte Linie, das "
+          "laufende QSO eine bernsteinfarbene Linie mit wandernden Impulsen."),
+    ("ul", [
+        "Die Tabelle daneben trägt Ihr Rufzeichen als Titel, die Frequenz mit Band "
+        "und Betriebsart, eine TX-Lampe (rot leuchtend beim Senden, mit der "
+        "gesendeten Nachricht) und HALT TRX wie auf der Hauptseite. Spalten: UTC, "
+        "Rufzeichen (mit CQ-Markierung, solange es ruft), Locator, km, Richtung, "
+        "SNR, DXCC.",
+        "Ein Klick auf eine Zeile (oder einen Punkt) dreht den Globus zur Station "
+        "und hält ihn dort an; RESUME unten links dreht ihn wieder - auch nachdem "
+        "er von Hand mit der Maus gedreht wurde. Das Mausrad zoomt.",
+        "Ein Doppelklick auf eine Zeile ruft die Station - über die Hauptseite, "
+        "genau wie ein Doppelklick in Received Messages (RX-Fenster, Adopt "
+        "Frequency, Logformular, dann der Ruf). Ohne Hauptseite ruft das Popup nicht.",
+        "Unten sitzt ein kleines Audiospektrum (0-3 kHz, aus den Daten des "
+        "DIGI-Wasserfalls); bei DECODE aus bleibt es leer.",
+    ]),
     ("h2", "Bandbedingungen (VOACAP)"),
     ("p", "Unten rechts im Feld zeigen eine Sonne oder ein Mond und fünf Felder — "
           "80-40, 30-20, 17-15, 12-10, 6m — in Grün, Gelb oder Rot, wie offen die "

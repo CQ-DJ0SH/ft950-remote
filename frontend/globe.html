@@ -130,7 +130,8 @@
   td.approx{color:var(--dim); font-style:italic}
   tr{cursor:pointer}
   tbody tr:hover{background:var(--row)}
-  tbody tr.sel{background:var(--sel)}
+  tbody tr.sel{background:rgba(80,200,255,.28); box-shadow:inset 3px 0 0 var(--holo)}
+  tbody tr.sel td.call{color:#ffffff; text-shadow:0 0 10px rgba(70,212,255,.8)}
   tbody tr.fresh td.call{text-shadow:0 0 10px currentColor}   /* just heard: glows in its own colour */
   .empty{padding:18px; color:var(--dim)}
   .cqtag{display:inline-block; margin-left:6px; padding:0 4px; border:1px solid currentColor; border-radius:3px;
@@ -142,7 +143,9 @@
   .clr{margin-right:10px; padding:2px 8px; border:1px solid var(--edge); border-radius:5px; background:rgba(8,32,56,.6);
     color:var(--dim); font:500 10px var(--font-ui); letter-spacing:.12em; cursor:pointer}
   .clr:hover{color:#e6f7ff; border-color:var(--holo); box-shadow:0 0 10px -3px rgba(70,212,255,.7)}
-  .foot{padding:8px 14px; border-top:1px solid var(--edge); color:var(--dim); font-size:11px; display:flex; justify-content:space-between}
+  .foot{padding:8px 14px; border-top:1px solid var(--edge); color:var(--dim); font-size:11px; display:flex;
+    justify-content:space-between; align-items:center; gap:10px}
+  .foot > span{display:inline-flex; align-items:center; line-height:1.4}   /* both lines at one height */
   @media (max-width:900px){ .wrap{flex-direction:column} .side{flex:0 0 45%} }
 </style>
 </head>
@@ -541,7 +544,18 @@ const endDrag = () => {
 };
 cv.addEventListener("pointerup", endDrag); cv.addEventListener("pointercancel", endDrag);
 cv.addEventListener("pointerleave", () => setHover(null));
-cv.addEventListener("click", () => { if (hovered) select(hovered === selected ? null : hovered); });
+cv.addEventListener("click", () => {
+  if (!hovered) return;
+  const call = hovered === selected ? null : hovered;
+  select(call);
+  // marked on the globe: the row in the table too, scrolled into view - and
+  // kept there while the table re-sorts, until the table is scrolled by hand
+  followSel = call;
+  const tr = call && [...$("rows").children].find((r) => r.dataset.call === call);
+  if (tr) tr.scrollIntoView({ block: "center" });
+});
+let followSel = null;
+for (const ev of ["wheel", "touchmove", "keydown"]) document.querySelector(".tbl").addEventListener(ev, () => { followSel = null; }, { passive: true });
 cv.addEventListener("wheel", (e) => { e.preventDefault(); zoom = Math.max(0.6, Math.min(2.6, zoom * (e.deltaY < 0 ? 1.1 : 0.9))); }, { passive: false });
 
 function setHover(call, x, y) {
@@ -620,6 +634,10 @@ function render() {
   $("empty").style.display = list.length ? "none" : "block";
   $("count").textContent = `${list.length} station${list.length === 1 ? "" : "s"}` +
     ` · ${list.filter((s) => !s.approx && s.pos).length} with locator`;
+  if (followSel && followSel === selected) {        // keep the station marked on the globe in view
+    const tr = [...$("rows").children].find((r) => r.dataset.call === followSel);
+    if (tr) tr.scrollIntoView({ block: "nearest" });
+  }
   for (const tr of $("rows").children) {
     tr.onmouseenter = () => { hovered = tr.dataset.call; markRows(); };
     tr.onmouseleave = () => { hovered = null; markRows(); };

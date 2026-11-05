@@ -414,7 +414,17 @@ DE = [
         "SNR, DXCC.",
         "Ein Klick auf eine Zeile (oder einen Punkt) dreht den Globus zur Station "
         "und hält ihn dort an; RESUME unten links dreht ihn wieder - auch nachdem "
-        "er von Hand mit der Maus gedreht wurde. Das Mausrad zoomt.",
+        "er von Hand mit der Maus gedreht wurde. Das Mausrad zoomt. Eine auf dem "
+        "Globus angeklickte Station wird auch in der Tabelle markiert (cyanfarbener "
+        "Streifen) und in den sichtbaren Bereich gescrollt; die Tabelle hält sie "
+        "dort, während sie neu sortiert, bis Sie selbst scrollen.",
+        "Beim Senden zeigt eine kleine TX-Zeile oben rechts am Globus, was "
+        "hinausgeht (TX ▸ Nachricht, TUNE, VOICE oder PTT). Während eines QSOs "
+        "steht darüber die letzte Nachricht der Gegenstation (RX ◂ Nachricht und "
+        "SNR), und sie bleibt auch in den Empfangsperioden stehen, Ihre letzte "
+        "Nachricht dann abgeblendet.",
+        "✕ CLEAR in der Fußzeile der Tabelle leert Tabelle und Globus; nur danach "
+        "gehörte Stationen kommen wieder.",
         "Ein Doppelklick auf eine Zeile ruft die Station - über die Hauptseite, "
         "genau wie ein Doppelklick in Received Messages (RX-Fenster, Adopt "
         "Frequency, Logformular, dann der Ruf). Ohne Hauptseite ruft das Popup nicht.",

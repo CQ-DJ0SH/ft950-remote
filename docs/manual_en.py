@@ -377,7 +377,15 @@ EN = [
         "a CQ tag while it calls), locator, km, bearing, SNR, DXCC.",
         "A click on a row (or a point) turns the globe to the station and stops it "
         "there; RESUME, bottom left, turns it on again - also after turning it by "
-        "hand with the mouse. The wheel zooms.",
+        "hand with the mouse. The wheel zooms. A station clicked on the globe is "
+        "marked in the table too (cyan stripe) and scrolled into view; the table "
+        "keeps it there while it re-sorts, until you scroll it yourself.",
+        "While transmitting, a small TX line at the top right of the globe shows "
+        "what goes out (TX ▸ message, TUNE, VOICE or PTT). During a QSO it shows "
+        "the partner's last message above it (RX ◂ message and SNR) and stays "
+        "through the receive periods too, your last message then dimmed.",
+        "✕ CLEAR in the table footer empties table and globe; only stations heard "
+        "afterwards come back.",
         "A double-click on a row calls the station - through the main page, exactly "
         "as a double-click in Received Messages (RX window, Adopt Frequency, log "
         "form, then the call). Without the main page the popup does not call.",

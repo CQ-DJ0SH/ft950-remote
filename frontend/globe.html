@@ -59,7 +59,15 @@
   .txbar{position:absolute; right:10px; top:12px; display:none; align-items:center; gap:9px;
     padding:5px 12px; border-radius:7px; border:1px solid rgba(255,110,100,.55); white-space:nowrap;
     background:rgba(70,14,12,.55); color:#ffb4ad; box-shadow:0 0 12px -2px rgba(255,60,48,.45); z-index:3}
-  .txbar.on{display:inline-flex}
+  .txbar.on{display:inline-flex; flex-direction:column; align-items:flex-start; gap:4px}
+  .txbar > div{display:flex; align-items:center; gap:9px}
+  .txbar > div[hidden]{display:none}
+  /* receive period of a QSO: the TX line dimmed, the frame calmer */
+  .txbar.idle{border-color:rgba(255,110,100,.25); background:rgba(40,12,12,.45); box-shadow:none}
+  .txbar.idle > div:last-child{opacity:.45}
+  .txbar .rxline b{color:var(--holo)}
+  .txbar .rxline span{color:#c9eeff}
+  .txbar .rxline em{font:500 11px var(--font-mono); font-style:normal; color:var(--dim)}
   .txbar b{font:400 13px/1 'Neuropol',var(--font-ui); letter-spacing:.16em; color:#ff8a80}
   .txbar span{font:500 13px var(--font-mono); letter-spacing:.03em; color:#ffd6d2}
   .note{position:absolute; left:50%; top:172px; transform:translateX(-50%); padding:8px 16px; border-radius:8px;
@@ -131,6 +139,9 @@
   tbody tr.qso{background:rgba(255,178,62,.14); box-shadow:inset 3px 0 0 var(--home)}
   tbody tr.qso td.call::before{content:"QSO "; color:var(--home); font-weight:600; letter-spacing:.06em}
   .legend .l-qso{background:var(--home); border-radius:2px; width:14px; height:3px; margin-bottom:3px; box-shadow:0 0 8px var(--home)}
+  .clr{margin-right:10px; padding:2px 8px; border:1px solid var(--edge); border-radius:5px; background:rgba(8,32,56,.6);
+    color:var(--dim); font:500 10px var(--font-ui); letter-spacing:.12em; cursor:pointer}
+  .clr:hover{color:#e6f7ff; border-color:var(--holo); box-shadow:0 0 10px -3px rgba(70,212,255,.7)}
   .foot{padding:8px 14px; border-top:1px solid var(--edge); color:var(--dim); font-size:11px; display:flex; justify-content:space-between}
   @media (max-width:900px){ .wrap{flex-direction:column} .side{flex:0 0 45%} }
 </style>
@@ -141,7 +152,10 @@
     <canvas id="globe" aria-label="Globe with the received FT8/FT4 stations"></canvas>
     <div class="brand"><h2>FT 950<span class="dot">·</span>REMOTE</h2><div>Stations heard · FT8 / FT4</div></div>
     <div class="tip" id="tip"></div>
-    <div class="txbar" id="txbar"><b>TX</b><span id="txbar-msg"></span></div>
+    <div class="txbar" id="txbar">
+      <div class="rxline" id="rxline" hidden><b>RX</b><span id="rxbar-msg"></span><em id="rxbar-snr"></em></div>
+      <div><b>TX</b><span id="txbar-msg"></span></div>
+    </div>
     <div class="note" id="note"></div>
     <button class="resume" id="resume" type="button" title="The globe stands still (a marked station, or turned by hand) - turn on">▶ RESUME</button>
     <div class="spec"><canvas id="spec"></canvas><span class="lbl">AUDIO SPECTRUM · 0–3 kHz</span><span class="off" id="spec-off">DECODE off — no spectrum</span></div>
@@ -166,7 +180,7 @@
       </table>
       <div class="empty" id="empty">Waiting for decodes …</div>
     </div>
-    <div class="foot"><span id="count">0 stations</span><span>last 30 min · click: show · double-click: call</span></div>
+    <div class="foot"><span><button class="clr" id="clear" type="button" title="Empty the table and the globe: only stations heard from now on appear">✕ CLEAR</button><span id="count">0 stations</span></span><span>last 30 min · click: show · double-click: call</span></div>
   </aside>
 </div>
 <script>
@@ -548,6 +562,16 @@ function select(call) {
   $("resume").classList.toggle("show", paused);
   markRows();
 }
+$("clear").onclick = () => {
+  // empty table and globe; decodes already received (the last 100 on the Pi)
+  // stay out, only stations heard from the next period on come back
+  clearedAt = Math.max(clearedAt, ...[...stations.values()].map((s) => s.t), Date.now() / 1000 - 1);
+  stations.clear();
+  selected = hovered = null; paused = false; target = null;
+  $("resume").classList.remove("show"); $("tip").style.display = "none";
+  render();
+  note("Table cleared — new stations appear as they are heard");
+};
 $("resume").onclick = () => { select(null); paused = false; $("resume").classList.remove("show"); target = null; idleUntil = 0; };
 // Halt TRX: the same endpoint as the main page's button - it only stops
 $("halt").onclick = async () => {
@@ -628,8 +652,20 @@ async function pollRadio() {
       : tx.active === "voice" ? "VOICE" : tx.active ? String(tx.active).toUpperCase() : "PTT";
     $("txlamp").classList.toggle("on", on);
     $("txmsg").textContent = on ? "on air" : "receive";
-    $("txbar").classList.toggle("on", on);                    // the detail, top right
-    $("txbar-msg").textContent = on ? "▸ " + what : "";
+    // the detail, top right: while transmitting, and all through a running QSO
+    // (in its receive periods my last message stays, dimmed)
+    const ss = sq.kind && sq.session && sq.session.state === "running" ? sq.session : null;
+    const msgs = ss ? [...(ss.msgs || [])].reverse() : [];
+    const lastRx = msgs.find((m) => m.dir === "rx" && !m.other);
+    const lastTx = msgs.find((m) => m.dir === "tx" && !m.skipped && !m.pending);
+    $("txbar").classList.toggle("on", on || !!ss);
+    $("txbar").classList.toggle("idle", !on);
+    $("txbar-msg").textContent = on ? "▸ " + what : lastTx ? "▹ " + lastTx.msg : "▹ —";
+    $("rxline").hidden = !lastRx;
+    if (lastRx) {
+      $("rxbar-msg").textContent = "◂ " + lastRx.msg;
+      $("rxbar-snr").textContent = lastRx.snr != null ? `${lastRx.snr > 0 ? "+" : ""}${lastRx.snr} dB` : "";
+    }
     showFreq(st, digiMode);
   } catch { /* keeps the last state */ }
 }
@@ -639,7 +675,8 @@ function showFreq(st, mode) {
   const mhz = hz / 1e6, band = (BANDS.find(([a, b]) => mhz >= a && mhz <= b) || [0, 0, ""])[2];
   $("freq").innerHTML = `${mhz.toFixed(3)} MHz<span>${esc(band)}${band ? " · " : ""}${esc(mode || "")}</span>`;
 }
-let pending = [], loaded = false;                // loaded: the first poll is done (no lines for those)
+let pending = [], loaded = false;
+let clearedAt = 0;                                 // CLEAR: decodes up to this period are not taken again                // loaded: the first poll is done (no lines for those)
 async function poll() {
   let d;
   try { d = await (await fetch("/api/digi")).json(); } catch { return; }
@@ -662,6 +699,7 @@ async function poll() {
   for (const x of d.decodes || []) {
     const from = (x.from || "").toUpperCase();
     if (!from || from.startsWith("<") || from === me.call) continue;
+    if ((x.t0 || 0) <= clearedAt) continue;          // heard before CLEAR
     const known = stations.has(from);
     const s = stations.get(from) || { call: from, grid: "", pos: null, approx: false, t: 0 };
     if (!known && loaded) s.appeared = performance.now();       // new since the popup opened

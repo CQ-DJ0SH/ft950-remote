@@ -389,8 +389,15 @@ EN = [
         "A double-click on a row calls the station - through the main page, exactly "
         "as a double-click in Received Messages (RX window, Adopt Frequency, log "
         "form, then the call). Without the main page the popup does not call.",
-        "A small audio spectrum (0-3 kHz, from the DIGI waterfall's data) sits at "
-        "the bottom; with DECODE off it is empty.",
+        "Under the globe runs the FT8 spectrum across the full width: a waterfall "
+        "over the decoder's passband (200-3000 Hz from Settings ▸ FT8, the DIGI "
+        "waterfall's data) in the hologram colours with the current spectrum over "
+        "it, the stations of the last period with their call at their audio "
+        "frequency, the QSO partner in amber and your TX frequency as a red line "
+        "while a sequence runs. With DECODE off it is empty. Legend and FT8 "
+        "spectrum fold with their header line (▾/▸); the browser remembers it.",
+        "The popup follows the main page's light or dark theme (☀/☾), also while "
+        "it is open.",
     ]),
     ("h2", "Band conditions (VOACAP)"),
     ("p", "At the bottom right of the panel a sun or a moon and five chips — "

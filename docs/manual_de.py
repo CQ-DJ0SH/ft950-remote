@@ -428,8 +428,16 @@ DE = [
         "Ein Doppelklick auf eine Zeile ruft die Station - über die Hauptseite, "
         "genau wie ein Doppelklick in Received Messages (RX-Fenster, Adopt "
         "Frequency, Logformular, dann der Ruf). Ohne Hauptseite ruft das Popup nicht.",
-        "Unten sitzt ein kleines Audiospektrum (0-3 kHz, aus den Daten des "
-        "DIGI-Wasserfalls); bei DECODE aus bleibt es leer.",
+        "Unter dem Globus läuft über die ganze Breite das FT8-Spektrum: ein "
+        "Wasserfall über den Durchlassbereich des Decoders (200-3000 Hz aus "
+        "Settings ▸ FT8, die Daten des DIGI-Wasserfalls) in den Hologramm-Farben "
+        "mit dem aktuellen Spektrum darüber, die Stationen der letzten Periode mit "
+        "Rufzeichen an ihrer Audiofrequenz, die Gegenstation des QSOs in Bernstein "
+        "und Ihre TX-Frequenz als rote Linie, solange eine Sequenz läuft. Bei "
+        "DECODE aus bleibt es leer. Legende und FT8-Spektrum klappen über ihre "
+        "Kopfzeile ein und aus (▾/▸); der Browser merkt es sich.",
+        "Das Popup folgt dem hellen oder dunklen Thema der Hauptseite (☀/☾), "
+        "auch während es offen ist.",
     ]),
     ("h2", "Bandbedingungen (VOACAP)"),
     ("p", "Unten rechts im Feld zeigen eine Sonne oder ein Mond und fünf Felder — "

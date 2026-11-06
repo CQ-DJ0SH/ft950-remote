@@ -30,7 +30,9 @@
   body::after{content:""; position:fixed; inset:0; pointer-events:none;
     background:repeating-linear-gradient(0deg, rgba(120,210,255,.035) 0 1px, transparent 1px 3px)}
   .wrap{display:flex; height:100%; gap:18px; padding:18px}
-  .stage{position:relative; flex:1 1 auto; min-width:0}
+  /* left: the globe area over the FT8 strip */
+  .stage{position:relative; flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:8px}
+  .garea{position:relative; flex:1 1 auto; min-height:0}
   #globe{position:absolute; inset:0; width:100%; height:100%; cursor:grab; touch-action:none}
   #globe.drag{cursor:grabbing}
   .tip{position:absolute; pointer-events:none; padding:4px 8px; border:1px solid var(--edge); border-radius:6px;
@@ -49,7 +51,7 @@
   .halt svg{width:14px; height:14px; flex:none}
   .halt:hover:not(:disabled){background:rgba(150,24,18,.8); color:#fff}
   .halt:disabled{opacity:.35; cursor:default; box-shadow:none}
-  .resume{position:absolute; left:8px; bottom:6px; min-width:118px; display:none; align-items:center; justify-content:center; gap:6px;
+  .resume{position:absolute; left:50%; bottom:6px; transform:translateX(-50%); min-width:118px; display:none; align-items:center; justify-content:center; gap:6px;
     padding:6px 12px; border:1px solid var(--edge); border-radius:8px; background:rgba(8,32,56,.75); color:var(--holo);
     font:400 12px 'Neuropol',var(--font-ui); letter-spacing:.14em; cursor:pointer;
     box-shadow:0 0 18px -4px rgba(70,212,255,.6)}
@@ -74,16 +76,16 @@
     border:1px solid var(--edge); background:rgba(8,32,56,.9); color:#e6f7ff; font:500 13px var(--font-ui);
     letter-spacing:.06em; display:none; box-shadow:0 0 20px -6px rgba(70,212,255,.6)}
   .note.warn{border-color:rgba(255,120,110,.6); color:#ffb4ad}
-  .spec{position:absolute; right:6px; bottom:4px; width:min(340px,42%); height:96px; border:1px solid var(--edge);
-    border-radius:8px; background:rgba(8,32,56,.45); backdrop-filter:blur(4px);
-    box-shadow:0 0 20px -8px rgba(70,212,255,.4)}
-  .spec canvas{width:100%; height:100%; display:block}
-  .spec .lbl{position:absolute; left:8px; top:5px; font:500 9px var(--font-ui); letter-spacing:.18em; color:var(--dim);
+  /* the FT8 spectrum: a waterfall over the decoder's passband, wide under the globe */
+  .ft8{position:relative; flex:0 0 150px; border:1px solid var(--edge); border-radius:10px; overflow:hidden;
+    background:rgba(8,32,56,.45); box-shadow:0 0 20px -8px rgba(70,212,255,.4)}
+  .ft8 canvas{position:absolute; left:0; right:0; top:20px; bottom:0; width:100%; height:calc(100% - 20px); display:block}
+  .ft8 .lbl{position:absolute; left:10px; top:4px; font:500 9px var(--font-ui); letter-spacing:.18em; color:var(--dim);
     cursor:pointer; user-select:none; z-index:1}
-  .spec .lbl:hover, .legend .lg-head:hover{color:var(--holo)}
-  .spec.folded{height:22px}
-  .spec.folded canvas, .spec.folded .off{display:none !important}
-  .spec .off{position:absolute; inset:0; display:none; align-items:center; justify-content:center; color:var(--dim); font-size:11px}
+  .ft8 .lbl:hover, .legend .lg-head:hover{color:var(--holo)}
+  .ft8.folded{flex-basis:22px}
+  .ft8.folded canvas, .ft8.folded .off{display:none !important}
+  .ft8 .off{position:absolute; inset:20px 0 0; display:none; align-items:center; justify-content:center; color:var(--dim); font-size:11px}
   .legend{position:absolute; left:8px; top:74px; max-width:280px; line-height:1.9; padding:4px 10px 4px 0;
     border-radius:8px; background:rgba(3,7,13,.55); font-size:11px; color:var(--dim); letter-spacing:.06em}
   .legend i{display:inline-block; width:9px; height:9px; border-radius:50%; margin:0 5px -1px 0}
@@ -159,11 +161,54 @@
     justify-content:space-between; align-items:center; gap:10px}
   .foot > span{display:inline-flex; align-items:center; line-height:1.4; white-space:nowrap}   /* one height, one line */
   @media (max-width:900px){ .wrap{flex-direction:column} .side{flex:0 0 45%} }
+
+  /* light theme (follows the main page's ☀/☾) */
+  :root[data-theme="light"]{
+    --bg:#eef3f7; --holo:#0a79b0; --text:#173444; --dim:#557689; --newdx:#c0189a; --newb:#0e8a43; --home:#c27400;
+    --panel:rgba(255,255,255,.66); --edge:rgba(10,121,176,.28); --row:rgba(10,121,176,.08); --sel:rgba(10,121,176,.16);
+  }
+  :root[data-theme="light"] body{background:radial-gradient(ellipse at 38% 50%, #ffffff 0%, #eaf2f8 50%, #dde8f0 100%)}
+  :root[data-theme="light"] body::after{background:repeating-linear-gradient(0deg, rgba(10,80,130,.025) 0 1px, transparent 1px 3px)}
+  :root[data-theme="light"] *{scrollbar-color:rgba(10,121,176,.45) rgba(10,121,176,.08)}
+  :root[data-theme="light"] ::-webkit-scrollbar-track{background:rgba(10,121,176,.08)}
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb{background:rgba(10,121,176,.4); border-color:rgba(255,255,255,.6); box-shadow:none}
+  :root[data-theme="light"] .brand{background:radial-gradient(ellipse at 30% 50%, rgba(255,255,255,.8), rgba(255,255,255,0) 75%)}
+  :root[data-theme="light"] .brand h2, :root[data-theme="light"] .side h1{text-shadow:none}
+  :root[data-theme="light"] .legend{background:rgba(255,255,255,.7)}
+  :root[data-theme="light"] .legend.folded{background:transparent}
+  :root[data-theme="light"] .tip, :root[data-theme="light"] .note{background:rgba(255,255,255,.95); color:var(--text)}
+  :root[data-theme="light"] .resume{background:rgba(255,255,255,.85); box-shadow:0 2px 10px -4px rgba(10,80,130,.4)}
+  :root[data-theme="light"] .resume:hover{background:#fff; color:#04263a}
+  :root[data-theme="light"] .side{box-shadow:0 4px 24px -10px rgba(10,80,130,.35)}
+  :root[data-theme="light"] .side .freq{color:#0b2533; text-shadow:none}
+  :root[data-theme="light"] th{background:rgba(236,244,250,.96)}
+  :root[data-theme="light"] td{border-bottom-color:rgba(10,121,176,.1)}
+  :root[data-theme="light"] td.call{color:#c4271c}
+  :root[data-theme="light"] td.call.newdx{color:var(--newdx)}
+  :root[data-theme="light"] td.call.newb{color:var(--newb)}
+  :root[data-theme="light"] td.call.newdx, :root[data-theme="light"] td.call.newb{text-shadow:none}
+  :root[data-theme="light"] tbody tr.sel{background:rgba(10,121,176,.16)}
+  :root[data-theme="light"] tbody tr.sel td.call{color:#04263a; text-shadow:none}
+  :root[data-theme="light"] tbody tr.fresh td.call{text-shadow:0 0 6px rgba(255,255,255,.9)}
+  :root[data-theme="light"] tbody tr.qso{background:rgba(194,116,0,.12)}
+  :root[data-theme="light"] .clr{background:rgba(255,255,255,.7)}
+  :root[data-theme="light"] .clr:hover{color:#04263a; box-shadow:none}
+  :root[data-theme="light"] .txlamp{background:rgba(255,236,234,.8); color:rgba(196,39,28,.45); border-color:rgba(196,39,28,.3)}
+  :root[data-theme="light"] .halt{background:rgba(255,236,234,.85); color:#b3241a; box-shadow:none}
+  :root[data-theme="light"] .halt:hover:not(:disabled){background:#d8352a; color:#fff}
+  :root[data-theme="light"] .txbar{background:rgba(255,236,234,.92); border-color:rgba(196,39,28,.45); box-shadow:none}
+  :root[data-theme="light"] .txbar b{color:#c4271c}
+  :root[data-theme="light"] .txbar span{color:#5a140f}
+  :root[data-theme="light"] .txbar .rxline b{color:var(--holo)}
+  :root[data-theme="light"] .txbar .rxline span{color:#173444}
+  :root[data-theme="light"] .txbar.idle{background:rgba(255,245,244,.85)}
+  :root[data-theme="light"] .ft8{background:rgba(255,255,255,.6); box-shadow:0 4px 18px -10px rgba(10,80,130,.35)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="stage">
+   <div class="garea">
     <canvas id="globe" aria-label="Globe with the received FT8/FT4 stations"></canvas>
     <div class="brand"><h2>FT 950<span class="dot">·</span>REMOTE</h2><div>Stations heard · FT8 / FT4</div></div>
     <div class="tip" id="tip"></div>
@@ -173,8 +218,9 @@
     </div>
     <div class="note" id="note"></div>
     <button class="resume" id="resume" type="button" title="The globe stands still (a marked station, or turned by hand) - turn on">▶ RESUME</button>
-    <div class="spec"><canvas id="spec"></canvas><span class="lbl" id="spec-head" title="Fold / unfold the spectrum">AUDIO SPECTRUM · 0–3 kHz <b class="fold">▾</b></span><span class="off" id="spec-off">DECODE off — no spectrum</span></div>
     <div class="legend" id="legend"><b class="lg-head" id="legend-head" title="Fold / unfold the legend">LEGEND <i class="fold" style="all:unset">▾</i></b><span><i class="l-home"></i>my station</span><span><i class="l-newdx"></i>new DXCC</span><span><i class="l-newb"></i>new on this band</span><span><i class="l-grid"></i>worked</span><span><i class="l-dxcc"></i>country centre (no locator)</span><span><i class="l-cq"></i>calling CQ now</span><span><i class="l-qso"></i>QSO in progress</span></div>
+   </div>
+   <div class="ft8" id="ft8"><span class="lbl" id="ft8-head" title="Fold / unfold the FT8 spectrum">FT8 SPECTRUM · <span id="ft8-range">200–3000 Hz</span> <b class="fold">▾</b></span><canvas id="ft8c"></canvas><span class="off" id="ft8-off">DECODE off — no spectrum</span></div>
   </div>
   <aside class="side">
     <div class="head">
@@ -229,6 +275,37 @@ function distBearing(a, b) {
 }
 const unit = (lat, lon) => { const f = rad(lat), l = rad(lon); return [Math.cos(f) * Math.cos(l), Math.cos(f) * Math.sin(l), Math.sin(f)]; };
 
+// ---------------------------------------------------------------- theme
+// the main page's ☀/☾ (localStorage "ft950.theme"), followed live
+const PAL = {
+  dark: { holo: "70,212,255", dot: "110,225,255", coast: "120,230,255", back: "70,212,255",
+          fill0: "40,110,160,0.07", fill1: "20,70,120,0.06", rim: "70,212,255,0.26", glow: "70,212,255,0.28",
+          newdx: "255,91,216", newb: "109,255,158", worked: "255,92,82",
+          home: "255,178,62", homeText: "#ffcf7a", homeSub: "rgba(255,207,122,.85)", pulse: "255,220,150",
+          hotText: "#ffffff", halo: null, axis: "rgba(111,169,196,.85)", tx: "255,80,70",
+          wf: [[0, 6, 18, 34], [0.35, 8, 60, 110], [0.6, 30, 170, 230], [0.82, 140, 235, 255], [1, 255, 255, 255]] },
+  light: { holo: "10,121,176", dot: "0,95,150", coast: "0,90,140", back: "10,121,176",
+          fill0: "255,255,255,0.35", fill1: "200,225,240,0.25", rim: "10,121,176,0.35", glow: "10,121,176,0.18",
+          newdx: "190,20,150", newb: "10,140,62", worked: "205,35,25",
+          home: "214,122,0", homeText: "#9a5600", homeSub: "rgba(150,85,0,.9)", pulse: "240,160,40",
+          hotText: "#04263a", halo: "rgba(255,255,255,.95)", axis: "rgba(60,95,115,.9)", tx: "205,35,25",
+          wf: [[0, 246, 250, 253], [0.35, 190, 222, 240], [0.6, 80, 160, 210], [0.82, 10, 100, 160], [1, 0, 40, 80]] },
+};
+let P = PAL.dark, KIND_RGB = null;
+function readTheme() {
+  let t = "dark";
+  try { t = JSON.parse(localStorage.getItem("ft950.theme") || '"dark"') === "light" ? "light" : "dark"; } catch { /* dark */ }
+  return t;
+}
+function applyTheme() {
+  const t = readTheme();
+  document.documentElement.dataset.theme = t;
+  P = PAL[t];
+  KIND_RGB = { newdx: P.newdx, newb: P.newb, worked: P.worked };
+  if (typeof wfLut === "function") { wfLut(); wfClear(); }
+}
+addEventListener("storage", (e) => { if (e.key === "ft950.theme") applyTheme(); });
+
 // ---------------------------------------------------------------- state
 let me = { call: "", grid: "", pos: null };
 const stations = new Map();                       // call -> {call, grid, pos, approx, snr, t, dxcc, mode, msg}
@@ -251,6 +328,8 @@ function size() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 addEventListener("resize", size);
+// the globe area also changes when the FT8 strip folds: re-size the canvas, or the globe turns into an egg
+new ResizeObserver(() => size()).observe(cv);
 
 // orthographic projection; r > 1 lifts the point above the surface (arcs)
 let sl0, cl0, sp0, cp0;
@@ -302,7 +381,7 @@ function arcPoints(a, b, n = 48) {                 // great circle a -> b, lifte
   return pts;
 }
 const front = (p) => p[2] > 0 || p[3] * p[3] + p[4] * p[4] > 1;   // in front of the globe, or beside it
-function drawArc(pts, alpha, width, rgb = "70,212,255", upto = 1, dash = null) {
+function drawArc(pts, alpha, width, rgb = P.holo, upto = 1, dash = null) {
   const end = Math.max(1, Math.round((pts.length - 1) * upto));
   ctx.lineWidth = width;
   if (dash) {
@@ -336,7 +415,6 @@ function glowDot(x, y, r, col, a = 1) {
 }
 let shown = [];                                     // projected stations for hover hit-tests
 // colour by worked-before (as in Received Messages): new DXCC, new on this band, worked
-const KIND_RGB = { newdx: "255,91,216", newb: "109,255,158", worked: "255,92,82" };
 function kindOf(s) {
   const w = s.worked;
   if (!w) return "worked";
@@ -350,11 +428,11 @@ function draw(now) {
   const cx = W / 2, cy = H / 2;
   // the sphere: dark glass with a glowing rim
   let g = ctx.createRadialGradient(cx - R * 0.25, cy - R * 0.3, R * 0.1, cx, cy, R);
-  g.addColorStop(0, "rgba(40,110,160,0.07)"); g.addColorStop(0.8, "rgba(20,70,120,0.06)"); g.addColorStop(1, "rgba(70,212,255,0.26)");
+  g.addColorStop(0, `rgba(${P.fill0})`); g.addColorStop(0.8, `rgba(${P.fill1})`); g.addColorStop(1, `rgba(${P.rim})`);
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
   g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.18);          // glow only outside the rim
-  g.addColorStop(0, "rgba(70,212,255,0)"); g.addColorStop(0.82, "rgba(70,212,255,0)");
-  g.addColorStop(0.85, "rgba(70,212,255,0.28)"); g.addColorStop(1, "rgba(70,212,255,0)");
+  g.addColorStop(0, `rgba(${P.holo},0)`); g.addColorStop(0.82, `rgba(${P.holo},0)`);
+  g.addColorStop(0.85, `rgba(${P.glow})`); g.addColorStop(1, `rgba(${P.holo},0)`);
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 1.18, 0, 7); ctx.fill();
   // graticule every 30°
   ctx.lineWidth = 0.6;
@@ -362,7 +440,7 @@ function draw(now) {
     let prev = null;
     for (let lat = -90; lat <= 90; lat += 5) {
       const p = projLL(lat, lon);
-      if (prev) { ctx.strokeStyle = `rgba(70,212,255,${p[2] > 0 && prev[2] > 0 ? 0.13 : 0.035})`; ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); }
+      if (prev) { ctx.strokeStyle = `rgba(${P.holo},${p[2] > 0 && prev[2] > 0 ? 0.13 : 0.035})`; ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); }
       prev = p;
     }
   }
@@ -370,7 +448,7 @@ function draw(now) {
     let prev = null;
     for (let lon = -180; lon <= 180; lon += 5) {
       const p = projLL(lat, lon);
-      if (prev) { ctx.strokeStyle = `rgba(70,212,255,${p[2] > 0 && prev[2] > 0 ? (lat ? 0.13 : 0.22) : 0.035})`; ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); }
+      if (prev) { ctx.strokeStyle = `rgba(${P.holo},${p[2] > 0 && prev[2] > 0 ? (lat ? 0.13 : 0.22) : 0.035})`; ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); }
       prev = p;
     }
   }
@@ -378,11 +456,11 @@ function draw(now) {
     // land as a dot matrix: the far side faint, the near side bright
     const flick = 0.92 + 0.08 * Math.sin(now / 170);
     const n = dots.sf.length, sz = Math.max(1.1, R / 260);
-    ctx.fillStyle = "rgba(70,212,255,0.13)";
+    ctx.fillStyle = `rgba(${P.back},0.13)`;
     for (let i = 0; i < n; i++) { const p = proj(dots.sf[i], dots.cf[i], dots.sl[i], dots.cl[i]); if (p[2] <= 0) ctx.fillRect(p[0] - sz / 2, p[1] - sz / 2, sz, sz); }
     for (let i = 0; i < n; i++) {
       const p = proj(dots.sf[i], dots.cf[i], dots.sl[i], dots.cl[i]);
-      if (p[2] > 0) { ctx.fillStyle = `rgba(110,225,255,${(0.35 + 0.6 * p[2]) * flick})`; ctx.fillRect(p[0] - sz * 0.6, p[1] - sz * 0.6, sz * 1.2, sz * 1.2); }
+      if (p[2] > 0) { ctx.fillStyle = `rgba(${P.dot},${(0.35 + 0.6 * p[2]) * flick})`; ctx.fillRect(p[0] - sz * 0.6, p[1] - sz * 0.6, sz * 1.2, sz * 1.2); }
     }
     // coastlines
     ctx.lineWidth = 0.8;
@@ -390,7 +468,7 @@ function draw(now) {
       let prev = null;
       for (let i = 0; i < o.length; i += 4) {
         const p = proj(o[i], o[i + 1], o[i + 2], o[i + 3]);
-        if (prev) { ctx.strokeStyle = p[2] > 0 && prev[2] > 0 ? "rgba(120,230,255,0.55)" : "rgba(70,212,255,0.07)"; ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); }
+        if (prev) { ctx.strokeStyle = p[2] > 0 && prev[2] > 0 ? `rgba(${P.coast},0.55)` : `rgba(${P.back},0.07)`; ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); }
         prev = p;
       }
     }
@@ -445,25 +523,25 @@ function draw(now) {
                     prio: hot ? 0 : kind === "newdx" ? 1 : fresh ? 2 : kind === "newb" ? 3 : 4 });
       shown.push([p[0], p[1], s.call]);
     } else {
-      ctx.fillStyle = "rgba(70,212,255,0.22)"; ctx.beginPath(); ctx.arc(p[0], p[1], 1.6, 0, 7); ctx.fill();
+      ctx.fillStyle = `rgba(${P.back},0.22)`; ctx.beginPath(); ctx.arc(p[0], p[1], 1.6, 0, 7); ctx.fill();
     }
   }
   // the QSO in progress: an amber line to me with a pulse running along it
   const qp = qsoPos();
   if (me.pos && qp) {
     const pts = arcPoints(me.pos, qp, 64);
-    drawArc(pts, 0.95, 2.6, "255,178,62");
+    drawArc(pts, 0.95, 2.6, P.home);
     for (const off of [0, 0.5]) {                     // two pulses, me -> partner
       const t = ((now / 1600) + off) % 1, h = pts[Math.round((pts.length - 1) * t)];
-      if (front(h)) glowDot(h[0], h[1], 2.6, "rgba(255,220,150,A)", 1);
+      if (front(h)) glowDot(h[0], h[1], 2.6, `rgba(${P.pulse},A)`, 1);
     }
     const p = projLL(qp[0], qp[1]);
     if (p[2] > 0) {
-      glowDot(p[0], p[1], 4, "rgba(255,178,62,A)", 1);
+      glowDot(p[0], p[1], 4, `rgba(${P.home},A)`, 1);
       const k = (now / 1000) % 1;
-      ctx.strokeStyle = `rgba(255,178,62,${0.9 * (1 - k)})`; ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(${P.home},${0.9 * (1 - k)})`; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(p[0], p[1], 5 + 16 * k, 0, 7); ctx.stroke();
-      labels.push({ x: p[0], y: p[1], call: "QSO " + qso.call, rgb: "255,207,122", hot: true, z: 1, prio: -1 });
+      labels.push({ x: p[0], y: p[1], call: "QSO " + qso.call, rgb: P.home, hot: true, z: 1, prio: -1 });
     }
   }
   // callsigns, most important first; one that would overlap a label already
@@ -489,8 +567,8 @@ function draw(now) {
       if (!L.hot) continue;                         // no room: left out
       [x, y] = spots[0];                            // the highlighted one always shows
     }
-    ctx.fillStyle = L.hot ? "#ffffff" : `rgba(${L.rgb},${0.6 + 0.4 * L.z})`;
-    if (L.hot) { ctx.shadowColor = `rgba(${L.rgb},.9)`; ctx.shadowBlur = 8; }
+    ctx.fillStyle = L.hot ? P.hotText : `rgba(${L.rgb},${0.6 + 0.4 * L.z})`;
+    if (L.hot || P.halo) { ctx.shadowColor = P.halo || `rgba(${L.rgb},.9)`; ctx.shadowBlur = P.halo ? 4 : 8; }
     ctx.fillText(L.call, x, y);
     ctx.shadowBlur = 0;
   }
@@ -498,14 +576,14 @@ function draw(now) {
     const p = projLL(me.pos[0], me.pos[1]);
     const a = p[2] > 0 ? 1 : 0.3;
     const k = (now / 1600) % 1;
-    ctx.strokeStyle = `rgba(255,178,62,${a * 0.9 * (1 - k)})`; ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(${P.home},${a * 0.9 * (1 - k)})`; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(p[0], p[1], 6 + 22 * k, 0, 7); ctx.stroke();
-    glowDot(p[0], p[1], 4.5, "rgba(255,178,62,A)", a);
+    glowDot(p[0], p[1], 4.5, `rgba(${P.home},A)`, a);
     if (p[2] > 0) {
-      ctx.font = "400 15px 'Neuropol', sans-serif"; ctx.fillStyle = "#ffcf7a";
-      ctx.shadowColor = "rgba(255,178,62,.9)"; ctx.shadowBlur = 10;
+      ctx.font = "400 15px 'Neuropol', sans-serif"; ctx.fillStyle = P.homeText;
+      ctx.shadowColor = P.halo || `rgba(${P.home},.9)`; ctx.shadowBlur = P.halo ? 5 : 10;
       ctx.fillText(me.call, p[0] + 12, p[1] + 5);
-      ctx.font = "500 11px 'IBM Plex Mono', monospace"; ctx.fillStyle = "rgba(255,207,122,.85)";
+      ctx.font = "500 11px 'IBM Plex Mono', monospace"; ctx.fillStyle = P.homeSub;
       ctx.fillText(me.grid, p[0] + 12, p[1] + 19); ctx.shadowBlur = 0;
     }
   }
@@ -533,7 +611,7 @@ function frame(now) {
     view.lon = (view.lon + dt * 15 + 540) % 360 - 180;          // 15°/s
   }
   draw(now);
-  drawSpec();
+  drawFt8();
 }
 cv.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, lon: view.lon, lat: view.lat }; target = null; cv.setPointerCapture(e.pointerId); cv.classList.add("drag"); });
 cv.addEventListener("pointermove", (e) => {
@@ -677,6 +755,7 @@ async function pollRadio() {
     const [st, tx, sq] = await Promise.all([fetch("/api/status").then((r) => r.json()), fetch("/api/tx").then((r) => r.json()),
       fetch("/api/seq").then((r) => r.json())]);
     $("halt").disabled = !(tx.active === "ft" || sq.kind || sq.hunt);    // as Halt TRX on the main page
+    txHz = sq.kind && sq.tx_hz ? sq.tx_hz : null;                        // the TX mark in the FT8 spectrum
     const on = !!(st.tx || tx.active);
     const what = tx.active === "ft" ? (tx.message || "FT8") : tx.active === "tune" ? "TUNE"
       : tx.active === "voice" ? "VOICE" : tx.active ? String(tx.active).toUpperCase() : "PTT";
@@ -711,6 +790,11 @@ async function poll() {
   let d;
   try { d = await (await fetch("/api/digi")).json(); } catch { return; }
   digiMode = d.mode || digiMode;
+  const cfg = d.config || {};
+  if (cfg.low_hz && cfg.high_hz && (cfg.low_hz !== band.lo || cfg.high_hz !== band.hi)) {
+    band = { lo: cfg.low_hz, hi: cfg.high_hz }; wf.width = 0; spec = null;     // a new range: start afresh
+    $("ft8-range").textContent = `${band.lo}–${band.hi} Hz`;
+  }
   try {                                             // the running QSO, if any
     const sq = await (await fetch("/api/seq")).json();
     const ss = sq.kind && sq.session && sq.session.state === "running" ? sq.session : null;
@@ -761,51 +845,110 @@ function foldable(box, head, key) {
   $(head).onclick = () => { const f = !$(box).classList.contains("folded"); apply(f); keep.set(key, f); };
 }
 foldable("legend", "legend-head", "legendFolded");
-document.querySelector(".spec").id = "specbox";
-foldable("specbox", "spec-head", "specFolded");
+foldable("ft8", "ft8-head", "ft8Folded");
 
-// ---------------------------------------------------------------- spectrum
-// the DIGI waterfall's frames (computed on the Pi, 0-3000 Hz, 10/s): the
-// current spectrum as a glowing line, a slowly falling peak hold behind it
-const sc = $("spec"), sctx = sc.getContext("2d");
-let spec = null, peak = null, floor = null, lastFrame = 0;
+// ---------------------------------------------------------------- FT8 spectrum
+// The DIGI waterfall's frames (computed on the Pi, 10/s) over the decoder's
+// passband, as a waterfall in the hologram palette with the current spectrum
+// on top; the stations heard in the last period at their audio frequency, my
+// TX frequency while a sequence runs.
+const fc = $("ft8c"), fctx = fc.getContext("2d");
+const WF_H = 160;
+const wf = document.createElement("canvas"), wctx = wf.getContext("2d");
+let band = { lo: 200, hi: 3000 }, lut = new Uint8ClampedArray(256 * 3);
+let spec = null, floor = null, lastFrame = 0, txHz = null;
+function wfLut() {                                   // 256 colours from the palette's stops
+  const st = P.wf;
+  for (let v = 0; v < 256; v++) {
+    const t = v / 255;
+    let k = 0; while (k < st.length - 2 && t > st[k + 1][0]) k++;
+    const [t0, r0, g0, b0] = st[k], [t1, r1, g1, b1] = st[k + 1];
+    const u = Math.max(0, Math.min(1, (t - t0) / (t1 - t0)));
+    lut[v * 3] = r0 + (r1 - r0) * u; lut[v * 3 + 1] = g0 + (g1 - g0) * u; lut[v * 3 + 2] = b0 + (b1 - b0) * u;
+  }
+}
+function wfClear() {
+  if (!wf.width) return;
+  wctx.fillStyle = `rgb(${lut[0]},${lut[1]},${lut[2]})`; wctx.fillRect(0, 0, wf.width, wf.height);
+}
 function specFrame(f) {
-  const n = Math.min(f.db.length, Math.round(3000 / f.hz_per_bin));
-  const db = f.db.slice(0, n);
+  const b0 = Math.floor(band.lo / f.hz_per_bin), b1 = Math.ceil(band.hi / f.hz_per_bin);
+  const db = f.db.slice(b0, b1), n = db.length;
+  if (!n) return;
+  if (wf.width !== n) { wf.width = n; wf.height = WF_H; wfClear(); }
   const sorted = [...db].sort((a, b) => a - b);
   const med = sorted[Math.floor(n * 0.4)];
   floor = floor === null ? med : floor * 0.95 + med * 0.05;
-  // smooth a little over neighbouring bins (2.9 Hz each): a readable line
-  const k = 3, out = new Float32Array(n);
+  wctx.drawImage(wf, 0, 0, n, WF_H - 1, 0, 1, n, WF_H - 1);          // one row down
+  const row = wctx.createImageData(n, 1);
+  for (let i = 0; i < n; i++) {
+    const v = Math.max(0, Math.min(255, Math.round((db[i] - floor + 3) / 34 * 255)));
+    row.data[i * 4] = lut[v * 3]; row.data[i * 4 + 1] = lut[v * 3 + 1]; row.data[i * 4 + 2] = lut[v * 3 + 2]; row.data[i * 4 + 3] = 255;
+  }
+  wctx.putImageData(row, 0, 0);
+  const k = 3, out = new Float32Array(n);                            // the spectrum line, a little smoothed
   for (let i = 0; i < n; i++) { let s = 0, c = 0; for (let j = -k; j <= k; j++) { const v = db[i + j]; if (v !== undefined) { s += v; c++; } } out[i] = s / c; }
   spec = spec && spec.length === n ? spec.map((v, i) => v * 0.5 + out[i] * 0.5) : out;
-  peak = peak && peak.length === n ? peak.map((v, i) => Math.max(out[i], v - 0.25)) : Float32Array.from(out);
   lastFrame = performance.now();
 }
-function drawSpec() {
-  if ($("specbox") && $("specbox").classList.contains("folded")) return;   // folded: not drawn
-  const r = sc.getBoundingClientRect(), d = window.devicePixelRatio || 1;
-  if (sc.width !== Math.round(r.width * d)) { sc.width = Math.round(r.width * d); sc.height = Math.round(r.height * d); }
+function drawFt8() {
+  if ($("ft8").classList.contains("folded")) return;                 // folded: not drawn
+  const r = fc.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  if (fc.width !== Math.round(r.width * d) || fc.height !== Math.round(r.height * d)) {
+    fc.width = Math.round(r.width * d); fc.height = Math.round(r.height * d);
+  }
   const w = r.width, h = r.height;
-  sctx.setTransform(d, 0, 0, d, 0, 0); sctx.clearRect(0, 0, w, h);
-  $("spec-off").style.display = performance.now() - lastFrame > 3000 ? "flex" : "none";
-  if (!spec || floor === null) return;
-  const top = 18, bot = h - 12, lo = floor - 6, hi = floor + 40;
-  const y = (v) => bot - Math.max(0, Math.min(1, (v - lo) / (hi - lo))) * (bot - top);
-  const x = (i) => 6 + i / (spec.length - 1) * (w - 12);
-  sctx.strokeStyle = "rgba(70,212,255,.12)"; sctx.lineWidth = 1;          // 1 / 2 kHz marks
-  for (const f of [1000, 2000]) { const xx = 6 + f / 3000 * (w - 12); sctx.beginPath(); sctx.moveTo(xx, top); sctx.lineTo(xx, bot); sctx.stroke(); }
-  sctx.font = "500 9px 'IBM Plex Mono', monospace"; sctx.fillStyle = "rgba(111,169,196,.8)";
-  for (const [f, t] of [[0, "0"], [1000, "1k"], [2000, "2k"], [3000, "3k"]]) sctx.fillText(t, Math.min(w - 16, 6 + f / 3000 * (w - 12)), h - 2);
-  sctx.beginPath(); peak.forEach((v, i) => (i ? sctx.lineTo(x(i), y(v)) : sctx.moveTo(x(i), y(v))));
-  sctx.strokeStyle = "rgba(255,207,122,.45)"; sctx.stroke();               // peak hold
-  const g = sctx.createLinearGradient(0, top, 0, bot);
-  g.addColorStop(0, "rgba(70,212,255,.45)"); g.addColorStop(1, "rgba(70,212,255,0)");
-  sctx.beginPath(); sctx.moveTo(x(0), bot); spec.forEach((v, i) => sctx.lineTo(x(i), y(v))); sctx.lineTo(x(spec.length - 1), bot);
-  sctx.fillStyle = g; sctx.fill();
-  sctx.beginPath(); spec.forEach((v, i) => (i ? sctx.lineTo(x(i), y(v)) : sctx.moveTo(x(i), y(v))));
-  sctx.strokeStyle = "rgba(140,235,255,.95)"; sctx.lineWidth = 1.2;
-  sctx.shadowColor = "rgba(70,212,255,.8)"; sctx.shadowBlur = 6; sctx.stroke(); sctx.shadowBlur = 0;
+  fctx.setTransform(d, 0, 0, d, 0, 0); fctx.clearRect(0, 0, w, h);
+  $("ft8-off").style.display = performance.now() - lastFrame > 3000 ? "flex" : "none";
+  const axisH = 14, top = 0, bot = h - axisH;
+  const x = (hz) => (hz - band.lo) / (band.hi - band.lo) * w;
+  if (wf.width) { fctx.imageSmoothingEnabled = true; fctx.globalAlpha = 0.92; fctx.drawImage(wf, 0, top, w, bot - top); fctx.globalAlpha = 1; }
+  // the current spectrum over the upper part
+  if (spec && floor !== null) {
+    const lo = floor - 4, hi = floor + 36, sh = (bot - top) * 0.55;
+    const yy = (v) => top + sh - Math.max(0, Math.min(1, (v - lo) / (hi - lo))) * sh;
+    fctx.beginPath(); spec.forEach((v, i) => { const xx = i / (spec.length - 1) * w; i ? fctx.lineTo(xx, yy(v)) : fctx.moveTo(xx, yy(v)); });
+    fctx.strokeStyle = `rgba(${P.dot},.85)`; fctx.lineWidth = 1.1;
+    if (!P.halo) { fctx.shadowColor = `rgba(${P.holo},.8)`; fctx.shadowBlur = 5; }
+    fctx.stroke(); fctx.shadowBlur = 0;
+  }
+  // frequency scale every 500 Hz
+  fctx.font = "500 9px 'IBM Plex Mono', monospace"; fctx.fillStyle = P.axis; fctx.strokeStyle = `rgba(${P.holo},.25)`; fctx.lineWidth = 1;
+  for (let f = Math.ceil(band.lo / 500) * 500; f <= band.hi; f += 500) {
+    const xx = Math.round(x(f)) + 0.5;
+    fctx.beginPath(); fctx.moveTo(xx, bot); fctx.lineTo(xx, bot + 3); fctx.stroke();
+    const t = f >= 1000 ? (f / 1000).toFixed(f % 1000 ? 1 : 0) + "k" : String(f);
+    fctx.fillText(t, Math.max(2, Math.min(w - 18, xx - 8)), h - 2);
+  }
+  // my TX frequency while a sequence runs
+  if (txHz) {
+    const xx = Math.round(x(txHz)) + 0.5;
+    fctx.strokeStyle = `rgba(${P.tx},.85)`; fctx.setLineDash([3, 3]); fctx.beginPath(); fctx.moveTo(xx, top); fctx.lineTo(xx, bot); fctx.stroke(); fctx.setLineDash([]);
+    fctx.fillStyle = `rgba(${P.tx},.95)`; fctx.font = "600 9px 'IBM Plex Mono', monospace"; fctx.fillText("TX", xx + 3, top + 10);
+  }
+  // the stations of the last period at their audio frequency (callsigns without overlaps)
+  const nowS = Date.now() / 1000, taken = [];
+  // (a period's decodes arrive 15-17 s after its start: 35 s = the last complete one)
+  const list = [...stations.values()].filter((s) => s.d && s.d.df != null && nowS - s.t < 35)
+    .sort((a, b) => (qso && b.call === qso.call) - (qso && a.call === qso.call) || b.snr - a.snr);
+  fctx.font = "500 9px 'IBM Plex Mono', monospace";
+  for (const s of list) {
+    const isQso = qso && qso.call === s.call;
+    const rgb = isQso ? P.home : KIND_RGB[kindOf(s)];
+    const xx = Math.round(x(s.d.df + 25)) + 0.5;                     // the middle of an FT8 signal (50 Hz wide)
+    fctx.strokeStyle = `rgba(${rgb},${isQso ? 0.9 : 0.55})`; fctx.lineWidth = isQso ? 1.6 : 1;
+    fctx.beginPath(); fctx.moveTo(xx, bot - 6); fctx.lineTo(xx, bot); fctx.stroke();
+    const tw = fctx.measureText(s.call).width;
+    for (const row of [0, 1, 2, 3]) {                                   // four label rows, the first free one
+      const y = bot - 8 - row * 11, b = [xx - tw / 2 - 2, xx + tw / 2 + 2, row];
+      if (taken.some((t) => t[2] === row && b[0] < t[1] && b[1] > t[0])) continue;
+      taken.push(b);
+      if (P.halo) { fctx.shadowColor = P.halo; fctx.shadowBlur = 3; }
+      fctx.fillStyle = `rgba(${rgb},${isQso ? 1 : 0.9})`; fctx.fillText(s.call, xx - tw / 2, y);
+      fctx.shadowBlur = 0;
+      break;
+    }
+  }
 }
 function specSocket() {
   let delay = 500;
@@ -819,6 +962,7 @@ function specSocket() {
 }
 
 (async () => {
+  applyTheme(); wfLut();
   size(); setView();
   specSocket();
   try { await loadLand(); } catch { /* globe without land */ }

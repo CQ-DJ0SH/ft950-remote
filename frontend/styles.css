@@ -2118,3 +2118,49 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 .wf-sw-break{flex-basis:100%; height:0}
 .wf-wrap.calls-on .wf-calls .wc{pointer-events:auto; cursor:pointer}   /* double-click: call */
 .wf-wrap.calls-on .wf-calls .wc:hover{text-decoration:underline}
+
+/* CW assistant: style, serial, auto CQ and the NEXT step */
+.cw-auto{display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 10px 0; background:var(--panel-2)}
+.cw-auto .cw-call{margin-right:2px}
+.cw-auto #cw-name{width:84px} .cw-auto #cw-qth{width:110px}
+.cw-auto #cw-nr, .cw-auto #cw-acq-s{width:58px; font:700 13px var(--font-mono); color:var(--text); background:var(--field-bg);
+  border:1px solid var(--edge); border-radius:6px; padding:4px 6px}
+.cw-auto #cw-acq-s{width:46px}
+.cw-auto #cw-nr:disabled{opacity:.45}
+.cw-auto.contest .cw-qso-only{display:none}
+.cw-heard{font:600 12px var(--font-mono); color:var(--text-dim); white-space:nowrap}
+.cw-heard b{color:var(--text)}
+.cw-next{min-width:150px; border-color:var(--accent); color:var(--accent)}
+.cw-next.go{background:var(--accent); color:var(--ctrl-bg)}
+#cw-acq.on.listen{animation:cwListen 1s ease-in-out infinite alternate}
+@keyframes cwListen{from{opacity:1} to{opacity:.55}}
+#cw-call.found{outline:2px solid var(--accent); outline-offset:1px}
+
+/* Settings ▸ QSL: picture gallery, the card preview with its drag boxes */
+.qsl-pics{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px}
+.qsl-pic{position:relative; width:112px; height:76px; border:1px solid var(--edge); border-radius:8px; overflow:hidden;
+  cursor:pointer; background:var(--field-bg); padding:0}
+.qsl-pic img{width:100%; height:100%; object-fit:cover; display:block}
+.qsl-pic.on{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent)}
+.qsl-pic .del{position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%; border:0; cursor:pointer;
+  background:rgba(0,0,0,.6); color:#fff; font-size:11px; line-height:20px; padding:0; opacity:0; transition:opacity .15s}
+.qsl-pic:hover .del, .qsl-pic:focus-within .del{opacity:1}
+@media (hover:none){.qsl-pic .del{opacity:1}}
+.qsl-add{font:300 30px var(--font-ui); color:var(--text-dim); display:flex; align-items:center; justify-content:center}
+.qsl-add:hover{color:var(--accent); border-color:var(--accent)}
+.qsl-preview{position:relative; width:100%; border-radius:8px; overflow:hidden; background:var(--field-bg);
+  border:1px solid var(--edge); touch-action:none; user-select:none; min-height:80px}
+.qsl-preview img{display:block; width:100%; height:auto; pointer-events:none}
+.qsl-box{position:absolute; border:1.5px dashed rgba(255,255,255,.75); border-radius:6px; cursor:grab;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.qsl-box:hover{border-color:var(--accent); background:rgba(255,255,255,.04)}
+.qsl-box.drag{cursor:grabbing; border-style:solid; border-color:var(--accent); background:rgba(255,255,255,.08)}
+.qsl-grid{grid-template-columns:repeat(3, minmax(0,1fr))}
+.qsl-inline{display:flex; gap:8px}
+.qsl-inline input{width:90px; flex:none}
+.qsl-inline select{flex:1; min-width:0}
+#qsl-body{font:13px/1.5 var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge);
+  border-radius:7px; padding:8px 10px; resize:vertical; min-height:120px}
+#qsl-body:focus{outline:none; border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyan)}
+@media (max-width:640px){.qsl-grid{grid-template-columns:1fr 1fr}}
+.qsl-box[hidden]{display:none}

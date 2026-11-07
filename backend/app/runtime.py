@@ -27,7 +27,8 @@ KEYS = {"my_call", "my_grid", "serial_port", "audio_device",
         "mem_extra",                     # {"7": {"split": true, "vfo_b_hz": 29540000}}: not in a radio memory
         # Hunt: {"K1ABC": {"t": 1761480000.0, "dxcc": …, "snr": …, "band": …}}: the no-reply list
         "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes",
-        "psk_report", "psk_antenna"}            # PSK Reporter spots (Settings ▸ FT8)
+        "psk_report", "psk_antenna",
+        "qsl"}                           # QSL card by e-mail (Settings ▸ QSL; holds the SMTP password)            # PSK Reporter spots (Settings ▸ FT8)
 
 
 def load() -> dict:

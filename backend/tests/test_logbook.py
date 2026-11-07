@@ -94,3 +94,9 @@ def test_log_qso_to_one_target_only(tmp_path):
     assert r["entry"]["wavelog"] is None and r["entry"]["qrz"] is True and Worked.added == ["SP2DDD"]
     r = lb.log_qso(dict(q), station_callsign="DJ0SH", my_grid="JO62qk", to=("wavelog",))
     assert len(WL.sent) == 1 and len(Q.sent) == 1 and r["entry"]["qrz"] is None and r["ok"] is True
+
+
+def test_adif_contest_serials():
+    a = build_adif({"call": "DL1ABC", "mode": "CW", "rst_sent": "599", "srx": "123", "stx": "007"})
+    assert "<SRX:3>123" in a and "<STX:3>007" in a and "<MODE:2>CW" in a
+    assert "SRX" not in build_adif({"call": "DL1ABC", "mode": "CW"})

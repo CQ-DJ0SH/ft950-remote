@@ -11,6 +11,8 @@ decoding, plus voice operation over WebRTC.
 
 ![Globe popup: the stations heard on a turning hologram globe, with the table beside it](docs/screenshots/globe.jpg)
 
+![QSL card by e-mail: a picture with the QSO data drawn on it (sample picture)](docs/screenshots/qsl-card.jpg)
+
 ## Features
 
 - **VFO panel** with an LCD modelled on the FT-950's own display:
@@ -91,7 +93,11 @@ decoding, plus voice operation over WebRTC.
   memory 5 set to TEXT before each send) with macros; WPM slider sets the
   radio's speed (`KS`), starting at 20 WPM on each connect
   (`FT950_CW_START_WPM`, 0 = keep the radio's); MON plays your own CW as a click-free sidetone in the
-  browser (the radio's sidetone never reaches the Pi)
+  browser (the radio's sidetone never reaches the Pi); a **CW assistant** moves a QSO on
+  with one key (NEXT / Enter): QSO or contest style, serial numbers on demand,
+  auto CQ with a listening pause, the caller's call taken from the skimmer
+  (confirmed by you), double-click a signal to answer it, logging as CW with
+  RST, name, QTH and STX/SRX
 - **HackRF waterfall**: panadapter or wideband sweep from a HackRF One on
   another Pi, relayed from TM-V71 Remote's `/ws/hackrf`; follow shows the
   whole amateur band of VFO A; click tunes VFO A
@@ -100,7 +106,19 @@ decoding, plus voice operation over WebRTC.
 - **Log**:
   - Wavelog upload (auto-log or log form)
   - QRZ.com XML lookup and logbook upload (by hand, or its own auto-log)
+  - AUTO WAVELOG · AUTO QRZ · AUTO QSL switches in the LOG title
   - worked-before index downloaded from Wavelog
+  - Recent QSOs: mark several (Ctrl/Shift-click) for Send QSL
+- **QSL card by e-mail**:
+  - your own picture with the QSO data drawn on it on the Pi: callsign label,
+    data block and note, each dragged into place in a live preview
+  - HTML mail with the card inline, sent through your own SMTP account (login
+    on 587/465, or relay by address); test login and a test card
+  - address from QRZ.com; one QSO, several marked ones or automatically after
+    every log; stations whose QRZ.com entry says no QSL (NO QSL, LOTW ONLY, …)
+    and QSOs that already got a card are skipped
+  - the mail account, its password and the pictures stay on the Pi
+    (runtime.json, `backend/qsl_images/` — gitignored)
 - **Settings**:
   - station data, serial port and baud rate, decoder range, HackRF source,
     Shelly
@@ -136,6 +154,7 @@ Radio menu settings:
 ```bash
 sudo apt install wsjtx voacapl    # WSJT-X: jt9 (FT8/FT4 decoder), ft8code/ft4code (TX tones)
                                   # voacapl: VOACAP for the band conditions under the waterfall
+sudo apt install fonts-dejavu-core   # QSL card lettering (usually already there)
 cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8444   # development
 ```

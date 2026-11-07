@@ -1774,6 +1774,7 @@ function showTab(name) {
   if (name === "general") loadGeneral();
   if (name === "ft8") loadFt8();
   if (name === "log") loadLogSettings();
+  if (name === "qsl") loadQslSettings();
   if (name === "memories") loadMemEditor();
   if (name === "appearance") renderAppearance();
   if (name === "audio") { loadAudio(true); loadVoice(); loadMenus(); paneTimer = setInterval(() => loadAudio(false), 1000); }
@@ -2632,16 +2633,19 @@ async function logTo(btn) {
   } catch { /* toast */ } finally { btn.disabled = false; }
 }
 for (const id of LOG_BTNS) $(id).onclick = () => logTo($(id));
-let selRecent = null;                       // ts of the marked recent QSO
+let selRecent = null;                       // ts of the marked recent QSO (the last clicked)
+let selRecentSet = new Set();               // all marked (Ctrl/Cmd-click, Shift-click): Send QSL
 async function loadRecent() {
   let list;
   try { list = await api("/api/log/recent"); } catch { return; }
-  $("recent-body").innerHTML = list.map((e) => `<tr data-ts="${esc(e.ts)}"${e.ts === selRecent ? ' class="sel"' : ""}>
+  selRecentSet = new Set([...selRecentSet].filter((ts) => list.some((e) => e.ts === ts)));   // gone rows drop out
+  $("recent-body").innerHTML = list.map((e) => `<tr data-ts="${esc(e.ts)}"${selRecentSet.has(e.ts) ? ' class="sel"' : ""}>
     <td>${esc(e.ts.slice(11, 16))}</td><td class="msg">${esc(e.call)}</td><td>${esc(e.band)}</td>
     <td>${esc(e.mode)}</td><td>${esc(e.rst_sent)}</td><td>${esc(e.rst_rcvd)}</td><td class="cut nm" title="${esc(e.name)}"><span>${esc(e.name)}</span></td>
     <td class="dx cut ct" title="${esc(e.country)}"><span>${esc(e.country)}</span></td>
     <td class="${e.wavelog == null ? "" : e.wavelog ? "ok" : "bad"}" title="${esc(e.message)}${e.auto ? " (Auto-Log)" : ""}">${e.wavelog == null ? "—" : e.wavelog ? "✓" : "✗"}${e.auto ? " A" : ""}</td>
     <td class="${e.qrz == null ? "" : e.qrz ? "ok" : "bad"}" title="${esc(e.qrz_message || "no QRZ logbook key")}">${e.qrz == null ? "—" : e.qrz ? "✓" : "✗"}</td>
+    <td class="${e.qsl == null || e.qsl.skipped ? "" : e.qsl.ok ? "ok" : "bad"}" title="${esc(e.qsl ? `${e.qsl.message} (${new Date(e.qsl.t * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC)` : "no QSL card sent")}">${e.qsl == null ? "—" : e.qsl.skipped ? "⊘" : e.qsl.ok ? "✓" : "✗"}</td>
     <td><button class="del" data-ts="${esc(e.ts)}" title="Remove from the local list (not from Wavelog)">✕</button></td></tr>`).join("");
   for (const b of $("recent-body").querySelectorAll(".del")) {
     b.onclick = async (ev) => {
@@ -2649,15 +2653,40 @@ async function loadRecent() {
       await request("DELETE", "/api/log/recent/" + encodeURIComponent(b.dataset.ts)); loadRecent();
     };
   }
-  // mark a row → QRZ.com / map popups (as for a marked session)
-  const marked = () => list.find((e) => e.ts === selRecent) || null;
+  // mark a row → QRZ.com / map popups (as for a marked session); Ctrl/Cmd-click
+  // adds or removes one, Shift-click marks a range - Send QSL takes them all
+  const marked = () => (selRecentSet.has(selRecent) && list.find((e) => e.ts === selRecent)) || null;
   const sync = () => {
-    for (const tr of $("recent-body").children) tr.classList.toggle("sel", tr.dataset.ts === selRecent);
-    $("recent-qrz").disabled = $("recent-map").disabled = !marked();
+    for (const tr of $("recent-body").children) tr.classList.toggle("sel", selRecentSet.has(tr.dataset.ts));
+    $("recent-qrz").disabled = $("recent-map").disabled = $("recent-card").disabled = !marked();
+    const n = selRecentSet.size;
+    $("recent-qsl").disabled = !n;
+    $("recent-qsl").textContent = n > 1 ? `Send QSL (${n})` : "Send QSL";
   };
-  for (const tr of $("recent-body").children) tr.onclick = () => { selRecent = tr.dataset.ts; sync(); };
+  const rows = [...$("recent-body").children];
+  for (const tr of rows) {
+    tr.onmousedown = (ev) => { if (ev.shiftKey) ev.preventDefault(); };   // no text selection on Shift-click
+    tr.onclick = (ev) => {
+      const ts = tr.dataset.ts;
+      if (ev.shiftKey && selRecent) {
+        const a = rows.findIndex((r) => r.dataset.ts === selRecent), b = rows.indexOf(tr);
+        for (const r of rows.slice(Math.min(a, b), Math.max(a, b) + 1)) selRecentSet.add(r.dataset.ts);
+      } else if (ev.ctrlKey || ev.metaKey) {
+        if (selRecentSet.has(ts)) selRecentSet.delete(ts); else selRecentSet.add(ts);
+      } else {
+        selRecentSet = new Set([ts]);
+      }
+      selRecent = ts;
+      sync();
+    };
+  }
   $("recent-qrz").onclick = () => { const e = marked(); if (e) openQrz(e.call); };
   $("recent-map").onclick = () => { const e = marked(); if (e) openMap({ call: e.call, grid: e.gridsquare || "" }); };
+  $("recent-card").onclick = () => { const e = marked(); if (e) window.open("/api/qsl/card?ts=" + encodeURIComponent(e.ts), "_blank", "noopener"); };
+  $("recent-qsl").onclick = () => {
+    const sel = list.filter((e) => selRecentSet.has(e.ts));
+    if (sel.length === 1) sendQsl(sel[0]); else if (sel.length) sendQslMany(sel);
+  };
   sync();
 }
 async function loadLogStatus() {
@@ -2667,7 +2696,8 @@ async function loadLogStatus() {
   // LED + text, as CAT / USB AUDIO in the title bar
   $("l-wl").classList.toggle("online", !!s.wavelog_ready);
   $("l-qrz").classList.toggle("online", !!s.qrz_ready);
-  $("l-auto").classList.toggle("online", !!s.auto_log);
+  $("log-auto-wl").classList.toggle("on", !!s.auto_log);
+  $("log-auto-qrz").classList.toggle("on", !!s.auto_log_qrz);
   $("sess-autolog").classList.toggle("on", !!s.auto_log);
   const w = s.worked;
   $("worked-stat").textContent = w.synced_at
@@ -2676,6 +2706,33 @@ async function loadLogStatus() {
   $("log-stat").textContent = s.sync_error ? "Sync error: " + s.sync_error
     : s.wavelog_ready ? "" : "Wavelog not configured";
 }
+// AUTO WAVELOG / AUTO QRZ in the LOG title: the same switches as Settings ▸ Log
+// ▸ Automation (and Auto-log in Sessions for Wavelog)
+for (const [id, key, label] of [["log-auto-wl", "auto_log", "Auto-log to Wavelog"], ["log-auto-qrz", "auto_log_qrz", "Auto-log to the QRZ.com logbook"]]) {
+  $(id).onclick = async () => {
+    const on = !$(id).classList.contains("on");
+    try {
+      const c = await api("/api/log/config", { [key]: on });
+      if (key === "auto_log" && seqState) seqState.auto_log = !!c.auto_log;
+      await loadLogStatus();
+      toast(`${label} ${c[key] ? "on" : "off"}.`);
+    } catch { /* toast */ }
+  };
+}
+// AUTO QSL in the LOG title: the same switch as Settings ▸ QSL ▸ Automation
+function showQslAuto(on) {
+  $("log-auto-qsl").classList.toggle("on", !!on);
+  $("qsl-auto").checked = !!on;
+}
+api("/api/qsl/config").then((c) => showQslAuto(c.auto)).catch(() => {});
+$("log-auto-qsl").onclick = async () => {
+  const on = !$("log-auto-qsl").classList.contains("on");
+  try {
+    const c = await api("/api/qsl/config", { auto: on });
+    showQslAuto(c.auto);
+    toast(c.auto ? "Auto QSL on: a QSL card goes out after every successful log." : "Auto QSL off.");
+  } catch { /* toast */ }
+};
 $("log-sync").onclick = async () => {
   try { const r = await api("/api/log/sync", {}); toast(`Wavelog: +${r.new} QSOs, ${r.calls} calls in the index.`); } catch { /* toast */ }
   loadLogStatus();
@@ -2768,6 +2825,192 @@ $("log-resync").onclick = async () => {
     $("log-sync-out").textContent = `${r.qsos} QSOs · ${r.calls} calls · ${r.entities} DXCC`;
   } catch (e) { $("log-sync-out").textContent = e.message; }
   loadLogStatus();
+};
+
+// ---------------------------------------------------------------- QSL card by e-mail
+// Recent QSOs ▸ Send QSL: the address from QRZ.com, confirmed (and editable)
+// by the operator, then sent by the Pi through the SMTP account of Settings ▸ QSL
+async function sendQsl(e) {
+  const btn = $("recent-qsl");
+  btn.disabled = true;
+  try {
+    let info = {};
+    try { info = await api("/api/qsl/recipient?call=" + encodeURIComponent(e.call)); } catch { /* no lookup */ }
+    const again = e.qsl?.ok ? ` (already sent to ${e.qsl.to})` : "";
+    const qrz = info.declined ? `\n\n⚠ QRZ.com: this station wants no QSL card — ${info.declined}`
+      : info.hint ? `\n\nQRZ.com: ${info.hint}` : "";
+    const to = prompt(`Send the QSL card for ${e.call} (${e.band} ${e.mode})${again} to:${qrz}`, info.email || e.qsl?.to || "");
+    if (to == null) return;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to.trim())) { toast("No valid e-mail address", true); return; }
+    toast(`Sending QSL card to ${to.trim()} …`);
+    const r = await api("/api/qsl/send", { ts: e.ts, to: to.trim() });
+    toast(r.message);
+  } catch { /* toast */ } finally { btn.disabled = false; loadRecent(); }
+}
+
+// several marked QSOs: one confirmation, then each in turn - only those with
+// an e-mail address on QRZ.com, the rest are skipped and named
+async function sendQslMany(all) {
+  const done = all.filter((e) => e.qsl?.ok), list = all.filter((e) => !e.qsl?.ok);   // sent once is enough
+  if (!list.length) { toast(`All ${all.length} marked QSOs already got their QSL card.`); return; }
+  if (!confirm(`Send QSL cards for ${list.length} QSOs?\n\nOnly stations with an e-mail address on QRZ.com get one; ` +
+    "those without, and those whose QRZ.com entry says they want no QSL, are skipped." +
+    `${done.length ? `\n${done.length} marked QSO${done.length === 1 ? "" : "s"} already got a card and ${done.length === 1 ? "is" : "are"} skipped.` : ""}`)) return;
+  const btn = $("recent-qsl");
+  btn.disabled = true;
+  const sent = [], none = [], declined = [], failed = [];
+  try {
+    for (const [i, e] of list.entries()) {
+      btn.textContent = `Sending ${i + 1}/${list.length} …`;
+      let info = {};
+      try { info = await api("/api/qsl/recipient?call=" + encodeURIComponent(e.call)); } catch { /* no lookup */ }
+      if (info.declined) { declined.push(e.call); continue; }
+      if (!info.email) { none.push(e.call); continue; }
+      try { await api("/api/qsl/send", { ts: e.ts, to: info.email }); sent.push(e.call); } catch { failed.push(e.call); }
+    }
+  } finally {
+    const parts = [`QSL cards sent: ${sent.length}`];
+    if (done.length) parts.push(`already sent before: ${done.map((e) => e.call).join(", ")}`);
+    if (declined.length) parts.push(`skipped, no QSL wanted: ${declined.join(", ")}`);
+    if (none.length) parts.push(`no e-mail on QRZ.com: ${none.join(", ")}`);
+    if (failed.length) parts.push(`failed: ${failed.join(", ")}`);
+    toast(parts.join(" · "), failed.length > 0);
+    loadRecent();
+  }
+}
+
+// Settings ▸ QSL
+const QSL_FIELDS = { op: "qsl-op", qth: "qsl-qth", rig: "qsl-rig", pwr: "qsl-pwr", ant: "qsl-ant", qsl_text: "qsl-text",
+  note: "qsl-note", smtp_host: "qsl-host", smtp_user: "qsl-user", from_addr: "qsl-from", from_name: "qsl-from-name",
+  subject: "qsl-subject", body: "qsl-body", test_to: "qsl-test-to" };
+const qslState = { image: "", pos_call: [0.025, 0.04], pos_data: [0.025, 0.6], pos_note: [0.62, 0.86], images: [], boxes: null, timer: null };
+function qslBody() {
+  const b = { image: qslState.image, pos_call: qslState.pos_call, pos_data: qslState.pos_data, pos_note: qslState.pos_note,
+    smtp_port: +$("qsl-port").value || 587, smtp_security: $("qsl-sec").value,
+    bcc_self: $("qsl-bcc").checked, auto: $("qsl-auto").checked };
+  for (const [k, id] of Object.entries(QSL_FIELDS)) b[k] = $(id).value.trim();
+  b.body = $("qsl-body").value;                      // keep the line breaks as typed
+  const pw = $("qsl-pass").value;
+  if (pw) b.smtp_password = pw;
+  return b;
+}
+async function loadQslSettings() {
+  let c;
+  try { c = await api("/api/qsl/config"); } catch { return; }
+  for (const [k, id] of Object.entries(QSL_FIELDS)) $(id).value = c[k] ?? "";
+  $("qsl-port").value = c.smtp_port; $("qsl-sec").value = c.smtp_security;
+  $("qsl-bcc").checked = !!c.bcc_self; $("qsl-auto").checked = !!c.auto;
+  $("qsl-pass").value = "";
+  $("qsl-pass").placeholder = c.password_set ? "saved — empty keeps it" : "";
+  Object.assign(qslState, { image: c.image || "", pos_call: c.pos_call, pos_data: c.pos_data, pos_note: c.pos_note, images: c.images || [] });
+  qslPics();
+  qslPreview();
+}
+function qslPics() {
+  $("qsl-pics").innerHTML = qslState.images.map((n) => `<div class="qsl-pic${n === qslState.image ? " on" : ""}" data-n="${esc(n)}" title="${esc(n)}">
+      <img src="/api/qsl/images/${encodeURIComponent(n)}?w=200" alt=""><button class="del" title="Delete this picture">✕</button></div>`).join("")
+    + `<button class="qsl-pic qsl-add" id="qsl-add" title="Add pictures">+</button>`;
+  for (const d of $("qsl-pics").querySelectorAll(".qsl-pic[data-n]")) {
+    d.onclick = () => { qslState.image = d.dataset.n; qslPics(); qslPreview(); };
+    d.querySelector(".del").onclick = async (ev) => {
+      ev.stopPropagation();
+      if (!confirm(`Delete picture ${d.dataset.n}?`)) return;
+      try { const c = await request("DELETE", "/api/qsl/images/" + encodeURIComponent(d.dataset.n));
+        qslState.images = c.images; if (qslState.image === d.dataset.n) qslState.image = c.image || ""; qslPics(); qslPreview(); } catch { /* toast */ }
+    };
+  }
+  $("qsl-add").onclick = () => $("qsl-file").click();
+}
+$("qsl-file").onchange = async (e) => {
+  for (const f of e.target.files) {
+    toast(`Uploading ${f.name} …`);
+    try {
+      const r = await fetch("/api/qsl/images?name=" + encodeURIComponent(f.name), { method: "POST", body: f,
+        headers: { "Content-Type": f.type || "application/octet-stream" } });
+      const c = await r.json();
+      if (!r.ok) throw new Error(c.detail || r.statusText);
+      qslState.images = c.images;
+      qslState.image = c.added;
+    } catch (err) { toast(`${f.name}: ${err.message}`, true); }
+  }
+  e.target.value = "";
+  qslPics(); qslPreview();
+};
+// the preview is drawn by the Pi exactly as the card will be; the two boxes
+// over it are the drag handles
+function qslPreview() {
+  clearTimeout(qslState.timer);
+  qslState.timer = setTimeout(async () => {
+    try {
+      const r = await api("/api/qsl/preview", { ...qslBody(), width: 900 });
+      $("qsl-prev-img").src = "data:image/jpeg;base64," + r.jpeg;
+      qslState.boxes = r.boxes;
+      qslBoxes();
+    } catch { /* toast */ }
+  }, 250);
+}
+function qslBoxes() {
+  const b = qslState.boxes;
+  if (!b) return;
+  for (const el of document.querySelectorAll(".qsl-box")) {
+    el.hidden = !b[el.dataset.k];                      // no note: no box
+    if (!b[el.dataset.k]) continue;
+    const [x, y, w, h] = b[el.dataset.k];
+    Object.assign(el.style, { left: x * 100 + "%", top: y * 100 + "%", width: w * 100 + "%", height: h * 100 + "%" });
+  }
+}
+for (const el of document.querySelectorAll(".qsl-box")) {
+  el.addEventListener("pointerdown", (ev) => {
+    if (!qslState.boxes?.[el.dataset.k]) return;
+    ev.preventDefault();
+    el.setPointerCapture(ev.pointerId);
+    const R = $("qsl-preview").getBoundingClientRect(), k = el.dataset.k, box = qslState.boxes[k];
+    const sx = ev.clientX, sy = ev.clientY, [x0, y0, w, h] = box;
+    el.classList.add("drag");
+    const move = (e) => {
+      box[0] = Math.max(0, Math.min(1 - w, x0 + (e.clientX - sx) / R.width));
+      box[1] = Math.max(0, Math.min(1 - h, y0 + (e.clientY - sy) / R.height));
+      qslBoxes();
+    };
+    const up = () => {
+      el.removeEventListener("pointermove", move);
+      el.classList.remove("drag");
+      qslState["pos_" + k] = [+box[0].toFixed(4), +box[1].toFixed(4)];
+      qslPreview();
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up, { once: true });
+    el.addEventListener("pointercancel", up, { once: true });
+  });
+}
+for (const id of ["qsl-op", "qsl-qth", "qsl-rig", "qsl-pwr", "qsl-ant", "qsl-text", "qsl-note"]) $(id).addEventListener("input", qslPreview);
+async function qslSave(quiet) {
+  const c = await api("/api/qsl/config", qslBody());
+  showQslAuto(c.auto);
+  $("qsl-pass").value = "";
+  $("qsl-pass").placeholder = c.password_set ? "saved — empty keeps it" : "";
+  if (!quiet) toast("QSL settings saved.");
+  return c;
+}
+$("qsl-save").onclick = () => qslSave(false).catch(() => {});
+$("qsl-smtp-test").onclick = async () => {
+  setStatusLine("qsl-smtp-status", null, "connecting …");
+  try {
+    await qslSave(true);
+    const r = await api("/api/qsl/smtp-test", {});
+    setStatusLine("qsl-smtp-status", r.ok, (r.ok ? "✓ " : "✗ ") + r.message);
+  } catch (e) { setStatusLine("qsl-smtp-status", false, "✗ " + e.message); }
+};
+$("qsl-test-send").onclick = async () => {
+  const to = $("qsl-test-to").value.trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { setStatusLine("qsl-test-status", false, "✗ enter a test recipient"); return; }
+  if (!confirm(`Send a test QSL card (sample QSO with DL1ABC) to ${to}?`)) return;
+  setStatusLine("qsl-test-status", null, "sending …");
+  try {
+    await qslSave(true);
+    const r = await api("/api/qsl/send", { to });
+    setStatusLine("qsl-test-status", true, "✓ " + r.message);
+  } catch (e) { setStatusLine("qsl-test-status", false, "✗ " + e.message); }
 };
 
 // ---------------------------------------------------------------- peak hold
@@ -4052,6 +4295,30 @@ function cwRf(pitch) {
     default: return v.freq_hz + pitch;                                       // USB / DATA-U / AM / FM: dial + tone
   }
 }
+// click selects a signal; a second click on it within 400 ms answers it (the
+// table is redrawn several times a second, so no dblclick event)
+let cwLastClick = { id: null, t: 0 };
+function cwRowClick(id) {
+  const dbl = cwLastClick.id === id && Date.now() - cwLastClick.t < 400;
+  cwLastClick = { id, t: dbl ? 0 : Date.now() };
+  cwSel = id;
+  renderCw(cwState);
+  if (dbl) cwAnswer(id);
+}
+// search & pounce: zero beat on the station, its call into CALL, ANSWER
+function cwAnswer(id) {
+  const c = cwState.channels.find((x) => x.id === id);
+  const call = c && cwCallFrom(c.text);
+  if (!call) { toast("No callsign in this signal's text yet", true); return; }
+  cwAcqSet(false);
+  cwA.phase = "idle";
+  cwNewQso();
+  $("cw-call").value = call;
+  cwCallTouched = Date.now();
+  const rf = cwRf(c.hz);
+  if (rf) tuneLive(Math.round(rf / 10) * 10);
+  setTimeout(() => cwNext(), 400);                  // after the tuning
+}
 function renderCw(s) {
   cwState = s;
   $("cw-on").classList.toggle("on", !!s.enabled);
@@ -4067,7 +4334,7 @@ function renderCw(s) {
         `<td class="n">${rf ? (rf / 1000).toFixed(2) : "—"}</td><td class="n">${c.wpm}</td><td class="n">${c.snr}</td>` +
         `<td class="msg cw-tail"><span>${esc(c.text.slice(-120))}</span></td></tr>`;
     }).join("");
-    for (const tr of body.querySelectorAll("tr[data-id]")) tr.onclick = () => { cwSel = +tr.dataset.id; renderCw(cwState); };
+    for (const tr of body.querySelectorAll("tr[data-id]")) tr.onclick = () => cwRowClick(+tr.dataset.id);
   }
   const sel = s.channels.find((c) => c.id === cwSel);
   $("cw-zb").disabled = !sel;
@@ -4075,8 +4342,11 @@ function renderCw(s) {
   if (sel) {
     const t = $("cw-text"); t.textContent = sel.text; t.scrollTop = t.scrollHeight;
     const c = cwCallFrom(sel.text);
-    if (c && Date.now() - cwCallTouched > 20000) $("cw-call").value = c;   // don't overwrite a hand-typed call
+    // don't overwrite a hand-typed call, nor the one of a running QSO
+    // (only before a QSO: while calling CQ the caller comes from cwHear)
+    if (c && Date.now() - cwCallTouched > 20000 && cwA.phase === "idle") { $("cw-call").value = c; cwShow(); }
   }
+  cwHear(s.channels || []);
 }
 // keyer speed slider: value shown while dragging, sent to the radio 180 ms after the last move
 const setCwWpm = slider("cw-wpm", (v) => `${v}`, async (wpm) => { try { await api("/api/cw/speed", { wpm }); } finally { loadCw(); } });
@@ -4103,18 +4373,26 @@ $("cw-zb").onclick = () => {
   const rf = sel && cwRf(sel.hz);
   if (rf) { tuneLive(Math.round(rf / 10) * 10); toast(`Zero beat: ${(rf / 1000).toFixed(2)} kHz`); }
 };
+// one send path for SEND, macros and the assistant: the radio's keyer, the
+// MON sidetone, the Sent list; returns when the radio will be done
+async function cwSendText(text) {
+  const r = await api("/api/cw/send", { text });
+  if (cwMon) cwSidetone(text, cwRadio?.wpm || 20, cwRadio?.pitch || 700);
+  const row = document.createElement("div");
+  row.innerHTML = `<span class="t">${new Date().toISOString().slice(11, 19)}</span>${esc(text.toUpperCase())}`;
+  $("cw-sent").appendChild(row);
+  $("cw-sent").scrollTop = $("cw-sent").scrollHeight;
+  // backend: per 50-character chunk its length + 0.2 s and the CAT writes
+  cwA.busyUntil = Date.now() + (r.seconds + 0.35 * cwChunks(text).length + 0.5) * 1000;
+  return r;
+}
 $("cw-send").onclick = async () => {
   const text = $("cw-msg").value.trim();
-  if (!text) return;
+  if (!text) { cwNext(); return; }                 // empty line: the next step
   try {
-    const r = await api("/api/cw/send", { text });
+    const r = await cwSendText(text);
     toast(`Sending CW (${r.seconds} s)`);
-    if (cwMon) cwSidetone(text, cwRadio?.wpm || 20, cwRadio?.pitch || 700);
     $("cw-msg").value = "";
-    const row = document.createElement("div");
-    row.innerHTML = `<span class="t">${new Date().toISOString().slice(11, 19)}</span>${esc(text.toUpperCase())}`;
-    $("cw-sent").appendChild(row);
-    $("cw-sent").scrollTop = $("cw-sent").scrollHeight;
   } catch { /* toast */ }
 };
 $("cw-msg").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("cw-send").click(); } });
@@ -4210,8 +4488,175 @@ function cwCallFrom(text) {
 }
 let cwCallTouched = 0;
 $("cw-call").addEventListener("input", () => { cwCallTouched = Date.now(); });
+$("cw-call").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); cwNext(); } });
+
+// ---- CW assistant: one key (NEXT / Enter) moves the QSO on, as the "Enter
+// sends message" of contest loggers. Run: CQ → REPORT → TU + LOG (then CQ
+// again). Search & pounce (double-click a signal): ANSWER → REPORT → 73 + LOG
+// (contest: REPORT + LOG). AUTO CQ repeats CQ with a listening pause; a call
+// heard near the own pitch comes into CALL and waits for NEXT - nothing is
+// answered or logged without the operator. All in this browser: closing the
+// page stops it.
+const cwA = { phase: "idle", rx: {}, tOn: null, heard: "", seen: new Map(), busyUntil: 0,
+  listenUntil: 0, cqLeft: 0, acq: false, foundCall: "" };
+let cwStyle = store.get("cwStyle", "qso"), cwSer = store.get("cwSerial", false), cwNr = store.get("cwNr", 1);
+$("cw-name").value = store.get("cwName", "");
+$("cw-qth").value = store.get("cwQth", "");
+$("cw-nr").value = cwNr;
+$("cw-acq-s").value = store.get("cwAcqS", 6);
+const cwNr3 = () => String(cwNr).padStart(3, "0");
+const cwCall = () => $("cw-call").value.trim().toUpperCase();
+function cwStepText(step) {
+  const C = cwStyle === "contest", nr = cwSer ? ` ${cwNr3()}` : "";
+  const name = $("cw-name").value.trim().toUpperCase(), qth = $("cw-qth").value.trim().toUpperCase();
+  const rst = `UR RST 599 599${cwSer ? ` NR ${cwNr3()} ${cwNr3()}` : ""}`;
+  const op = (name ? ` = NAME ${name} ${name}` : "") + (qth ? ` = QTH ${qth} ${qth}` : "");
+  const t = {
+    cq: C ? "CQ TEST {MY} {MY}" : "CQ CQ CQ DE {MY} {MY} {MY} K",
+    report: C ? `{CALL} 5NN${nr}` : `{CALL} DE {MY} = TNX FER CALL = ${rst}${op} = HW? {CALL} DE {MY} KN`,
+    tu: C ? "TU {MY}" : "{CALL} DE {MY} = TNX FER QSO ES 73 = {CALL} DE {MY} SK",
+    answer: C ? "{MY}" : "{CALL} DE {MY} {MY} K",
+    spreport: C ? `TU 5NN${nr}` : `{CALL} DE {MY} = R TNX FER RPT = ${rst}${op} = HW? {CALL} DE {MY} KN`,
+    sp73: "{CALL} DE {MY} = TNX FER QSO ES 73 = {CALL} DE {MY} SK",
+  }[step];
+  return t.replaceAll("{MY}", cwMy.call).replaceAll("{CALL}", cwCall()).replace(/\s+/g, " ").trim();
+}
+// the step NEXT sends now, from the phase and whether CALL holds a callsign
+function cwStep() {
+  const call = !!cwCall(), C = cwStyle === "contest";
+  switch (cwA.phase) {
+    case "rpt": return { step: "tu", label: "TU + LOG", log: true, then: "cq" };
+    case "sp-call": return C ? { step: "spreport", label: "REPORT + LOG", log: true, then: "idle" }
+      : { step: "spreport", label: "REPORT", then: "sp-rpt" };
+    case "sp-rpt": return { step: "sp73", label: "73 + LOG", log: true, then: "idle" };
+    case "cq": return call ? { step: "report", label: "REPORT", then: "rpt", start: true } : { step: "cq", label: "CQ", then: "cq" };
+    default: return call ? { step: "answer", label: "ANSWER", then: "sp-call", start: true } : { step: "cq", label: "CQ", then: "cq" };
+  }
+}
+function cwShow() {
+  $("cw-auto").classList.toggle("contest", cwStyle === "contest");
+  for (const b of $("cw-style").children) b.classList.toggle("on", b.dataset.v === cwStyle);
+  $("cw-ser").classList.toggle("on", cwSer);
+  $("cw-nr").disabled = !cwSer;
+  $("cw-acq").classList.toggle("on", cwA.acq);
+  $("cw-acq").classList.toggle("listen", cwA.acq && Date.now() >= cwA.busyUntil && cwA.phase === "cq" && !cwCall());
+  const st = cwStep();
+  $("cw-next").textContent = `NEXT ▸ ${st.label}`;
+  $("cw-next").classList.toggle("go", cwA.phase !== "idle" && cwA.phase !== "cq" || (cwA.phase === "cq" && !!cwCall()));
+  $("cw-next").title = cwMy.call ? cwStepText(st.step) : "Set your callsign in Settings first";
+  const r = cwA.rx, parts = [];
+  if (r.rst) parts.push(`RST <b>${esc(r.rst)}</b>`);
+  if (r.nr) parts.push(`NR <b>${esc(r.nr)}</b>`);
+  if (r.name) parts.push(`<b>${esc(r.name)}</b>`);
+  if (r.qth) parts.push(`<b>${esc(r.qth)}</b>`);
+  $("cw-heard").innerHTML = parts.length ? `RCVD ${parts.join(" · ")}` : "";
+}
+function cwNewQso() { cwA.rx = {}; cwA.tOn = null; cwA.heard = ""; cwA.foundCall = ""; $("cw-call").classList.remove("found"); }
+async function cwNext() {
+  if (!cwMy.call) { toast("Set your callsign in Settings first", true); return; }
+  const st = cwStep();
+  if (st.step === "cq" && cwA.phase !== "cq") cwNewQso();
+  try {
+    await cwSendText(cwStepText(st.step));
+  } catch { cwAcqSet(false); return; }
+  if (st.start) { cwA.tOn = new Date(); cwA.rx = {}; }
+  cwA.heard = "";                                   // listen afresh after this transmission
+  $("cw-call").classList.remove("found");
+  cwA.phase = st.then;
+  if (st.step === "cq") cwA.cqLeft--;
+  if (st.log) await cwLog();
+  if (cwA.phase === "cq" || cwA.phase === "idle") cwA.listenUntil = cwA.busyUntil + (+$("cw-acq-s").value || 6) * 1000;
+  cwShow();
+}
+async function cwLog() {
+  const call = cwCall(), on = cwA.tOn || new Date(), off = new Date();
+  const ymd = (d) => d.toISOString().slice(0, 10).replaceAll("-", ""), hms = (d) => d.toISOString().slice(11, 19).replaceAll(":", "");
+  const q = { call, mode: "CW", tx_offset_hz: 0, rst_sent: "599", rst_rcvd: cwA.rx.rst || "599",
+    name: cwA.rx.name || "", qth: cwA.rx.qth || "", qso_date: ymd(on), time_on: hms(on), time_off: hms(off) };
+  if (cwSer) { q.stx = cwNr3(); if (cwA.rx.nr) q.srx = cwA.rx.nr; }
+  try {
+    const r = await api("/api/log/qso", q);
+    toast(r.ok === false ? `${call}: ${r.message}` : `Logged ${call} (CW${cwSer ? `, NR ${q.stx}` : ""})`, r.ok === false);
+  } catch { /* toast */ }
+  if (cwSer) { cwNr = Math.min(9999, cwNr + 1); store.set("cwNr", cwNr); $("cw-nr").value = cwNr; }
+  $("cw-call").value = "";
+  cwNewQso();
+}
+// what the other station sends: RST, serial (cut numbers T=0 N=9 O=0 A=1), name, QTH
+function cwParse(h) {
+  const r = cwA.rx, t = ` ${h} `;
+  const m = t.match(/\b(?:RST\s+(?:IS\s+)?)?([1-5][1-9N][9N])\b/);
+  if (m) r.rst = m[1].replace(/N/g, "9");
+  const n = t.match(/\b(?:5NN|599)\s+(?:NR\s+)?([0-9TNOA]{1,4})\b/);
+  if (n) { const v = n[1].replace(/[TO]/g, "0").replace(/N/g, "9").replace(/A/g, "1"); if (/\d/.test(n[1])) r.nr = v; }
+  const nm = t.match(/\b(?:NAME|OP)\s+(?:IS\s+|HR\s+)?([A-Z]{2,12})\b/);
+  if (nm && !["IS", "HR"].includes(nm[1])) r.name = nm[1];
+  const q = t.match(/\bQTH\s+(?:IS\s+|HR\s+)?([A-Z]{2,16})\b/);
+  if (q && !["IS", "HR"].includes(q[1])) r.qth = q[1];
+}
+// fed with every skimmer update: new text of the signals near the own pitch
+// (where a caller zero-beats) or of the selected one, while not transmitting
+function cwHear(channels) {
+  const pitch = cwRadio?.pitch || 700, now = Date.now();
+  for (const c of channels) {
+    const old = cwA.seen.get(c.id) || "";
+    let add = c.text;
+    if (old) {
+      const tail = old.slice(-30), i = c.text.lastIndexOf(tail);
+      add = i >= 0 ? c.text.slice(i + tail.length) : c.text;
+    }
+    cwA.seen.set(c.id, c.text);
+    if (!add || now < cwA.busyUntil) continue;
+    if (c.id !== cwSel && Math.abs(c.hz - pitch) > 120) continue;
+    cwA.heard = (cwA.heard + add).slice(-300);
+  }
+  if (cwA.seen.size > 64) cwA.seen = new Map([...cwA.seen].slice(-32));
+  if (!cwA.heard) return;
+  if (cwA.phase !== "idle") cwParse(cwA.heard);
+  // a caller after my CQ: into CALL, highlighted - NEXT sends the report
+  if (cwA.phase === "cq" && !cwCall()) {
+    const call = cwCallFrom(cwA.heard);
+    if (call && call !== cwA.foundCall) {
+      cwA.foundCall = call;
+      $("cw-call").value = call;
+      $("cw-call").classList.add("found");
+      toast(`Caller ${call} — NEXT (Enter) sends the report`);
+    }
+  }
+  cwShow();
+}
+function cwAcqSet(on) {
+  cwA.acq = on;
+  if (on) {
+    cwA.cqLeft = 30;
+    if (cwA.phase !== "cq") { cwA.phase = "cq"; cwNewQso(); }
+    cwA.listenUntil = Math.max(Date.now(), cwA.busyUntil);
+  }
+  cwShow();
+}
+// AUTO CQ: a CQ whenever the listening pause has passed with no caller
+setInterval(() => {
+  if (!cwA.acq) return;
+  const now = Date.now();
+  if (now < cwA.busyUntil || cwA.phase !== "cq" || cwCall()) { cwShow(); return; }
+  if (now < cwA.listenUntil) { cwShow(); return; }
+  if (cwA.cqLeft <= 0) { cwAcqSet(false); toast("Auto CQ: 30 calls without an answer — stopped"); return; }
+  cwA.listenUntil = now + 60000;                   // till the send below sets it
+  cwNext();
+}, 250);
+for (const b of $("cw-style").children) b.onclick = () => { cwStyle = b.dataset.v; store.set("cwStyle", cwStyle); cwShow(); };
+$("cw-ser").onclick = () => { cwSer = !cwSer; store.set("cwSerial", cwSer); cwShow(); };
+$("cw-nr").onchange = (e) => { cwNr = Math.max(1, Math.min(9999, Math.round(+e.target.value) || 1)); e.target.value = cwNr; store.set("cwNr", cwNr); cwShow(); };
+$("cw-acq-s").onchange = (e) => { const v = Math.max(2, Math.min(30, Math.round(+e.target.value) || 6)); e.target.value = v; store.set("cwAcqS", v); };
+$("cw-name").onchange = (e) => { store.set("cwName", e.target.value.trim().toUpperCase()); cwShow(); };
+$("cw-qth").onchange = (e) => { store.set("cwQth", e.target.value.trim().toUpperCase()); cwShow(); };
+$("cw-acq").onclick = () => cwAcqSet(!cwA.acq);
+$("cw-next").onclick = () => cwNext();
+$("cw-reset").onclick = () => { cwAcqSet(false); cwA.phase = "idle"; $("cw-call").value = ""; cwNewQso(); cwShow(); };
+$("cw-call").addEventListener("input", () => { $("cw-call").classList.remove("found"); cwShow(); });
+cwShow();
 $("cw-sent-clear").onclick = () => { $("cw-sent").innerHTML = ""; };
-$("cw-stop").onclick = () => (cwSidetoneStop(false), api("/api/cw/stop", {})).then(() => toast("CW stopped after the current chunk")).catch(() => {});
+$("cw-stop").onclick = () => (cwSidetoneStop(false), cwAcqSet(false), api("/api/cw/stop", {})).then(() => toast("CW stopped after the current chunk")).catch(() => {});
 
 // ---------------------------------------------------------------- RTTY skimmer + AFSK
 let rtState = { channels: [] }, rtSel = null;

@@ -117,6 +117,7 @@ def build_adif(q: dict) -> str:
         ("NAME", q.get("name")), ("GRIDSQUARE", q.get("gridsquare")),
         ("QTH", q.get("qth")), ("COUNTRY", q.get("country")),
         ("TX_PWR", q.get("tx_pwr")), ("COMMENT", q.get("comment")),
+        ("SRX", q.get("srx")), ("STX", q.get("stx")),
         ("STATION_CALLSIGN", q.get("station_callsign")),
         ("MY_GRIDSQUARE", q.get("my_grid")),
     ]
@@ -411,7 +412,10 @@ class Qrz:
                 return {"callsign": cs.get("call", call),
                         "name": f"{cs.get('fname', '')} {cs.get('name', '')}".strip(),
                         "gridsquare": cs.get("grid", ""), "qth": cs.get("addr2", ""),
-                        "country": cs.get("country", "")}
+                        "country": cs.get("country", ""), "email": cs.get("email", ""),
+                        # QSL preferences: 1/0/"" (unknown) and the operator's free-text note
+                        "eqsl": cs.get("eqsl", ""), "mqsl": cs.get("mqsl", ""),
+                        "lotw": cs.get("lotw", ""), "qslmgr": cs.get("qslmgr", "")}
             if attempt == 1 and "session" in err.lower():
                 self._session = ""          # expired: log in again once
                 continue
@@ -433,6 +437,9 @@ class Qrz:
 
 # --- manager ----------------------------------------------------------------
 class LogBook:
+    on_logged = None                          # callback(entry) after a successful log (QSL)
+    _recent_lock = threading.Lock()           # log thread and QSL sender both write the list
+
     def __init__(self, dxcc: Dxcc) -> None:
         rt = runtime.load()
         self.wavelog = Wavelog(rt.get("wavelog_url", ""), rt.get("wavelog_key", ""),
@@ -525,11 +532,11 @@ class LogBook:
     def lookup(self, callsign: str, band: str = "") -> dict:
         call = callsign.strip().upper()
         ent = self.dxcc.lookup(call)
-        res = {"callsign": call, "name": "", "gridsquare": "", "qth": "", "country": ent or "",
+        res = {"callsign": call, "name": "", "gridsquare": "", "qth": "", "country": ent or "", "email": "",
                "dxcc": ent or "", "sources": [], "worked": self.worked.status(call, band, ent)}
         if self.qrz.configured():
             q = self.qrz.lookup(call)
-            for k in ("name", "gridsquare", "qth", "country"):
+            for k in ("name", "gridsquare", "qth", "country", "email"):
                 if q.get(k):
                     res[k] = q[k]
             if q:
@@ -539,15 +546,26 @@ class LogBook:
     def recent(self) -> list:
         return self._recent[:RECENT_MAX]
 
+    def entry(self, ts: str) -> Optional[dict]:
+        return next((e for e in self._recent if e.get("ts") == ts), None)
+
+    def set_qsl(self, ts: str, info: dict) -> None:
+        """QSL card state of a recent entry: {"t", "ok", "to", "message"}."""
+        e = self.entry(ts)
+        if e is not None:
+            e["qsl"] = info
+            self._save_recent()
+
     def delete_recent(self, ts: str) -> list:
         self._recent = [e for e in self._recent if e.get("ts") != ts]
         self._save_recent()
         return self.recent()
 
     def _save_recent(self) -> None:
-        tmp = RECENT_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self._recent[:RECENT_MAX], indent=1))
-        os.replace(tmp, RECENT_FILE)
+        with self._recent_lock:             # log thread and QSL sender both write
+            tmp = RECENT_FILE.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self._recent[:RECENT_MAX], indent=1))
+            os.replace(tmp, RECENT_FILE)
 
     def log_qso(self, q: dict, *, station_callsign: str, my_grid: str,
                 automatic: bool = False, to: tuple = ("wavelog", "qrz")) -> dict:
@@ -569,6 +587,7 @@ class LogBook:
             "name": (q.get("name") or "").strip(), "gridsquare": (q.get("gridsquare") or "").strip(),
             "qth": (q.get("qth") or "").strip(), "country": (q.get("country") or "").strip(),
             "tx_pwr": q.get("tx_pwr"), "comment": (q.get("comment") or "").strip(),
+            "srx": (q.get("srx") or "").strip(), "stx": (q.get("stx") or "").strip(),
             "station_callsign": station_callsign, "my_grid": my_grid,
         }
         lookup_note = ""
@@ -591,12 +610,17 @@ class LogBook:
         qrz = self.qrz.log_qso(adif) if "qrz" in to and self.qrz.upload_ready() else None
         entry = {"ts": now.isoformat(timespec="seconds"), **{k: qso[k] for k in (
             "call", "band", "freq_mhz", "mode", "rst_sent", "rst_rcvd", "name",
-            "gridsquare", "qth", "country")}, "wavelog": result["ok"],
+            "gridsquare", "qth", "country", "qso_date", "time_on")}, "wavelog": result["ok"],
             "message": result["message"], "qrz": qrz["ok"] if qrz else None,
             "qrz_message": qrz["message"] if qrz else "",
-            "auto": automatic, "lookup_error": lookup_note}
+            "auto": automatic, "lookup_error": lookup_note, "qsl": None}
         self._recent.insert(0, entry)
         self._save_recent()
+        if self.on_logged and (result["ok"] or (qrz and qrz["ok"])):
+            try:
+                self.on_logged(entry)           # QSL card by e-mail (Settings ▸ QSL ▸ auto)
+            except Exception as exc:  # noqa: BLE001 - the log entry stands regardless
+                log.warning("after-log hook: %s", exc)
         if result["ok"] or (qrz and qrz["ok"]):         # worked, wherever it went
             self.worked.add(call, qso["band"])
             self.worked.save()

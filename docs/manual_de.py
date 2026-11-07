@@ -41,10 +41,17 @@ DE = [
         "dekodiert (45,45 Bd, 170 Hz); Senden als AFSK über den DATA-Eingang, mit "
         "Makros.",
         "CW-Skimmer: Alle CW-Signale im Durchlassbereich werden gleichzeitig "
-        "dekodiert; gesendet wird über den eingebauten Keyer des Funkgeräts, mit Makros.",
+        "dekodiert; gesendet wird über den eingebauten Keyer des Funkgeräts, mit Makros, "
+        "WPM-Regler und Mithörton im Browser (MON); ein CW-Assistent bringt ein QSO mit "
+        "einer Taste weiter (QSO- oder Contest-Stil, Seriennummer bei Bedarf, Auto-CQ, "
+        "Anrufer-Erkennung, Logbuch).",
         "HackRF-Wasserfall, weitergereicht von TM-V71 Remote, der dem Amateurfunkband "
         "von VFO A folgt.",
-        "Logbuch in Wavelog und QRZ.com; Worked-before-Index aus Wavelog.",
+        "Logbuch in Wavelog und QRZ.com, Auto-Log in der LOG-Titelzeile schaltbar; "
+        "Worked-before-Index aus Wavelog.",
+        "QSL-Karte per E-Mail: das eigene Bild mit den QSO-Daten darauf, versandt über "
+        "das eigene Mailkonto — für ein QSO, mehrere markierte oder automatisch nach "
+        "jedem Log; Stationen, die keine QSL wünschen (QRZ.com), werden übersprungen.",
         "Stromversorgung des Funkgeräts über ein Shelly-Relais mit automatischer "
         "Abschaltung.",
         "Dunkles und helles Design, 90 % Zoom der Felder, als PWA installierbar.",
@@ -546,6 +553,29 @@ DE = [
         "Geht nichts hinaus, zeigt GET /api/cw/diag (nur lesend) Keyer, Typ von "
         "Speicher 5, beide Tastenbuchsen und den Inhalt von Speicher 5.",
     ]),
+    ("p", "Der CW-Assistent (die Zeile über der Sendezeile) bringt ein QSO mit einer "
+          "Taste weiter: NEXT, oder Enter in der leeren Sendezeile oder in CALL. Der "
+          "Knopf nennt den Schritt, den er sendet."),
+    ("ul", [
+        "Selbst CQ rufen: CQ → REPORT → TU + LOG, dann wieder CQ. Nach dem eigenen CQ "
+        "kommt ein Rufzeichen, das nahe der eigenen Tonhöhe gehört wird (dort, wo ein "
+        "Anrufer auf Schwebungsnull geht), umrandet in CALL — beantwortet wird erst "
+        "mit NEXT. Was die Gegenstation sendet, wird aus ihrem Text gelesen und als "
+        "RCVD gezeigt: RST, Seriennummer (gekürzte Ziffern wie 1T2 = 102), Name und "
+        "QTH; es geht ins Logbuch.",
+        "Eine Station anrufen: Ein Doppelklick auf ein Signal stimmt darauf ab (Zero "
+        "Beat), übernimmt das Rufzeichen in CALL und sendet ANSWER; danach REPORT und "
+        "73 + LOG (Contest: REPORT + LOG).",
+        "QSO oder CONTEST: QSO sendet den vollen Austausch mit RST 599, NAME und QTH "
+        "(im Browser gespeichert); CONTEST den kurzen (CQ TEST, CALL 5NN, TU).",
+        "SERIAL hängt bei Bedarf eine Seriennummer an den Rapport; das Feld zeigt die "
+        "nächste (änderbar), sie zählt nach jedem geloggten QSO weiter.",
+        "AUTO CQ wiederholt CQ mit einer Hörpause (PAUSE), bis eine Station antwortet, "
+        "STOP oder RESET — höchstens 30 Anrufe. Es läuft in diesem Browser: Schließen "
+        "der Seite beendet es.",
+        "Der Logeintrag geht als Betriebsart CW mit gesendetem und empfangenem RST, "
+        "Name, QTH, Beginn und Ende nach Wavelog und QRZ.com, mit SERIAL auch STX/SRX.",
+    ]),
 
     ("h1", "12  HackRF-Wasserfall"),
     ("img", "manual/hackrf.png", 174),
@@ -568,13 +598,66 @@ DE = [
           "Der Worked-before-Index wird aus Wavelog geladen und färbt die FT8-Liste. "
           "Unter Settings ▸ Log stehen die Zugänge — die Schlüssel verlassen den Pi nie."),
     ("p", "In der Titelzeile LEDs wie in der Titelleiste der Seite: WAVELOG und QRZ "
-          "grün, wenn eingerichtet, AUTO grün, solange fertige QSOs automatisch "
-          "geloggt werden (nach Wavelog). Die LOG-Knöpfe sind nur umrandet, solange das "
-          "Formular leer ist, und gefüllt, sobald ein Rufzeichen darin steht — dann "
-          "gibt es etwas zu loggen. Recent QSOs: QRZ Visit und Map Display für die "
-          "markierte Zeile."),
+          "grün, wenn eingerichtet. Drei Schalter (gefüllt = an): AUTO WAVELOG loggt "
+          "von der Ablaufsteuerung beendete QSOs nach Wavelog (wie Auto-log in "
+          "Sessions und Settings ▸ Log), AUTO QRZ zusätzlich ins QRZ.com-Logbuch, "
+          "AUTO QSL schickt nach jedem erfolgreichen Log die QSL-Karte per E-Mail "
+          "(Kapitel 14). Die LOG-Knöpfe sind nur umrandet, solange das Formular leer "
+          "ist, und gefüllt, sobald ein Rufzeichen darin steht — dann gibt es etwas "
+          "zu loggen."),
+    ("p", "Recent QSOs: Ein Klick markiert eine Zeile, Strg/Cmd-Klick nimmt eine "
+          "hinzu oder heraus, Umschalt-Klick markiert einen Bereich. QRZ Visit, Map "
+          "Display und QSL Card (zeigt die Karte) gelten für die zuletzt geklickte "
+          "Zeile, Send QSL für alle markierten. Die Spalte QSL zeigt ✓ gesendet, ✗ "
+          "nicht gesendet, ⊘ übersprungen — der Hover sagt, warum."),
 
-    ("h1", "14  Einstellungen"),
+    ("h1", "14  QSL-Karte per E-Mail"),
+    ("img", "manual/qsl-card.jpg", 150),
+    ("p", "Eine QSL-Karte ist das eigene Bild, auf das der Pi die QSO-Daten zeichnet: "
+          "das eigene Rufzeichen als Schild (in der Schrift des Namensschilds, 0 als "
+          "Ø), der Datenblock (an Station, Datum, UTC, Band, Betriebsart, RST, QSL und "
+          "darunter OP, QTH, RIG, PWR, ANT nebeneinander) und eine eigene Notiz. Die "
+          "Mail ist HTML mit der Karte darin, dem Titelschild der Seite im Kopf, einem "
+          "Link zu diesem Projekt und einem Textteil; sie geht über das eigene "
+          "Mailkonto hinaus."),
+    ("img", "manual/set-qsl.jpg", 120),
+    ("ul", [
+        "Settings ▸ QSL ▸ Card: + fügt Bilder hinzu (auf dem Pi gedreht und auf "
+        "2000 px verkleinert), ein Klick wählt eines. Die Vorschau zeichnet der Pi "
+        "genau wie die Karte; Rufzeichen, Datenblock und Notiz werden an ihren Platz "
+        "gezogen. Die Notiz kennt Platzhalter, z. B. TNX {CALL} 73; leere Zeilen "
+        "fallen weg.",
+        "Mail server: SMTP-Server, Port und Verschlüsselung, Benutzername und Passwort "
+        "(bleibt auf dem Pi, geht nie zurück an den Browser), Absender. Mit "
+        "Benutzername meldet sich der Pi an (587 STARTTLS oder 465 SSL/TLS) — die "
+        "Mail bekommt dann die DKIM-Signatur der eigenen Domain und besteht DMARC. "
+        "Ohne Benutzername wird sie ohne Anmeldung übergeben, für einen Server, der "
+        "für den Pi anhand seiner Adresse weiterleitet; dessen DKIM-Signierer und SPF "
+        "müssen diese Adresse dann auch kennen. Test login meldet sich nur an und "
+        "sendet nichts.",
+        "E-Mail: Betreff und Text mit Platzhaltern {CALL} {NAME} {MY} {OP} {DATE} "
+        "{UTC} {BAND} {MODE} {RST} {FREQ}. Send test card schickt eine Karte für ein "
+        "Beispiel-QSO an den Testempfänger.",
+        "Versand: QSOs in Recent QSOs markieren und Send QSL klicken. Die Adresse "
+        "kommt von QRZ.com (XML-Abfrage, Settings ▸ Log). Bei einem QSO zeigt die "
+        "Rückfrage sie änderbar an, mit den QSL-Hinweisen von QRZ.com (eQSL / LoTW / "
+        "Papier und die QSL-Notiz des Operators). Bei mehreren gibt es eine Rückfrage; "
+        "Stationen ohne Adresse, solche, die keine QSL wünschen, und QSOs, die schon "
+        "eine Karte bekamen, werden übersprungen und genannt.",
+        "Keine QSL gewünscht: eine QSL-Notiz auf QRZ.com wie NO QSL, NO EQSL, NO "
+        "CARDS, LOTW ONLY, QRZ ONLY oder OQRS ONLY, oder eQSL: nein. Solche "
+        "Stationen werden bei mehreren markierten QSOs und von AUTO QSL "
+        "übersprungen; bei einem einzelnen QSO warnt die Rückfrage und lässt die "
+        "Wahl.",
+        "AUTO QSL (LOG-Titelzeile oder Settings ▸ QSL ▸ Automation) schickt die "
+        "Karte nach jedem erfolgreichen Log, im Hintergrund auf dem Pi — ohne "
+        "offenen Browser.",
+        "Was nur auf dem Pi bleibt: das Mailkonto mit Passwort, die Bilder und das "
+        "Titelschild (backend/qsl_images/, runtime.json, backend/app/assets/ — alle "
+        "in .gitignore).",
+    ]),
+
+    ("h1", "15  Einstellungen"),
     ("img", "manual/set-general.png", 120),
     ("ul", [
         "General: Rufzeichen, Locator, CAT-Port und Baudrate, Shelly und "
@@ -609,6 +692,8 @@ DE = [
         "Log: Wavelog und QRZ.com; Automatik: QRZ-Abfrage vor jedem Log, Auto-log "
         "nach Wavelog (wie Auto-log in Sessions) und, davon getrennt, Auto-log ins "
         "QRZ.com-Logbuch (braucht dessen API-Key).",
+        "QSL: Kartenbild und Anordnung, Mailserver, E-Mail-Text, Testkarte, "
+        "automatischer Versand (Kapitel 14).",
         "Memories: die 32 Speichertasten mit CTCSS, Split und VFO B.",
         "Appearance (pro Browser): die Felder DIGI, RTTY, CW, HackRF und Log ausblenden "
         "(VFO, PTT und Audio bleiben immer; ein ausgeblendetes HackRF stoppt den "
@@ -631,14 +716,14 @@ DE = [
     ]),
     ("img", "manual/set-ft8.png", 120),
     ("img", "manual/set-appearance.png", 120),
-    ("p", "Jeder Reiter endet mit derselben Leiste: CLOSE, bei General, FT8, Log "
-          "und Appearance dazu SAVE. Unter Audio wirken Änderungen sofort, unter Memories hat jede "
+    ("p", "Jeder Reiter endet mit derselben Leiste: CLOSE, bei General, FT8, Log, "
+          "QSL und Appearance dazu SAVE. Unter Audio wirken Änderungen sofort, unter Memories hat jede "
           "Zeile ihr eigenes WRITE, Pi Hardware ist nur zur Ansicht. Solange Settings "
           "offen ist, pausieren die Animationen dahinter (Zyklusbalken, Anzeigen, "
           "Spektrum, Wasserfälle), um die CPU des Browsers zu schonen; Daten und "
           "Dekodierung laufen weiter, die Wasserfälle zeichnen beim Schließen nach."),
 
-    ("h1", "15  Fernein- und -ausschalten"),
+    ("h1", "16  Fernein- und -ausschalten"),
     ("p", "Ein Shelly-Relais (Gen1 oder Gen2/Plus/Pro, wird automatisch erkannt) "
           "schaltet die 13,8 V des Funkgeräts. Der Netzschalter in der Titelleiste "
           "schaltet ein und aus — bevor die Versorgung getrennt wird, werden eine "
@@ -648,7 +733,7 @@ DE = [
           "Funkgerät aus, wenn die Seite für die eingestellte Zeit in keinem Browser "
           "mehr offen war."),
 
-    ("h1", "16  Fehlersuche"),
+    ("h1", "17  Fehlersuche"),
     ("ul", [
         "CAT offline: by-id-Port prüfen und Menü 026 = 3 (38400 Bd).",
         "Kein Empfangston: CONNECT, dann RX GAIN prüfen und ob MUTE/DROP aus sind.",
@@ -662,7 +747,7 @@ DE = [
         "Settings ▸ General einen Locator eintragen.",
     ]),
 
-    ("h1", "17  Technische Referenz"),
+    ("h1", "18  Technische Referenz"),
     ("diagram", "system", "de"),
     ("h2", "Backend"),
     ("ul", [

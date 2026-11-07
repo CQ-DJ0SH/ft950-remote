@@ -45,3 +45,5 @@ backend/ex_defaults.json
 # sunspot number
 backend/itshfbc/
 backend/propagation.json
+backend/qsl_images/
+backend/app/assets/mail_plate.png

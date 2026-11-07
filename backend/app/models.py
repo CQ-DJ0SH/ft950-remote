@@ -154,6 +154,47 @@ class LogConfigReq(BaseModel):
     qrz_before_log: bool | None = None
 
 
+_POS = Field(default=None, min_length=2, max_length=2)
+
+
+class QslConfigReq(BaseModel):
+    """Settings ▸ QSL; None = unchanged, smtp_password "" = keep the stored one."""
+    smtp_host: str | None = Field(default=None, max_length=120)
+    smtp_port: int | None = Field(default=None, ge=1, le=65535)
+    smtp_security: Literal["starttls", "ssl", "none"] | None = None
+    smtp_user: str | None = Field(default=None, max_length=120)
+    smtp_password: str | None = Field(default=None, max_length=200)
+    from_addr: str | None = Field(default=None, max_length=120, pattern=r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    from_name: str | None = Field(default=None, max_length=60)
+    bcc_self: bool | None = None
+    test_to: str | None = Field(default=None, max_length=120, pattern=r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    image: str | None = Field(default=None, max_length=90)
+    op: str | None = Field(default=None, max_length=40)
+    qth: str | None = Field(default=None, max_length=40)
+    rig: str | None = Field(default=None, max_length=40)
+    pwr: str | None = Field(default=None, max_length=20)
+    ant: str | None = Field(default=None, max_length=40)
+    qsl_text: str | None = Field(default=None, max_length=12)
+    note: str | None = Field(default=None, max_length=60)
+    pos_call: list[float] | None = _POS
+    pos_data: list[float] | None = _POS
+    pos_note: list[float] | None = _POS
+    subject: str | None = Field(default=None, max_length=200)
+    body: str | None = Field(default=None, max_length=4000)
+    auto: bool | None = None
+
+
+class QslPreviewReq(QslConfigReq):
+    """Unsaved settings drawn on a test QSO (or a recent one: ts)."""
+    ts: str | None = None
+    width: int = Field(default=900, ge=200, le=1400)
+
+
+class QslSendReq(BaseModel):
+    ts: str | None = None                   # a recent log entry; None = test card
+    to: str | None = Field(default=None, max_length=120, pattern=r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
 class QsoReq(BaseModel):
     call: Callsign = Field(min_length=3, max_length=16)
     gridsquare: str = ""
@@ -163,6 +204,8 @@ class QsoReq(BaseModel):
     qth: str = ""
     country: str = ""
     comment: str = ""
+    srx: str = Field(default="", max_length=8)          # contest serial received
+    stx: str = Field(default="", max_length=8)          # contest serial sent
     mode: str | None = None                 # default: current digi mode
     freq_hz: int | None = None              # default: dial + TX offset
     tx_offset_hz: int | None = None

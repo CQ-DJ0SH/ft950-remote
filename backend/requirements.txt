@@ -11,3 +11,6 @@ numpy>=2.1,<2.3
 # WebRTC audio to/from the browser (Opus)
 aiortc==1.14.0
 av==16.1.0
+
+# QSL card: drawn on the Pi (picture + data block), sent by e-mail
+pillow>=11,<13

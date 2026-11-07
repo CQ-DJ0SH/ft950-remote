@@ -39,9 +39,15 @@ EN = [
         "RTTY skimmer: every RTTY signal in the passband decoded at once (45.45 Bd, "
         "170 Hz); transmit as AFSK through the DATA input, with macros.",
         "CW skimmer: every CW signal in the passband decoded at once; send through "
-        "the radio's keyer with macros.",
+        "the radio's keyer with macros, WPM slider and a browser sidetone (MON); a CW "
+        "assistant moves a QSO on with one key (QSO or contest style, serial numbers "
+        "on demand, auto CQ, caller detection, logging).",
         "HackRF waterfall relayed from TM-V71 Remote, following the amateur band of VFO A.",
-        "Logging to Wavelog and QRZ.com; worked-before index from Wavelog.",
+        "Logging to Wavelog and QRZ.com, auto-log switchable in the LOG title; "
+        "worked-before index from Wavelog.",
+        "QSL card by e-mail: your picture with the QSO data drawn on it, sent through "
+        "your own mail account — one QSO, several marked ones or automatically after "
+        "every log; stations that want no QSL (QRZ.com) are skipped.",
         "Radio power through a Shelly relay with auto power-off.",
         "Dark and light theme, 90 % panel zoom, installable as a PWA.",
     ]),
@@ -501,6 +507,27 @@ EN = [
         "If something does not go out, GET /api/cw/diag shows (read only) the "
         "keyer, memory 5 type, both key jacks and the content of memory 5.",
     ]),
+    ("p", "The CW assistant (the row above the send line) moves a QSO on with one "
+          "key: NEXT, or Enter in an empty send line or in CALL. The button names the "
+          "step it sends."),
+    ("ul", [
+        "Calling CQ: CQ → REPORT → TU + LOG, then CQ again. After your CQ, a call "
+        "heard near your own pitch (where a caller zero-beats) comes into CALL, "
+        "framed — it is only answered when you press NEXT. What the other station "
+        "sends is read from its text and shown as RCVD: RST, serial number (cut "
+        "numbers such as 1T2 = 102), name and QTH; it goes into the log.",
+        "Answering a station: a double-click on a signal tunes onto it (zero beat), "
+        "takes its call into CALL and sends ANSWER; then REPORT and 73 + LOG "
+        "(contest: REPORT + LOG).",
+        "QSO or CONTEST: QSO sends the full exchange with RST 599, NAME and QTH "
+        "(stored in the browser); CONTEST the short one (CQ TEST, CALL 5NN, TU).",
+        "SERIAL adds a serial number to the report on demand; the field shows the "
+        "next one (editable), it counts up after every logged QSO.",
+        "AUTO CQ repeats CQ with a listening PAUSE until a station answers, STOP or "
+        "RESET — at most 30 calls. It runs in this browser: closing the page stops it.",
+        "The log entry goes to Wavelog and QRZ.com as mode CW with RST sent and "
+        "received, name, QTH, start and end time, with SERIAL also STX/SRX.",
+    ]),
 
     ("h1", "12  HackRF waterfall"),
     ("img", "manual/hackrf.png", 174),
@@ -522,12 +549,59 @@ EN = [
           "locator; NEW STATION / WORKED shows in the title bar. The worked-before index is downloaded from Wavelog and colours "
           "the FT8 list. Settings ▸ Log holds the accounts — the keys never leave the Pi."),
     ("p", "In the title bar, LEDs as in the page's own title bar: WAVELOG and QRZ "
-          "green when set up, AUTO green while completed QSOs are logged "
-          "automatically (to Wavelog). The LOG buttons are only outlined while the "
-          "form is empty and filled once a callsign is in it — then there is "
-          "something to log. Recent QSOs: QRZ Visit and Map Display for the marked row."),
+          "green when set up. Three switches (filled = on): AUTO WAVELOG logs QSOs "
+          "completed by the sequencer to Wavelog (as Auto-log in Sessions and "
+          "Settings ▸ Log), AUTO QRZ to the QRZ.com logbook as well, AUTO QSL sends "
+          "the QSL card by e-mail after every successful log (chapter 14). The LOG "
+          "buttons are only outlined while the form is empty and filled once a "
+          "callsign is in it — then there is something to log."),
+    ("p", "Recent QSOs: a click marks a row, Ctrl/Cmd-click adds or removes one, "
+          "Shift-click marks a range. QRZ Visit, Map Display and QSL Card (shows the "
+          "card) work on the last clicked row, Send QSL on all marked ones. The QSL "
+          "column shows ✓ sent, ✗ not sent, ⊘ skipped — hover for why."),
 
-    ("h1", "14  Settings"),
+    ("h1", "14  QSL card by e-mail"),
+    ("img", "manual/qsl-card.jpg", 150),
+    ("p", "A QSL card is your own picture with the QSO data drawn on it on the Pi: "
+          "your callsign as a label (in the nameplate font, 0 as Ø), the data block "
+          "(to radio, date, UTC, band, mode, RST, QSL and below it OP, QTH, RIG, PWR, "
+          "ANT side by side) and a note of its own. The mail is HTML with the card in "
+          "it, the page's title plate in the header, a link to this project and a "
+          "plain-text part; it goes out through your own mail account."),
+    ("img", "manual/set-qsl.jpg", 120),
+    ("ul", [
+        "Settings ▸ QSL ▸ Card: + adds pictures (rotated and reduced to 2000 px on "
+        "the Pi), a click picks one. The preview is drawn by the Pi exactly as the "
+        "card will be; drag the callsign, the data block and the note into place. "
+        "The note takes placeholders, e.g. TNX {CALL} 73; empty lines are left out.",
+        "Mail server: SMTP server, port and security, username and password (stays "
+        "on the Pi, never sent back to the browser), sender. With a username the "
+        "Pi logs in (587 STARTTLS or 465 SSL/TLS) — the mail then gets your "
+        "domain's DKIM signature and passes DMARC. Without a username it is handed "
+        "over without login, for a server that relays for the Pi by its address; "
+        "its DKIM signer and SPF must know that address too. Test login only logs "
+        "in, it sends nothing.",
+        "E-mail: subject and text with placeholders {CALL} {NAME} {MY} {OP} {DATE} "
+        "{UTC} {BAND} {MODE} {RST} {FREQ}. Send test card mails a card for a sample "
+        "QSO to the test recipient.",
+        "Sending: mark QSOs in Recent QSOs and click Send QSL. The address comes "
+        "from QRZ.com (XML lookup, Settings ▸ Log). For one QSO the confirmation "
+        "shows it, editable, with QRZ.com's QSL hints (eQSL / LoTW / paper and the "
+        "operator's QSL note). For several, one confirmation; stations without an "
+        "address, those that want no QSL and QSOs that already got a card are "
+        "skipped and named.",
+        "No QSL wanted: a QSL note on QRZ.com such as NO QSL, NO EQSL, NO CARDS, "
+        "LOTW ONLY, QRZ ONLY or OQRS ONLY, or eQSL: no. Such stations are skipped "
+        "when several QSOs are marked and by AUTO QSL; for a single QSO the "
+        "confirmation warns and leaves the choice to you.",
+        "AUTO QSL (LOG title, or Settings ▸ QSL ▸ Automation) sends the card after "
+        "every successful log, in the background on the Pi — no browser needed.",
+        "What stays on the Pi only: the mail account with its password, the "
+        "pictures and the title plate (backend/qsl_images/, runtime.json, "
+        "backend/app/assets/ — all gitignored).",
+    ]),
+
+    ("h1", "15  Settings"),
     ("img", "manual/set-general.png", 120),
     ("ul", [
         "General: callsign, locator, CAT port and baud rate, Shelly and auto "
@@ -560,6 +634,8 @@ EN = [
         "Log: Wavelog and QRZ.com; automation: QRZ lookup before every log, "
         "auto-log to Wavelog (as Auto-log in Sessions) and, separately, auto-log to "
         "the QRZ.com logbook (needs its API key).",
+        "QSL: card picture and layout, mail server, e-mail text, test card, "
+        "automatic sending (chapter 14).",
         "Memories: the 32 memory keys with CTCSS, split and VFO B.",
         "Appearance (per browser): hide the DIGI, RTTY, CW, HackRF and Log panels (VFO, "
         "PTT and Audio always stay; hiding the HackRF stops its sweep), an accent "
@@ -581,13 +657,13 @@ EN = [
     ]),
     ("img", "manual/set-ft8.png", 120),
     ("img", "manual/set-appearance.png", 120),
-    ("p", "Every tab ends with the same bar: CLOSE, plus SAVE on General, FT8, Log and Appearance. "
+    ("p", "Every tab ends with the same bar: CLOSE, plus SAVE on General, FT8, Log, QSL and Appearance. "
           "On Audio changes apply at once, on Memories each row has its own WRITE, "
           "Pi Hardware is read only. While Settings is open, the animations behind it "
           "pause (cycle bar, meters, spectrum, waterfalls) to save the browser's CPU; "
           "data and decoding go on, and the waterfalls draw what came in on close."),
 
-    ("h1", "15  Remote power"),
+    ("h1", "16  Remote power"),
     ("p", "A Shelly relay (Gen1 or Gen2/Plus/Pro, detected automatically) "
           "switches the radio's 13.8 V. The power switch in the title bar turns it "
           "on and off — before cutting the supply, a transmission and the sequencer "
@@ -595,7 +671,7 @@ EN = [
           "the radio is off a plate covers the page. Auto power-off switches the "
           "radio off when no browser has had the page open for the set time."),
 
-    ("h1", "16  Troubleshooting"),
+    ("h1", "17  Troubleshooting"),
     ("ul", [
         "CAT offline: check the by-id port and menu 026 = 3 (38400 Bd).",
         "No receive audio: CONNECT, then check RX GAIN and that MUTE/DROP are off.",
@@ -608,7 +684,7 @@ EN = [
         "in Settings ▸ General.",
     ]),
 
-    ("h1", "17  Technical reference"),
+    ("h1", "18  Technical reference"),
     ("diagram", "system", "en"),
     ("h2", "Backend"),
     ("ul", [

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 import logging
 import urllib.request
@@ -16,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from . import menus as exmenus
 from . import dec_history, mixer, runtime, sys_history, system_info
 from .logbook import LogBook, LogError, band_for_hz
+from . import qsl as qslcard
 from .tx import Transmitter
 from .sequencer import Sequencer
 from .pskreporter import PskReporter
@@ -34,7 +36,7 @@ from .config import APP_VERSION, settings
 from .digi import DECODERS as DIGI_DECODERS, MODES as DIGI_MODES, DigiService, decoder_available, decoder_config, decoder_tag
 from .ft950 import (AGC_SET, ATT, BANDS, MODES, PREAMP, ROOF_SET, WIDTHS,
                     FT950Error, width_column)
-from .models import (RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
+from .models import (QslConfigReq, QslPreviewReq, QslSendReq, RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
                      ClarReq, ContourReq, IfShiftReq, LevelReq, NotchReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
@@ -1230,6 +1232,159 @@ async def log_qso(req: QsoReq) -> dict:
     to = tuple(q.pop("to", None) or ("wavelog", "qrz"))
     return await asyncio.to_thread(_logged, logbook.log_qso, q, to=to,
                                    station_callsign=settings.my_call, my_grid=settings.my_grid)
+
+
+# -- QSL card by e-mail (Settings ▸ QSL) ----------------------------------------
+def _qsl_info(call: str) -> dict:
+    """The station's e-mail address and QSL preferences from QRZ.com (needs
+    the XML lookup): {"email", "hint", "declined"}."""
+    info: dict = {}
+    if logbook.qrz.configured():
+        try:
+            info = logbook.qrz.lookup(call) or {}
+        except LogError:
+            info = {}
+    return {"email": info.get("email", "") or "", **qslcard.qsl_hint(info)}
+
+
+def _qsl_recipient(call: str) -> str:
+    return _qsl_info(call)["email"]
+
+
+def _qsl_send(q: dict, to: str = "", ts: str | None = None) -> dict:
+    """Draw the card, mail it, note the result on the log entry (ts)."""
+    if not settings.my_call:
+        raise qslcard.QslError("own callsign missing (Settings ▸ General)")
+    cfg = qslcard.load_cfg()
+    to = (to or "").strip() or _qsl_recipient(q.get("call", ""))
+    try:
+        if not to:
+            raise qslcard.QslError(f"no e-mail address for {q.get('call')} on QRZ.com — enter one")
+        card, _ = qslcard.render(cfg, q, settings.my_call)
+        qslcard.smtp_send(cfg, qslcard.build_mail(cfg, q, settings.my_call, to, card))
+    except qslcard.QslError as exc:
+        if ts:
+            logbook.set_qsl(ts, {"t": time.time(), "ok": False, "to": to, "message": str(exc)})
+        raise
+    info = {"t": time.time(), "ok": True, "to": to, "message": f"QSL card sent to {to}"}
+    if ts:
+        logbook.set_qsl(ts, info)
+    log.info("QSL card %s -> %s (%s)", settings.my_call, q.get("call"), to)
+    return info
+
+
+def _qsl_auto(entry: dict) -> None:
+    """After a successful log, with Settings ▸ QSL ▸ auto on: send in the background."""
+    if not qslcard.load_cfg().get("auto") or (entry.get("qsl") or {}).get("ok"):
+        return
+
+    def run() -> None:
+        info = _qsl_info(entry.get("call", ""))
+        if info["declined"]:                    # the station asks for no card (QRZ.com)
+            logbook.set_qsl(entry["ts"], {"t": time.time(), "ok": False, "skipped": True, "to": "",
+                                          "message": f"skipped — no QSL wanted ({info['declined']})"})
+            log.info("QSL card to %s skipped: %s", entry.get("call"), info["declined"])
+            return
+        try:
+            _qsl_send(entry, to=info["email"], ts=entry.get("ts"))
+        except qslcard.QslError as exc:
+            log.info("QSL card to %s not sent: %s", entry.get("call"), exc)
+    threading.Thread(target=run, name="qsl-auto", daemon=True).start()
+
+
+logbook.on_logged = _qsl_auto
+
+
+def _qsl(fn, *a, **kw):
+    try:
+        return fn(*a, **kw)
+    except qslcard.QslError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/qsl/config")
+async def qsl_config() -> dict:
+    return qslcard.public_cfg()
+
+
+@app.post("/api/qsl/config")
+async def qsl_config_save(req: QslConfigReq) -> dict:
+    upd = req.model_dump(exclude_none=True)
+    if upd.get("image"):
+        _qsl(qslcard.image_path, upd["image"])
+    return qslcard.save_cfg(upd)
+
+
+@app.get("/api/qsl/images/{name}")
+async def qsl_image(name: str, w: int = 240) -> Response:
+    data = await asyncio.to_thread(_qsl, qslcard.thumbnail, name, max(60, min(1400, w)))
+    return Response(data, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/api/qsl/images")
+async def qsl_image_add(request: Request, name: str = "picture.jpg") -> dict:
+    data = await request.body()
+    stored = await asyncio.to_thread(_qsl, qslcard.add_image, name, data)
+    return {**qslcard.public_cfg(), "added": stored}
+
+
+@app.delete("/api/qsl/images/{name}")
+async def qsl_image_delete(name: str) -> dict:
+    _qsl(qslcard.delete_image, name)
+    if qslcard.load_cfg().get("image") == name:
+        qslcard.save_cfg({"image": ""})
+    return qslcard.public_cfg()
+
+
+def _qso_for(ts: str | None) -> dict:
+    if not ts:
+        return qslcard.test_qso()
+    e = logbook.entry(ts)
+    if not e:
+        raise HTTPException(404, "QSO not in the recent list")
+    return e
+
+
+@app.post("/api/qsl/preview")
+async def qsl_preview(req: QslPreviewReq) -> dict:
+    """The card with the settings as they stand in the form (not saved)."""
+    import base64
+    cfg = {**qslcard.load_cfg(), **req.model_dump(exclude_none=True, exclude={"ts", "width"})}
+    q = _qso_for(req.ts)
+    jpg, boxes = await asyncio.to_thread(_qsl, qslcard.render, cfg, q, settings.my_call or "MYCALL",
+                                         None, req.width)
+    return {"jpeg": base64.b64encode(jpg).decode(), "boxes": boxes}
+
+
+@app.get("/api/qsl/card")
+async def qsl_card(ts: str | None = None) -> Response:
+    q = _qso_for(ts)
+    jpg, _ = await asyncio.to_thread(_qsl, qslcard.render, qslcard.load_cfg(), q, settings.my_call or "MYCALL")
+    return Response(jpg, media_type="image/jpeg")
+
+
+@app.get("/api/qsl/recipient")
+async def qsl_recipient(call: str) -> dict:
+    """E-mail address and QSL preferences (hint, declined) from QRZ.com."""
+    return {"call": call.upper(), **await asyncio.to_thread(_qsl_info, zero_call(call))}
+
+
+@app.post("/api/qsl/send")
+async def qsl_send(req: QslSendReq) -> dict:
+    """ts: the card for that recent QSO; no ts: a test card (sample QSO) to
+    ``to`` or the test recipient of Settings ▸ QSL."""
+    if req.ts:
+        return await asyncio.to_thread(_qsl, _qsl_send, _qso_for(req.ts), req.to or "", req.ts)
+    to = req.to or qslcard.load_cfg().get("test_to") or ""
+    if not to:
+        raise HTTPException(400, "no test recipient (Settings ▸ QSL)")
+    return await asyncio.to_thread(_qsl, _qsl_send, qslcard.test_qso(), to)
+
+
+@app.post("/api/qsl/smtp-test")
+async def qsl_smtp_test() -> dict:
+    """Connect and log in to the mail server - sends nothing."""
+    return await asyncio.to_thread(qslcard.smtp_test, qslcard.load_cfg())
 
 
 # -- certificate -------------------------------------------------------------

@@ -581,6 +581,20 @@
       <label class="cw-call" title="Callsign for the macros — taken from the selected signal, editable">CALL <input type="text" id="cw-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
       <span id="cw-macro-btns"></span>
     </div>
+    <div class="cw-auto" id="cw-auto">
+      <div class="seg cw-style" id="cw-style" title="QSO: normal exchange with RST, name and QTH · CONTEST: short 5NN exchange">
+        <button class="sg" data-v="qso">QSO</button><button class="sg" data-v="contest">CONTEST</button></div>
+      <label class="cw-call cw-qso-only" title="Your name for the QSO exchange (stored in this browser)">NAME <input type="text" id="cw-name" maxlength="12" autocomplete="off" spellcheck="false"></label>
+      <label class="cw-call cw-qso-only" title="Your QTH for the QSO exchange (stored in this browser)">QTH <input type="text" id="cw-qth" maxlength="16" autocomplete="off" spellcheck="false"></label>
+      <button class="btn sm toggle" id="cw-ser" title="Send a serial number in the report (contest); counts up after each logged QSO">SERIAL</button>
+      <input type="number" id="cw-nr" min="1" max="9999" step="1" title="Next serial number to send — editable">
+      <button class="btn sm toggle" id="cw-acq" title="Auto CQ: repeat CQ with a listening pause until a station answers (its call comes into CALL for you to confirm), STOP or 30 calls">AUTO CQ</button>
+      <label class="cw-call" title="Listening pause between two CQs">PAUSE <input type="number" id="cw-acq-s" min="2" max="30" step="1"> s</label>
+      <span class="cw-heard" id="cw-heard" title="Taken from the other station's text: RST, serial, name, QTH — goes into the log"></span>
+      <span class="spacer"></span>
+      <button class="btn cw-next" id="cw-next" title="Send the next step of the QSO (Enter in an empty send line or in CALL)">NEXT ▸ CQ</button>
+      <button class="btn sm" id="cw-reset" title="Start over: back to CQ, CALL and received data cleared">RESET</button>
+    </div>
     <div class="cw-tx">
       <input type="text" id="cw-msg" placeholder="text to send in CW (the radio's keyer: CW/CW-R, BK-IN on)…" autocomplete="off" autocapitalize="characters" spellcheck="false">
       <button class="btn" id="cw-send">SEND</button>
@@ -634,10 +648,12 @@
       <h2>LOG · WAVELOG</h2>
       <span class="stat" id="l-wl" title="Wavelog configured (Settings ▸ Log)"><span class="led"></span><span class="stat-label">WAVELOG</span></span>
       <span class="stat" id="l-qrz" title="QRZ.com lookup configured"><span class="led"></span><span class="stat-label">QRZ</span></span>
-      <span class="stat" id="l-auto" title="Auto-log: completed QSOs of the auto-sequencer are logged without a click"><span class="led"></span><span class="stat-label">AUTO</span></span>
       <span class="panel-stat" id="log-stat"></span>
       <span class="q-worked" id="q-worked"></span>
       <span class="spacer"></span>
+      <button class="btn sm toggle" id="log-auto-wl" title="Auto-log to Wavelog: QSOs completed by the auto-sequencer are logged without a click (as Auto-log in Sessions and Settings ▸ Log)">AUTO WAVELOG</button>
+      <button class="btn sm toggle" id="log-auto-qrz" title="Auto-log to the QRZ.com logbook as well (needs the logbook API key, Settings ▸ Log)">AUTO QRZ</button>
+      <button class="btn sm toggle" id="log-auto-qsl" title="Auto QSL: send the QSL card by e-mail after every successful log (address from QRZ.com; stations that want no QSL are skipped) — Settings ▸ QSL">AUTO QSL</button>
       <button class="btn sm" id="log-sync" title="Reload the log from Wavelog — marks worked stations red">⟳ SYNC LOG</button>
       <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
     </div>
@@ -668,10 +684,10 @@
         </div>
       </form>
       <div class="pane recent-pane">
-        <div class="pane-head"><h3>Recent QSOs</h3><span class="panel-stat" id="worked-stat"></span><span class="spacer"></span><button class="btn sm" id="recent-qrz" disabled title="Look up the marked QSO's call on QRZ.com (popup)">QRZ Visit</button><button class="btn sm" id="recent-map" disabled title="Show the marked QSO's station on a world map (popup)">Map Display</button></div>
+        <div class="pane-head"><h3>Recent QSOs</h3><span class="panel-stat" id="worked-stat"></span><span class="spacer"></span><button class="btn sm" id="recent-qrz" disabled title="Look up the marked QSO's call on QRZ.com (popup)">QRZ Visit</button><button class="btn sm" id="recent-map" disabled title="Show the marked QSO's station on a world map (popup)">Map Display</button><button class="btn sm" id="recent-card" disabled title="Show the QSL card of the marked QSO">QSL Card</button><button class="btn sm" id="recent-qsl" disabled title="Send the QSL card of the marked QSO by e-mail (address from QRZ.com, editable)">Send QSL</button></div>
         <div class="tbl mid">
           <table class="msgs">
-            <thead><tr><th>UTC</th><th>Call</th><th>Band</th><th>Mode</th><th>S</th><th>R</th><th>Name</th><th>Country</th><th title="Wavelog">WL</th><th title="QRZ.com logbook">QRZ</th><th></th></tr></thead>
+            <thead><tr><th>UTC</th><th>Call</th><th>Band</th><th>Mode</th><th>S</th><th>R</th><th>Name</th><th>Country</th><th title="Wavelog">WL</th><th title="QRZ.com logbook">QRZ</th><th title="QSL card by e-mail">QSL</th><th></th></tr></thead>
             <tbody id="recent-body"></tbody>
           </table>
           <div class="empty">Nothing logged yet.</div>
@@ -694,6 +710,7 @@
       <button class="tab" data-tab="ft8" role="tab">FT8</button>
       <button class="tab" data-tab="audio" role="tab">Audio</button>
       <button class="tab" data-tab="log" role="tab">Log</button>
+      <button class="tab" data-tab="qsl" role="tab">QSL</button>
       <button class="tab" data-tab="memories" role="tab">Memories</button>
       <button class="tab" data-tab="appearance" role="tab">Appearance</button>
       <button class="tab" data-tab="hardware" role="tab">Pi Hardware</button>
@@ -912,6 +929,76 @@
       <div class="modal-actions">
         <button class="btn-ghost" data-close>CLOSE</button>
         <button id="log-save" class="btn-primary">SAVE</button>
+      </div>
+    </section>
+
+    <!-- QSL: card picture, data block position, parameters, mail server, e-mail text -->
+    <section class="tab-pane" data-pane="qsl">
+      <div class="logsec">
+        <span class="logo-label">CARD</span>
+        <div class="qsl-pics" id="qsl-pics"></div>
+        <input type="file" id="qsl-file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+        <div class="qsl-preview" id="qsl-preview">
+          <img id="qsl-prev-img" alt="QSL card preview">
+          <div class="qsl-box" data-k="call" title="Drag: callsign label"></div>
+          <div class="qsl-box" data-k="data" title="Drag: data block"></div>
+          <div class="qsl-box" data-k="note" title="Drag: note"></div>
+        </div>
+        <p class="pane-hint">Click a picture to use it, + adds pictures (JPEG/PNG, rotated and reduced to 2000 px on the Pi). Drag the callsign label, the data block and the note where they look best — the preview shows a sample QSO. Empty lines are left out of the card.</p>
+        <div class="form-grid qsl-grid">
+          <label>OP<input type="text" id="qsl-op" maxlength="40" autocomplete="off"></label>
+          <label>QTH<input type="text" id="qsl-qth" maxlength="40" autocomplete="off"></label>
+          <label>RIG<input type="text" id="qsl-rig" maxlength="40" autocomplete="off"></label>
+          <label>PWR<input type="text" id="qsl-pwr" maxlength="20" autocomplete="off" placeholder="e.g. 100 W"></label>
+          <label>ANT<input type="text" id="qsl-ant" maxlength="40" autocomplete="off"></label>
+          <label title="The QSL column of the card: TNX (confirming), PSE (asking for one) …">QSL<input type="text" id="qsl-text" maxlength="12" autocomplete="off"></label>
+          <label class="span-2" title="A block of its own, placed by dragging; placeholders as in the e-mail text, e.g. TNX {CALL} 73 — empty: no note">Note on the card<input type="text" id="qsl-note" maxlength="60" autocomplete="off"></label>
+        </div>
+      </div>
+
+      <div class="logsec">
+        <span class="logo-label">MAIL SERVER</span>
+        <div class="form-grid">
+          <label>SMTP server<input type="text" id="qsl-host" autocomplete="off" spellcheck="false" autocapitalize="off"></label>
+          <label class="qsl-port">Port · security<span class="qsl-inline"><input type="number" id="qsl-port" min="1" max="65535"><select id="qsl-sec"><option value="starttls">STARTTLS</option><option value="ssl">SSL/TLS</option><option value="none">none</option></select></span></label>
+          <label>Username<input type="text" id="qsl-user" autocomplete="off" spellcheck="false" autocapitalize="off"></label>
+          <label>Password<input type="password" id="qsl-pass" autocomplete="new-password"></label>
+          <label>Sender address<input type="email" id="qsl-from" autocomplete="off" spellcheck="false"></label>
+          <label>Sender name<input type="text" id="qsl-from-name" maxlength="60" autocomplete="off" placeholder="your callsign if empty"></label>
+          <label class="check-label span-2"><input type="checkbox" id="qsl-bcc"> A copy of every card to the sender address (Bcc)</label>
+        </div>
+        <div class="logo-row log-test-row">
+          <span class="update-status" id="qsl-smtp-status">not tested</span>
+          <button type="button" id="qsl-smtp-test" class="mini-btn" title="Saves, then connects and logs in — sends nothing">Test login</button>
+        </div>
+        <p class="pane-hint">The password stays on the Pi only (runtime.json, readable by root only) and is never sent back to the browser — an empty field keeps the saved one. Port 587 with STARTTLS or 465 with SSL/TLS and a login; empty username: no login, for a server that relays for the Pi by its address (postfix mynetworks) — its DKIM signer and the SPF record must know that address too, or DMARC rejects the mail.</p>
+      </div>
+
+      <div class="logsec">
+        <span class="logo-label">E-MAIL</span>
+        <div class="form-grid">
+          <label class="span-2">Subject<input type="text" id="qsl-subject" maxlength="200" autocomplete="off"></label>
+          <label class="span-2">Text<textarea id="qsl-body" rows="7" maxlength="4000" spellcheck="false"></textarea></label>
+        </div>
+        <p class="pane-hint">Placeholders: {CALL} {NAME} (first name from the log or QRZ, else the call) {MY} {OP} {DATE} {UTC} {BAND} {MODE} {RST} {FREQ}. The mail is HTML with the card in it, plus a plain-text part. The address comes from QRZ.com (XML lookup, Settings ▸ Log) and can be changed before sending.</p>
+        <div class="form-grid">
+          <label>Test recipient<input type="email" id="qsl-test-to" autocomplete="off" spellcheck="false"></label>
+          <label class="check-label"><button type="button" id="qsl-test-send" class="mini-btn" title="Saves, then sends a card for a sample QSO (DL1ABC) to the test recipient">Send test card</button></label>
+        </div>
+        <div class="logo-row log-test-row"><span class="update-status" id="qsl-test-status"></span></div>
+      </div>
+
+      <div class="logsec">
+        <span class="logo-label">AUTOMATION</span>
+        <div class="form-grid">
+          <label class="check-label span-2"><input type="checkbox" id="qsl-auto"> Send the QSL card automatically after every successful log (when QRZ.com has an address)</label>
+        </div>
+        <p class="pane-hint">Otherwise: mark a QSO in Recent QSOs (LOG panel) and click Send QSL. The QSL column there shows ✓ sent / ✗ not sent / ⊘ skipped (hover: why). Stations whose QRZ.com entry says they want no QSL (a QSL note such as NO QSL, NO EQSL, LOTW ONLY, QRZ ONLY, OQRS ONLY — or eQSL: no) are skipped by the automatic sending and when several QSOs are marked; for a single QSO the confirmation shows the hint and leaves the choice to you.</p>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-ghost" data-close>CLOSE</button>
+        <button id="qsl-save" class="btn-primary">SAVE</button>
       </div>
     </section>
 

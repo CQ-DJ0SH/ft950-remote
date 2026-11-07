@@ -1181,6 +1181,11 @@ function openMap(x) {
   const q = new URLSearchParams({ call: x.call, grid: x.grid || "", my: myGrid });
   popup("map.html?" + q, "dxmap", 960, 640);
 }
+// Sessions ▸ SKIP: end the running QSO, keep CQ / Hunt / Auto Answer going
+$("sess-skip").onclick = async () => {
+  const call = seqState?.session?.call;
+  try { renderSeq(await api("/api/seq/skip", {})); if (call) toast(`${call} skipped.`); } catch { /* toast */ }
+};
 // Sessions ▸ Auto-log: same setting as Settings ▸ Log ▸ Auto-log
 $("sess-autolog").onclick = async () => {
   const on = !$("sess-autolog").classList.contains("on");
@@ -1255,9 +1260,11 @@ $("seq-cq").onclick = async () => {
       : await api("/api/seq/cq", { tx_hz: boxes.tx, cq_to: $("cq-to").value }));
   } catch { /* toast */ }
 };
-const STATE_CLS = { "done": "sess-ok", "running": "sess-run" };
+const STATE_CLS = { "done": "sess-ok", "running": "sess-run", "skipped": "sess-skipped" };
 function renderSeq(s) {
   seqState = s;
+  // SKIP: only while a QSO runs
+  $("sess-skip").disabled = !(s.session && s.session.state === "running");
   const follow = s.kind && s.kind !== "cq" && s.tx_hz ? s.tx_hz : null;   // a QSO on its own frequency
   if (follow !== seqTxHz) { seqTxHz = follow; placeBoxes(); }
   $("seq-cq").classList.toggle("on", s.kind === "cq");
@@ -2635,9 +2642,20 @@ async function logTo(btn) {
 for (const id of LOG_BTNS) $(id).onclick = () => logTo($(id));
 let selRecent = null;                       // ts of the marked recent QSO (the last clicked)
 let selRecentSet = new Set();               // all marked (Ctrl/Cmd-click, Shift-click): Send QSL
+let recentQsl = null;                       // ts → QSL result time, to spot results from the Pi
+const qslByPage = new Set();                // QSOs this page sent itself (they toast on their own)
 async function loadRecent() {
   let list;
   try { list = await api("/api/log/recent"); } catch { return; }
+  // QSL cards sent (or skipped) in the background - AUTO QSL - get a notice
+  const now = new Map(list.filter((e) => e.qsl).map((e) => [e.ts, e.qsl.t]));
+  if (recentQsl) {
+    for (const e of list) {
+      if (!e.qsl || recentQsl.get(e.ts) === e.qsl.t || qslByPage.has(e.ts)) continue;
+      toast(`Auto QSL ${e.call}: ${e.qsl.message}`, !e.qsl.ok && !e.qsl.skipped);
+    }
+  }
+  recentQsl = now;
   selRecentSet = new Set([...selRecentSet].filter((ts) => list.some((e) => e.ts === ts)));   // gone rows drop out
   $("recent-body").innerHTML = list.map((e) => `<tr data-ts="${esc(e.ts)}"${selRecentSet.has(e.ts) ? ' class="sel"' : ""}>
     <td>${esc(e.ts.slice(11, 16))}</td><td class="msg">${esc(e.call)}</td><td>${esc(e.band)}</td>
@@ -2843,6 +2861,7 @@ async function sendQsl(e) {
     if (to == null) return;
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to.trim())) { toast("No valid e-mail address", true); return; }
     toast(`Sending QSL card to ${to.trim()} …`);
+    qslByPage.add(e.ts);
     const r = await api("/api/qsl/send", { ts: e.ts, to: to.trim() });
     toast(r.message);
   } catch { /* toast */ } finally { btn.disabled = false; loadRecent(); }
@@ -2866,6 +2885,7 @@ async function sendQslMany(all) {
       try { info = await api("/api/qsl/recipient?call=" + encodeURIComponent(e.call)); } catch { /* no lookup */ }
       if (info.declined) { declined.push(e.call); continue; }
       if (!info.email) { none.push(e.call); continue; }
+      qslByPage.add(e.ts);
       try { await api("/api/qsl/send", { ts: e.ts, to: info.email }); sent.push(e.call); } catch { failed.push(e.call); }
     }
   } finally {
@@ -4278,6 +4298,19 @@ new MutationObserver(() => {
   loadRecent();
   loadLogStatus();
   setInterval(loadLogStatus, 30000);
+  // the recent list changes on the Pi too (auto-log, AUTO QSL in the background):
+  // a tiny change counter every 5 s, the list only reloads when it moved
+  let recentRev = null;
+  setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      const r = await fetch("/api/log/rev");
+      if (!r.ok) return;
+      const { rev } = await r.json();
+      if (recentRev !== null && rev !== recentRev) loadRecent();
+      recentRev = rev;
+    } catch { /* backend down */ }
+  }, 5000);
   bindHackRF();
 })();
 

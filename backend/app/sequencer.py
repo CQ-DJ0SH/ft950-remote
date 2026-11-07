@@ -228,6 +228,37 @@ class Sequencer:
             await self.tx.stop()
         return await self.publish()
 
+    async def skip(self) -> dict:
+        """End the QSO in progress at once and go on: CQ calls again (or takes
+        a waiting caller), Hunt / Auto Answer pick the next station. A station
+        Hunt was calling goes on the no-reply list, so it is not picked again
+        straight away."""
+        s = self.session
+        if not s or s["state"] != "running":
+            return await self.publish()
+        kind = self.kind
+        if self._task and self._task is not asyncio.current_task():
+            self._task.cancel()
+            await asyncio.gather(self._task, return_exceptions=True)
+        self._task = None
+        await self.tx.stop()                    # the message to this station must not go on
+        s["state"], s["ended"] = "skipped", time.time()
+        log.info("%s: skipped by the operator", s["call"])
+        if s.get("hunt"):
+            vfo = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
+            self._hunt_block(s["call"], {
+                "dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",
+                "df": s.get("df"), "mode": s.get("mode"), "tries": self.tries,
+                "band": band_for_hz(s.get("freq_hz") or vfo)})
+        self.session = None
+        if kind == "cq":
+            self.kind, self.step, self.tries = "cq", "cq", 0
+            self._take_queued()
+            self._run()
+        else:
+            self.kind, self.step = None, None
+        return await self.publish()
+
     def _run(self) -> None:
         self._task = asyncio.create_task(self._loop())
 

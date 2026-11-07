@@ -2164,3 +2164,8 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 #qsl-body:focus{outline:none; border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyan)}
 @media (max-width:640px){.qsl-grid{grid-template-columns:1fr 1fr}}
 .qsl-box[hidden]{display:none}
+
+/* Sessions ▸ SKIP: amber while a QSO runs; a skipped session dim */
+.sess-skipped{color:var(--text-dim)}
+#sess-skip:not(:disabled){border-color:var(--amber); color:var(--amber)}
+#sess-skip:disabled{opacity:.45}

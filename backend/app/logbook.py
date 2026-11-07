@@ -439,6 +439,7 @@ class Qrz:
 class LogBook:
     on_logged = None                          # callback(entry) after a successful log (QSL)
     _recent_lock = threading.Lock()           # log thread and QSL sender both write the list
+    recent_rev = 0                            # bumps on every change: the page reloads the list
 
     def __init__(self, dxcc: Dxcc) -> None:
         rt = runtime.load()
@@ -566,6 +567,7 @@ class LogBook:
             tmp = RECENT_FILE.with_suffix(".tmp")
             tmp.write_text(json.dumps(self._recent[:RECENT_MAX], indent=1))
             os.replace(tmp, RECENT_FILE)
+            self.recent_rev += 1
 
     def log_qso(self, q: dict, *, station_callsign: str, my_grid: str,
                 automatic: bool = False, to: tuple = ("wavelog", "qrz")) -> dict:

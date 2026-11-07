@@ -666,3 +666,45 @@ def test_late_rr73_after_no_reply_completes_and_logs():
     x = s.sessions[0]
     assert x["state"] == "done" and x["logged"] is False and x["qso"]["rst_rcvd"] == "-09"
     assert x["msgs"][-1]["msg"] == "DJ0SH RA3Y RR73"
+
+
+class _StopTx(_Tx):
+    def __init__(self): self.stopped = 0
+    async def stop(self): self.stopped += 1
+
+
+def test_skip_in_cq_ends_the_qso_and_cq_goes_on(monkeypatch):
+    import app.sequencer as sq
+    monkeypatch.setattr(sq, "MODES", {"FT8": {"period": 1.0}})
+    s = Sequencer(_Digi(), _StopTx(), _Log(), _Mgr(), _Set())
+    s.kind, s.mode, s.step = "cq", "FT8", "cq"
+    asyncio.run(s.on_decodes([_d("DJ0SH DL2XYZ JO40", snr=-3)], 30.0, "FT8", True))
+    sess = s.session
+    assert sess["call"] == "DL2XYZ" and s.step == "report"
+
+    async def run():
+        r = await s.skip()
+        s._task.cancel()
+        await asyncio.gather(s._task, return_exceptions=True)
+        return r
+    asyncio.run(run())
+    assert sess["state"] == "skipped" and s.session is None
+    assert (s.kind, s.step, s.tries) == ("cq", "cq", 0) and s.tx.stopped == 1
+    assert s._next_message() == "CQ DJ0SH JO62"
+
+
+def test_skip_in_hunt_blocks_the_station_and_frees_hunt():
+    s = Sequencer(_Digi(), _StopTx(), _Log(), _Mgr(), _Set())
+    s.kind, s.mode, s.hunt = "answer", "FT8", True
+    s.session = s._new_session(_d("CQ RA3Y KO85")); s.session["hunt"] = True; s.step = "call"
+    s._hunt_block = lambda call, info=None: setattr(s, "_blocked", call)
+    asyncio.run(s.skip())
+    assert s.sessions[-1]["state"] == "skipped" and s._blocked == "RA3Y"
+    assert s.kind is None and s.session is None and s.hunt
+
+
+def test_skip_without_a_running_qso_does_nothing():
+    s = Sequencer(_Digi(), _StopTx(), _Log(), _Mgr(), _Set())
+    s.kind, s.mode, s.step = "cq", "FT8", "cq"
+    asyncio.run(s.skip())
+    assert s.kind == "cq" and s.tx.stopped == 0

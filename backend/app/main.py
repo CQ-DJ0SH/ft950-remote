@@ -1154,6 +1154,12 @@ async def seq_hunt_clear() -> dict:
     return await sequencer.clear_hunt_blocked()
 
 
+@app.post("/api/seq/skip")
+async def seq_skip() -> dict:
+    """End the QSO in progress, keep CQ / Hunt / Auto Answer going."""
+    return await sequencer.skip()
+
+
 @app.post("/api/seq/halt")
 async def seq_halt() -> dict:
     return await sequencer.halt()
@@ -1207,6 +1213,13 @@ async def log_lookup(call: str) -> dict:
     vfo = service.status.get("vfo") or {}
     return await asyncio.to_thread(_logged, logbook.lookup, zero_call(call),
                                    band_for_hz(vfo.get("freq_hz")))
+
+
+@app.get("/api/log/rev")
+async def log_rev() -> dict:
+    """Change counter of the recent list (also QSL results sent in the
+    background): the page polls it and reloads the list when it moves."""
+    return {"rev": logbook.recent_rev}
 
 
 @app.get("/api/log/recent")

@@ -276,6 +276,13 @@ EN = [
         "A double-click within the first ~1.7 s of your own TX period still "
         "transmits in that period (start at once, the partner sees a slightly "
         "positive DT); later it goes out in the next one.",
+        "Palette Hologram (dark blue to cyan, as the globe) adds a callsign strip "
+        "at the foot of the waterfall: every decoded station of the last period "
+        "with a tick at its frequency, in up to four rows. The waterfall gets "
+        "shorter by that strip, so the labels never cover the signals. Hovering "
+        "a callsign shows country, SNR and the message; a double-click calls the "
+        "station, as in Received. Settings ▸ FT8 ▸ Callsigns (all palettes) shows "
+        "the strip with every palette.",
         "The filters above Received Messages show all, CQ only, RR73 (with RRR) "
         "only or 73 only. The arrow icon ↓ in each list head (follow) keeps the newest row in view, Session "
         "Messages included.",
@@ -457,7 +464,8 @@ EN = [
         "({MY}, {LOC} and the CALL field are filled in); Enter or SEND transmits "
         "it with CR LF before and after, mark idle in front. TX is the centre "
         "frequency in Hz of audio (300–2600); a click on a signal sets it to that "
-        "station. STOP and Halt TRX stop at once; a watchdog ends the transmission "
+        "station; DEFAULT puts it back to 2210 Hz (mark 2125 / space 2295 Hz). "
+        "STOP and Halt TRX stop at once; a watchdog ends the transmission "
         "at the latest 3 s after its length. While the FT8 sequencer or Auto Hunt "
         "runs, RTTY does not transmit.",
         "The panel can be hidden and gets its own accent colour in Settings ▸ "
@@ -474,6 +482,25 @@ EN = [
           "5 and played (KM/KY), in chunks of 50 characters. The radio must be in "
           "CW or CW-R with BK-IN on. Macros (CQ, CALL, 5NN, RR, 73, AGN, QRZ) fill "
           "the send line; CALL is taken from the selected signal."),
+    ("ul", [
+        "WPM is a slider (4–60) in the panel head; it sets the keyer speed of the "
+        "radio (KS) as soon as you let go, and follows the radio every 10 s. Each "
+        "time the service connects to the radio it starts at 20 WPM "
+        "(FT950_CW_START_WPM in .env, 0 keeps the radio's speed). The "
+        "pitch beside it is read from the radio (KP).",
+        "Before each send the panel switches the radio's keyer on (KR1) and sets "
+        "CW memory 5 to TEXT (menu 023), both checked by read-back. The text is "
+        "played with KYA - on the FT-950, text written with KM plays with "
+        "KY6…KYA (memory 1…5), not KY1…5. A message recorded with the paddle in "
+        "memory 5 is therefore not available.",
+        "MON plays your own CW in the browser: the radio's sidetone and monitor "
+        "reach only its speaker, not the Pi. The page keys a tone at the radio's "
+        "speed and pitch, paced like the radio's chunks, with soft edges (no "
+        "clicks). It is made in the browser and never transmitted; STOP ends it "
+        "with the radio, MON off at once.",
+        "If something does not go out, GET /api/cw/diag shows (read only) the "
+        "keyer, memory 5 type, both key jacks and the content of memory 5.",
+    ]),
 
     ("h1", "12  HackRF waterfall"),
     ("img", "manual/hackrf.png", 174),
@@ -523,7 +550,8 @@ EN = [
         "never; the no-reply list as a table — blocked time, call, country, grid, "
         "band, SNR, tries — with fixed column heads, × to take a call off, a field "
         "to add one by hand and Clear list; these edits apply at once), the "
-        "waterfall (per browser, at once: the green RX window on/off — default off — "
+        "waterfall (per browser, at once: the green RX window on/off — default off —, "
+        "the callsign strip for all palettes "
         "and the default palette, picked by clicking its colour sample; the Palette "
         "choice under the waterfall then lasts only until the page is reloaded), and "
         "the colours of the message lists with preview and reset.",

@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     # pass, ~140 ms per slow pass, both measured on the radio.
     fast_interval: float = 0.1       # frequency, mode, S-meter, busy, TX
     slow_interval: float = 1.0       # filters, AGC, preamp, power …
+    cw_start_wpm: int = 20           # keyer speed set on each connect (0 = keep the radio's)
     reconnect_interval: float = 2.0  # back-off while the radio is off / gone
 
     # Audio: the SCU-17's PCM2903B codec, addressed by card name (the card

@@ -302,6 +302,13 @@ DE = [
         "Sendeperiode sendet noch in dieser Periode (sofortiger Start, die "
         "Gegenstation sieht ein leicht positives DT); später geht es in der "
         "nächsten hinaus.",
+        "Das Farbschema Hologram (dunkelblau bis cyan, wie der Globus) zeigt am Fuß "
+        "des Wasserfalls einen Rufzeichenstreifen: jede dekodierte Station der "
+        "letzten Periode mit einem Strich an ihrer Frequenz, in bis zu vier Zeilen. "
+        "Der Wasserfall wird um diesen Streifen kürzer, die Beschriftung verdeckt "
+        "also keine Signale. Der Hover über einem Rufzeichen zeigt Land, SNR und die "
+        "Meldung; ein Doppelklick ruft die Station, wie in Received. Settings ▸ FT8 "
+        "▸ Callsigns (all palettes) zeigt den Streifen bei jedem Farbschema.",
         "Die Filter über Received Messages zeigen alles, nur CQ, nur RR73 (samt RRR) "
         "oder nur 73. Das Pfeilsymbol ↓ im Kopf jeder Liste (follow) hält die neueste Zeile im Blick, auch in "
         "Session Messages.",
@@ -501,7 +508,8 @@ DE = [
         "({MY}, {LOC} und das Feld CALL werden eingesetzt); Enter oder SEND sendet "
         "ihn mit CR LF davor und danach, mit Mark-Ruhe vorweg. TX ist die "
         "Mittenfrequenz in Hz NF (300–2600); ein Klick auf ein Signal setzt sie auf "
-        "diese Station. STOP und Halt TRX brechen sofort ab; ein Watchdog beendet "
+        "diese Station; DEFAULT stellt sie zurück auf 2210 Hz (Mark 2125 / Space "
+        "2295 Hz). STOP und Halt TRX brechen sofort ab; ein Watchdog beendet "
         "die Sendung spätestens 3 s nach ihrer Länge. Solange die FT8-Ablaufsteuerung "
         "oder Auto Hunt läuft, sendet RTTY nicht.",
         "Das Feld lässt sich unter Settings ▸ Appearance ausblenden und bekommt "
@@ -519,6 +527,25 @@ DE = [
           "Zeichen. Das Funkgerät muss in CW oder CW-R stehen und BK-IN muss "
           "eingeschaltet sein. Makros (CQ, CALL, 5NN, RR, 73, AGN, QRZ) füllen die "
           "Sendezeile; CALL wird vom ausgewählten Signal übernommen."),
+    ("ul", [
+        "WPM ist ein Schieberegler (4–60) im Kopf des Felds; er stellt das "
+        "Keyer-Tempo des Funkgeräts (KS), sobald man loslässt, und folgt alle 10 s "
+        "dem Funkgerät. Bei jeder Verbindung des Dienstes mit dem Funkgerät startet "
+        "es mit 20 WPM (FT950_CW_START_WPM in .env, 0 behält das Tempo des "
+        "Funkgeräts). Die Tonhöhe daneben wird vom Funkgerät gelesen (KP).",
+        "Vor jedem Senden schaltet das Feld den Keyer des Funkgeräts ein (KR1) und "
+        "stellt CW-Speicher 5 auf TEXT (Menü 023), beides per Rücklesen geprüft. "
+        "Abgespielt wird mit KYA — beim FT-950 spielt per KM geschriebener Text mit "
+        "KY6…KYA (Speicher 1…5), nicht mit KY1…5. Eine mit dem Paddle in Speicher 5 "
+        "aufgenommene Nachricht steht daher nicht zur Verfügung.",
+        "MON spielt das eigene CW im Browser: Mithörton und Monitor des Funkgeräts "
+        "erreichen nur dessen Lautsprecher, nicht den Pi. Die Seite tastet einen Ton "
+        "mit Tempo und Tonhöhe des Funkgeräts, im Takt seiner Stücke, mit weichen "
+        "Flanken (ohne Knacken). Er entsteht im Browser und wird nie gesendet; STOP "
+        "beendet ihn mit dem Funkgerät, MON aus sofort.",
+        "Geht nichts hinaus, zeigt GET /api/cw/diag (nur lesend) Keyer, Typ von "
+        "Speicher 5, beide Tastenbuchsen und den Inhalt von Speicher 5.",
+    ]),
 
     ("h1", "12  HackRF-Wasserfall"),
     ("img", "manual/hackrf.png", 174),
@@ -572,7 +599,8 @@ DE = [
         "als Tabelle — Sperrzeit, Rufzeichen, Land, Locator, Band, SNR, Versuche — "
         "mit fester Kopfzeile, × zum Entfernen, einem Feld zum Hinzufügen von Hand "
         "und Clear list; diese Änderungen wirken sofort), den Wasserfall (pro "
-        "Browser, sofort wirksam: das grüne Empfangsfenster ein/aus — Standard aus — "
+        "Browser, sofort wirksam: das grüne Empfangsfenster ein/aus — Standard aus —, "
+        "den Rufzeichenstreifen für alle Farbschemas "
         "und das Standard-Farbschema, gewählt per Klick auf sein Farbbeispiel; die "
         "Palette-Auswahl unter dem Wasserfall gilt dann nur bis zum Neuladen der "
         "Seite) und die Farben der Meldungslisten mit Vorschau und Zurücksetzen.",

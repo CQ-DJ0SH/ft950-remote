@@ -52,6 +52,9 @@ decoding, plus voice operation over WebRTC.
   - waterfall with TX (red) and RX (green) markers; **Adopt Frequency** moves TX
     onto the station clicked, a TX frequency set by hand switches it off;
     DIGI RX level and TX drive in one strip with the receive meter
+  - palette **Hologram**: a callsign strip at the foot of the waterfall (each
+    decoded station with a tick at its frequency; hover: country, SNR,
+    message; double-click calls it) - for all palettes by a Settings switch
   - a WSJT-X style QSO sequencer (CQ, answer, reports, RR73/73) with
     Auto Answer and **Auto Hunt** (calls new stations' CQs one after the
     other; a station that never answers is not called again; switches itself
@@ -80,10 +83,15 @@ decoding, plus voice operation over WebRTC.
 - **RTTY skimmer** (panel below DIGI): every RTTY signal in the passband
   decoded at once (45.45 Bd, 170 Hz, Baudot; matched filters, automatic
   threshold, squelch on clean frames), one row each; transmit as AFSK through
-  the DATA input with macros, mark/space following the sideband, REV
+  the DATA input with macros, mark/space following the sideband, REV;
+  DEFAULT puts TX back to 2210 Hz
 - **CW skimmer**: every CW signal in the passband decoded at once (own STFT
   front end, adaptive timing), listed like the FT8 table; select one, zero
-  beat, send through the radio's own keyer (`KM`/`KY`) with macros
+  beat, send through the radio's own keyer (`KM` + `KY6…KYA`; keyer on and
+  memory 5 set to TEXT before each send) with macros; WPM slider sets the
+  radio's speed (`KS`), starting at 20 WPM on each connect
+  (`FT950_CW_START_WPM`, 0 = keep the radio's); MON plays your own CW as a click-free sidetone in the
+  browser (the radio's sidetone never reaches the Pi)
 - **HackRF waterfall**: panadapter or wideband sweep from a HackRF One on
   another Pi, relayed from TM-V71 Remote's `/ws/hackrf`; follow shows the
   whole amateur band of VFO A; click tunes VFO A

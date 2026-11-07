@@ -102,6 +102,11 @@ class RadioService:
         if model != MODEL_ID:
             raise FT950Error(f"unexpected radio ID {model!r} (FT-950 is {MODEL_ID})")
         self.model = model
+        if settings.cw_start_wpm:                # fixed start speed, the slider changes it later
+            try:
+                self.radio.set_cw_speed(settings.cw_start_wpm)
+            except FT950Error as exc:
+                log.warning("CW start speed %d WPM not set: %s", settings.cw_start_wpm, exc)
 
     async def _poll_loop(self) -> None:
         while not self._stop.is_set():

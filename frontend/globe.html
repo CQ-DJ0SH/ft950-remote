@@ -850,8 +850,7 @@ foldable("ft8", "ft8-head", "ft8Folded");
 // ---------------------------------------------------------------- FT8 spectrum
 // The DIGI waterfall's frames (computed on the Pi, 10/s) over the decoder's
 // passband, as a waterfall in the hologram palette with the current spectrum
-// on top; the stations heard in the last period at their audio frequency, my
-// TX frequency while a sequence runs.
+// on top and my TX frequency while a sequence runs.
 const fc = $("ft8c"), fctx = fc.getContext("2d");
 const WF_H = 160;
 const wf = document.createElement("canvas"), wctx = wf.getContext("2d");
@@ -926,29 +925,7 @@ function drawFt8() {
     fctx.strokeStyle = `rgba(${P.tx},.85)`; fctx.setLineDash([3, 3]); fctx.beginPath(); fctx.moveTo(xx, top); fctx.lineTo(xx, bot); fctx.stroke(); fctx.setLineDash([]);
     fctx.fillStyle = `rgba(${P.tx},.95)`; fctx.font = "600 9px 'IBM Plex Mono', monospace"; fctx.fillText("TX", xx + 3, top + 10);
   }
-  // the stations of the last period at their audio frequency (callsigns without overlaps)
-  const nowS = Date.now() / 1000, taken = [];
-  // (a period's decodes arrive 15-17 s after its start: 35 s = the last complete one)
-  const list = [...stations.values()].filter((s) => s.d && s.d.df != null && nowS - s.t < 35)
-    .sort((a, b) => (qso && b.call === qso.call) - (qso && a.call === qso.call) || b.snr - a.snr);
-  fctx.font = "500 9px 'IBM Plex Mono', monospace";
-  for (const s of list) {
-    const isQso = qso && qso.call === s.call;
-    const rgb = isQso ? P.home : KIND_RGB[kindOf(s)];
-    const xx = Math.round(x(s.d.df + 25)) + 0.5;                     // the middle of an FT8 signal (50 Hz wide)
-    fctx.strokeStyle = `rgba(${rgb},${isQso ? 0.9 : 0.55})`; fctx.lineWidth = isQso ? 1.6 : 1;
-    fctx.beginPath(); fctx.moveTo(xx, bot - 6); fctx.lineTo(xx, bot); fctx.stroke();
-    const tw = fctx.measureText(s.call).width;
-    for (const row of [0, 1, 2, 3]) {                                   // four label rows, the first free one
-      const y = bot - 8 - row * 11, b = [xx - tw / 2 - 2, xx + tw / 2 + 2, row];
-      if (taken.some((t) => t[2] === row && b[0] < t[1] && b[1] > t[0])) continue;
-      taken.push(b);
-      if (P.halo) { fctx.shadowColor = P.halo; fctx.shadowBlur = 3; }
-      fctx.fillStyle = `rgba(${rgb},${isQso ? 1 : 0.9})`; fctx.fillText(s.call, xx - tw / 2, y);
-      fctx.shadowBlur = 0;
-      break;
-    }
-  }
+  // no callsigns here: the globe and the table carry them (the DIGI panel's waterfall shows them)
 }
 function specSocket() {
   let delay = 500;

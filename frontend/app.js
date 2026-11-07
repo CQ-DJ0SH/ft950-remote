@@ -162,6 +162,7 @@ for (const p of document.querySelectorAll(".panel")) {
 let meta = null;
 let radio = { connected: false };
 let rxBoxOn = store.get("rxBox", false);       // green RX window in the waterfall (Settings ▸ FT8), default off
+let wfCallsAll = store.get("wfCallsAll", false);  // callsigns in the waterfall in every palette, not only Hologram
 let digiMode = "FT8";
 let digiDepthCfg = "2";                 // decode depth setting: "1".."3" or "AUTO"
 let myCall = "";
@@ -1057,6 +1058,7 @@ function onDigi(m) {
     appendRx(d);
     appendMine(d);
   }
+  wfCalls(m.decodes);
   if (decodes.length > MAX_ROWS) { decodes.splice(0, decodes.length - MAX_ROWS); renderRx(); }
   else followRx();
 }
@@ -1508,19 +1510,25 @@ const wfCanvas = $("wf"), wfCtx = wfCanvas.getContext("2d");
 let wfFloor = null, lastFramePeriod = null, hzPerBin = 48000 / 16384;
 let decodeWasOn = null;                                  // last DECODE state seen (null: none yet)
 function clearWf() {
-  wfCtx.fillStyle = "#06043a";                            // the empty waterfall's colour (as sizeWf)
+  wfCtx.fillStyle = lut ? `rgb(${lut[0]},${lut[1]},${lut[2]})` : "#06043a";   // the palette's empty colour
   wfCtx.fillRect(0, 0, wfCanvas.width, wfCanvas.height);
   wfFloor = null; lastFramePeriod = null;
+  if ($("wf-calls")) $("wf-calls").innerHTML = "";        // DECODE off: no callsigns either
   if (typeof wfBacklog !== "undefined") wfBacklog.length = 0;
 }
 const CMAPS = {
   Purple: [[0, 6, 4, 58], [0.35, 40, 10, 120], [0.6, 150, 40, 190], [0.8, 235, 90, 230], [1, 255, 235, 255]],
   Rainbow: [[0, 0, 0, 80], [0.25, 0, 90, 255], [0.45, 0, 220, 200], [0.62, 90, 240, 40], [0.8, 255, 210, 0], [1, 255, 40, 20]],
   Blue: [[0, 2, 8, 24], [0.4, 10, 60, 140], [0.7, 60, 170, 230], [1, 230, 250, 255]],
+  // the globe's waterfall colours; only this one shows the callsigns over the waterfall
+  Hologram: [[0, 6, 18, 34], [0.35, 8, 60, 110], [0.6, 30, 170, 230], [0.82, 140, 235, 255], [1, 255, 255, 255]],
 };
-let lut = null;
+let lut = null, cmapNow = "";
 function buildLut(name) {
   const stops = CMAPS[name] || CMAPS.Purple;
+  cmapNow = CMAPS[name] ? name : "Purple";
+  if (cmapNow !== "Hologram" && !wfCallsAll && $("wf-calls")) $("wf-calls").innerHTML = "";   // Hologram (or all)
+  if ($("wf-wrap")) wfCallsLayout();
   lut = new Uint8ClampedArray(256 * 3);
   for (let i = 0; i < 256; i++) {
     const x = i / 255;
@@ -1636,6 +1644,58 @@ function setBox(which, hz) {
 // the partner's, set by Auto Hunt / Auto Answer in the backend); afterwards it goes
 // back to the frequency you set. Your setting itself is not changed.
 let seqTxHz = null;
+// the callsigns of the last period at the foot of the waterfall, at their
+// audio frequency (the middle of the signal) with a short line, on up to four
+// rows without overlaps;
+// coloured as in the globe: new DXCC, new on this band, worked - mine amber.
+// Shown in the Hologram palette (footer ▸ Palette, Settings ▸ FT8 ▸ default),
+// or in every palette with Settings ▸ FT8 ▸ "Callsigns (all palettes)"
+// a callsign in the strip: double-click calls it, as a double-click in Received
+// Messages (globeAnswer: RX window, Adopt Frequency, log form, then the call);
+// its clicks do not reach the waterfall, which would move the TX frequency
+const wfCallDecodes = new Map();
+$("wf-calls").addEventListener("click", (e) => { if (e.target.closest(".wc")) e.stopPropagation(); });
+$("wf-calls").addEventListener("dblclick", (e) => {
+  const el = e.target.closest(".wc");
+  if (!el) return;
+  e.stopPropagation();
+  const d = wfCallDecodes.get(el.dataset.call);
+  if (d) window.globeAnswer(d);
+});
+// callsigns active: the waterfall gets shorter and the callsigns their own strip below it
+function wfCallsOn() { return cmapNow === "Hologram" || wfCallsAll; }   // a declaration: used while loading
+function wfCallsLayout() { $("wf-wrap").classList.toggle("calls-on", wfCallsOn()); }
+function wfCalls(list) {
+  const box = $("wf-calls");
+  if (!box) return;
+  if (cmapNow !== "Hologram" && !wfCallsAll) { box.innerHTML = ""; return; }   // Hologram, or switched on for all
+  const w = $("wf-wrap").clientWidth || 1;
+  const bw = SIGNAL_BW[digiMode] || 50;
+  const partner = (seqState?.session?.call || "").toUpperCase();
+  const rows = [[], [], [], []];
+  const items = (list || []).filter((d) => d.from && !d.from.startsWith("<") && d.df != null)
+    .map((d) => {
+      const call = d.from.toUpperCase(), wk = d.worked;
+      const mine = isMine(d) || call === partner;
+      const cls = mine ? "me" : !wk ? "" : !wk.dxcc ? "newdx" : !wk.call_band ? "newb" : "worked";
+      return { call, d, x: (d.df + bw / 2 - F0) / (F1 - F0) * w, cls, prio: mine ? 0 : cls === "newdx" ? 1 : cls === "newb" ? 2 : 3, snr: d.snr };
+    })
+    .sort((a, b) => a.prio - b.prio || b.snr - a.snr);
+  const out = [];
+  wfCallDecodes.clear();
+  for (const it of items) {
+    const half = it.call.length * 3.1 + 3;                          // 10 px mono: ~6.2 px a character
+    const row = rows.findIndex((r) => !r.some(([a, b]) => it.x - half < b && it.x + half > a));
+    if (row < 0) continue;                                          // no room: left out
+    rows[row].push([it.x - half, it.x + half]);
+    const left = (it.x / w * 100).toFixed(2);
+    // in their own strip under the waterfall: a short line up to the signal, the call below it
+    out.push(`<span class="wt ${it.cls}" style="left:${left}%"></span>` +
+             `<span class="wc ${it.cls}" data-call="${esc(it.call)}" title="${esc(it.d.msg || it.call)} · double-click: call" style="left:${left}%;top:${7 + row * 12}px">${esc(it.call)}</span>`);
+    wfCallDecodes.set(it.call, it.d);
+  }
+  box.innerHTML = out.join("");
+}
 function placeBoxes() {
   const bw = SIGNAL_BW[digiMode] || 50;
   const at = { tx: seqTxHz ?? boxes.tx, rx: boxes.rx };
@@ -1660,6 +1720,13 @@ $("wf-wrap").addEventListener("click", (e) => {
 });
 $("set-rx-box").checked = rxBoxOn;
 $("set-rx-box").onchange = (e) => { rxBoxOn = e.target.checked; store.set("rxBox", rxBoxOn); placeBoxes(); };
+$("set-wf-calls").checked = wfCallsAll;
+$("set-wf-calls").onchange = (e) => {
+  wfCallsAll = e.target.checked; store.set("wfCallsAll", wfCallsAll);
+  if (!wfCallsAll && cmapNow !== "Hologram") $("wf-calls").innerHTML = "";   // off: gone at once; on: from the next period
+  wfCallsLayout();
+};
+wfCallsLayout();
 $("wf-wrap").addEventListener("mousemove", (e) => {
   const tip = $("wf-tip"), r = $("wf-wrap").getBoundingClientRect();
   tip.hidden = false;

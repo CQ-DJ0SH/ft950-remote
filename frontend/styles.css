@@ -2092,3 +2092,27 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 .globe-btn svg{width:14px; height:14px; flex:none}
 .rx-pane .pane-head h3:has(+ .globe-btn){margin-right:0}   /* Globe right beside the title */
 .rx-pane .pane-head .globe-btn{margin-right:auto}
+/* Received Messages ▸ Globe: outlined in the DIGI green */
+.rx-pane .pane-head .globe-btn{border-color:var(--accent)}
+
+/* DIGI waterfall: the callsigns of the last period at their audio frequency, in
+   their own strip under a shorter waterfall (Hologram palette, or switched on
+   for all in Settings ▸ FT8) */
+.wf-calls{display:none}
+.wf-wrap.calls-on canvas{height:calc(100% - 56px)}
+.wf-wrap.calls-on .wf-box{bottom:56px}
+.wf-wrap.calls-on .wf-calls{display:block; position:absolute; left:0; right:0; bottom:0; height:56px; pointer-events:none;
+  overflow:hidden; background:#04101e; border-top:1px solid rgba(70,212,255,.25)}
+.wf-calls .wc{position:absolute; transform:translateX(-50%); font:600 10px/1 var(--font-mono); white-space:nowrap; color:#e6f2ff}
+.wf-calls .wt{position:absolute; top:0; width:1px; height:5px; background:currentColor; opacity:.8; transform:translateX(-50%); color:#e6f2ff}
+.wf-calls .newdx{color:#ff5bd8} .wf-calls .newb{color:#6dff9e} .wf-calls .worked{color:#ff6f66} .wf-calls .me{color:#ffb23e}
+:root[data-theme="light"] .wf-wrap.calls-on .wf-calls{background:#eef4f9; border-top-color:rgba(10,121,176,.25)}
+:root[data-theme="light"] .wf-calls .wc, :root[data-theme="light"] .wf-calls .wt{color:#173444}
+:root[data-theme="light"] .wf-calls .newdx{color:#c0189a} :root[data-theme="light"] .wf-calls .newb{color:#0e8a43}
+:root[data-theme="light"] .wf-calls .worked{color:#c4271c} :root[data-theme="light"] .wf-calls .me{color:#b86e00}
+
+/* Settings ▸ FT8 ▸ WATERFALL: the switches on one line, default palette and its samples on the next */
+.wf-sw-row{flex-wrap:wrap}
+.wf-sw-break{flex-basis:100%; height:0}
+.wf-wrap.calls-on .wf-calls .wc{pointer-events:auto; cursor:pointer}   /* double-click: call */
+.wf-wrap.calls-on .wf-calls .wc:hover{text-decoration:underline}

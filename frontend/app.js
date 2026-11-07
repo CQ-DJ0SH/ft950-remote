@@ -2901,7 +2901,9 @@ async function sendQslMany(all) {
 
 // Settings ▸ QSL
 const QSL_FIELDS = { op: "qsl-op", qth: "qsl-qth", rig: "qsl-rig", pwr: "qsl-pwr", ant: "qsl-ant", qsl_text: "qsl-text",
-  note: "qsl-note", smtp_host: "qsl-host", smtp_user: "qsl-user", from_addr: "qsl-from", from_name: "qsl-from-name",
+  note: "qsl-note", call_color: "qsl-call-color", data_color: "qsl-data-color", note_color: "qsl-note-color",
+  header_color: "qsl-header-color",
+  smtp_host: "qsl-host", smtp_user: "qsl-user", from_addr: "qsl-from", from_name: "qsl-from-name",
   subject: "qsl-subject", body: "qsl-body", test_to: "qsl-test-to" };
 const qslState = { image: "", pos_call: [0.025, 0.04], pos_data: [0.025, 0.6], pos_note: [0.62, 0.86], images: [], boxes: null, timer: null };
 function qslBody() {
@@ -2917,7 +2919,7 @@ function qslBody() {
 async function loadQslSettings() {
   let c;
   try { c = await api("/api/qsl/config"); } catch { return; }
-  for (const [k, id] of Object.entries(QSL_FIELDS)) $(id).value = c[k] ?? "";
+  for (const [k, id] of Object.entries(QSL_FIELDS)) $(id).value = c[k] ?? ($(id).dataset.def || "");
   $("qsl-port").value = c.smtp_port; $("qsl-sec").value = c.smtp_security;
   $("qsl-bcc").checked = !!c.bcc_self; $("qsl-auto").checked = !!c.auto;
   $("qsl-pass").value = "";
@@ -3004,6 +3006,9 @@ for (const el of document.querySelectorAll(".qsl-box")) {
   });
 }
 for (const id of ["qsl-op", "qsl-qth", "qsl-rig", "qsl-pwr", "qsl-ant", "qsl-text", "qsl-note"]) $(id).addEventListener("input", qslPreview);
+for (const el of document.querySelectorAll(".qsl-color")) el.addEventListener("input", qslPreview);
+for (const b of document.querySelectorAll(".qsl-color-def"))
+  b.onclick = () => { const el = $(b.dataset.for); el.value = el.dataset.def; qslPreview(); };
 async function qslSave(quiet) {
   const c = await api("/api/qsl/config", qslBody());
   showQslAuto(c.auto);
@@ -3013,6 +3018,18 @@ async function qslSave(quiet) {
   return c;
 }
 $("qsl-save").onclick = () => qslSave(false).catch(() => {});
+// the whole mail as the recipient sees it, from the form as it stands
+$("qsl-mail-preview").onclick = async () => {
+  const win = window.open("", "_blank");            // opened on the click: no popup block
+  try {
+    const r = await fetch("/api/qsl/mail-preview", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(qslBody()) });
+    const html = await r.text();
+    if (!r.ok) throw new Error((() => { try { return JSON.parse(html).detail; } catch { return r.statusText; } })());
+    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    if (win) win.location = url; else window.open(url, "_blank");
+  } catch (e) { if (win) win.close(); toast("Mail preview: " + e.message, true); }
+};
 $("qsl-smtp-test").onclick = async () => {
   setStatusLine("qsl-smtp-status", null, "connecting …");
   try {

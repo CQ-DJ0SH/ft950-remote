@@ -2169,3 +2169,7 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 .sess-skipped{color:var(--text-dim)}
 #sess-skip:not(:disabled){border-color:var(--amber); color:var(--amber)}
 #sess-skip:disabled{opacity:.45}
+.qsl-color{width:56px; height:36px; padding:2px; border:1px solid var(--edge); border-radius:7px; background:var(--field-bg); cursor:pointer; flex:none}
+/* a button alone in a form-grid cell: aligned like the inputs, and only the
+   button itself is clickable (inside a <label> the whole cell triggered it) */
+.form-grid .btn-cell{display:flex; align-items:flex-end; justify-content:flex-start}

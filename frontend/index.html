@@ -889,7 +889,7 @@
           <label class="span-2">Wavelog-URL<input type="text" id="wl-url" placeholder="e.g. https://log.example.org" autocapitalize="off" autocomplete="off" spellcheck="false"></label>
           <label class="span-2">API-Token<input type="password" id="wl-key" placeholder="read/write API-Key" autocomplete="new-password" spellcheck="false"></label>
           <label>Station profile<select id="wl-station"><option value="">—</option></select></label>
-          <label class="check-label"><button type="button" id="wl-reload" class="mini-btn">Load profiles</button></label>
+          <div class="btn-cell"><button type="button" id="wl-reload" class="mini-btn">Load profiles</button></div>
         </div>
         <div class="logo-row log-test-row">
           <span class="update-status" id="wl-status">not tested</span>
@@ -953,6 +953,12 @@
           <label>ANT<input type="text" id="qsl-ant" maxlength="40" autocomplete="off"></label>
           <label title="The QSL column of the card: TNX (confirming), PSE (asking for one) …">QSL<input type="text" id="qsl-text" maxlength="12" autocomplete="off"></label>
           <label class="span-2" title="A block of its own, placed by dragging; placeholders as in the e-mail text, e.g. TNX {CALL} 73 — empty: no note">Note on the card<input type="text" id="qsl-note" maxlength="60" autocomplete="off"></label>
+          <label title="Colour of your callsign on the card and in the mail header (default: the amber of the radio's lamps)">Callsign colour
+            <span class="qsl-inline"><input type="color" class="qsl-color" id="qsl-call-color" value="#f2b13a" data-def="#f2b13a"><button type="button" class="mini-btn qsl-color-def" data-for="qsl-call-color" title="Back to amber">AMBER</button></span></label>
+          <label title="Colour of the data block's values; its labels (TO RADIO, DATE, OP …) take the same colour, fainter">Data block colour
+            <span class="qsl-inline"><input type="color" class="qsl-color" id="qsl-data-color" value="#ffffff" data-def="#ffffff"><button type="button" class="mini-btn qsl-color-def" data-for="qsl-data-color" title="Back to white">WHITE</button></span></label>
+          <label title="Colour of the note">Note colour
+            <span class="qsl-inline"><input type="color" class="qsl-color" id="qsl-note-color" value="#78dcc8" data-def="#78dcc8"><button type="button" class="mini-btn qsl-color-def" data-for="qsl-note-color" title="Back to turquoise">DEFAULT</button></span></label>
         </div>
       </div>
 
@@ -979,11 +985,14 @@
         <div class="form-grid">
           <label class="span-2">Subject<input type="text" id="qsl-subject" maxlength="200" autocomplete="off"></label>
           <label class="span-2">Text<textarea id="qsl-body" rows="7" maxlength="4000" spellcheck="false"></textarea></label>
+          <label title="Background of the mail's title bar; the gradient and the fine edges follow from it">Title colour
+            <span class="qsl-inline"><input type="color" class="qsl-color" id="qsl-header-color" value="#79726a" data-def="#79726a"><button type="button" class="mini-btn qsl-color-def" data-for="qsl-header-color" title="Back to warm steel">STEEL</button></span></label>
+          <div class="btn-cell"><button type="button" id="qsl-mail-preview" class="mini-btn" title="Show the mail as the recipient sees it, with the settings as they stand here (sample QSO, nothing is sent)">Preview mail</button></div>
         </div>
         <p class="pane-hint">Placeholders: {CALL} {NAME} (first name from the log or QRZ, else the call) {MY} {OP} {DATE} {UTC} {BAND} {MODE} {RST} {FREQ}. The mail is HTML with the card in it, plus a plain-text part. The address comes from QRZ.com (XML lookup, Settings ▸ Log) and can be changed before sending.</p>
         <div class="form-grid">
           <label>Test recipient<input type="email" id="qsl-test-to" autocomplete="off" spellcheck="false"></label>
-          <label class="check-label"><button type="button" id="qsl-test-send" class="mini-btn" title="Saves, then sends a card for a sample QSO (DL1ABC) to the test recipient">Send test card</button></label>
+          <div class="btn-cell"><button type="button" id="qsl-test-send" class="mini-btn" title="Saves, then sends a card for a sample QSO (DL1ABC) to the test recipient">Send test card</button></div>
         </div>
         <div class="logo-row log-test-row"><span class="update-status" id="qsl-test-status"></span></div>
       </div>

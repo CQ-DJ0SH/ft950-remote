@@ -83,6 +83,8 @@ def test_mail_html_with_inline_card_and_text():
     png = [p for p in m.walk() if p.get_content_type() == "image/png"][0]   # FT-950 REMOTE in Neuropol
     assert f'cid:{png["Content-ID"][1:-1]}' in html and 'alt="FT-950 REMOTE"' in html
     assert 'href="https://github.com/CQ-DJ0SH/ft950-remote"' in html
+    assert "Oliver DJØSH" in html and "Oliver DJ0SH" in plain        # Ø only in the HTML part
+    assert "2026-11-06" in html                                        # dates keep their 0
     assert "https://github.com/CQ-DJ0SH/ft950-remote" in plain
     assert f'cid:{img["Content-ID"][1:-1]}' in html
     assert img.get_filename() == "qsl-DJ0SH-to-M6FPW.jpg"
@@ -179,3 +181,39 @@ def test_qsl_hint_flags():
     h = qsl.qsl_hint({"eqsl": "1", "lotw": "1", "mqsl": "0", "qslmgr": "via EB7DX"})
     assert h == {"hint": "eQSL yes · LoTW yes · paper no · “via EB7DX”", "declined": ""}
     assert qsl.qsl_hint({"eqsl": "0"})["declined"] == "eQSL: no"
+
+
+def test_call_color_on_card_and_in_mail_header():
+    assert qsl._rgb("#00ff80") == (0, 255, 128) and qsl._rgb("rubbish") == (242, 177, 58)
+    m = qsl.build_mail({**qsl.DEFAULTS, **ACCOUNT, "call_color": "#123abc"}, Q, "DJ0SH", "a@b.de", b"x")
+    assert "color:#123abc" in m.get_body(("html",)).get_content()
+    jpg, b = qsl.render({**qsl.DEFAULTS, "call_color": "#00ff00"}, Q, "DJ0SH", width=1400)
+    im = Image.open(io.BytesIO(jpg)).convert("RGB")
+    x, y, w, h = [round(v * s) for v, s in zip(b["call"], (1400, im.height, 1400, im.height))]
+    greens = [p for p in im.crop((x, y, x + w, y + h)).get_flattened_data() if p[1] > 200 and p[0] < 80 and p[2] < 80]
+    assert len(greens) > 200                                   # the call is drawn in the chosen colour
+
+
+@pytest.mark.parametrize("key,block", [("data_color", "data"), ("note_color", "note")])
+def test_data_and_note_colours(key, block):
+    cfg = {**qsl.DEFAULTS, "op": "Oliver", "note": "TNX 73", key: "#00ff00"}
+    jpg, b = qsl.render(cfg, Q, "DJ0SH", width=1400)
+    im = Image.open(io.BytesIO(jpg)).convert("RGB")
+    x, y, w, h = [round(v * s) for v, s in zip(b[block], (1400, im.height, 1400, im.height))]
+    greens = [p for p in im.crop((x, y, x + w, y + h)).get_flattened_data() if p[1] > 200 and p[0] < 80 and p[2] < 80]
+    assert len(greens) > 100
+
+
+def test_long_call_does_not_widen_the_block_beyond_ten_characters():
+    w = {}
+    for call in ("DJ0ABC/QRP", "VP2V/DJ0ABC/QRP", "VP2V/DJ0ABCDE/QRPP"):
+        _, b = qsl.render(qsl.DEFAULTS, {**Q, "call": call}, "DJ0SH", width=1400)
+        w[call] = b["data"][2]
+    assert w["VP2V/DJ0ABC/QRP"] <= w["DJ0ABC/QRP"] + 0.01 and w["VP2V/DJ0ABCDE/QRPP"] <= w["DJ0ABC/QRP"] + 0.01
+
+
+def test_header_colour_drives_the_title_bar():
+    m = qsl.build_mail({**qsl.DEFAULTS, **ACCOUNT, "header_color": "#204060"}, Q, "DJ0SH", "a@b.de", b"x")
+    html = m.get_body(("html",)).get_content()
+    assert 'bgcolor="#204060"' in html and "background:#204060" in html
+    assert qsl._shade((32, 64, 96), 0.25) > "#204060" and qsl._shade((32, 64, 96), -0.17) < "#204060"

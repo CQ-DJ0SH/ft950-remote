@@ -175,6 +175,10 @@ class QslConfigReq(BaseModel):
     pwr: str | None = Field(default=None, max_length=20)
     ant: str | None = Field(default=None, max_length=40)
     qsl_text: str | None = Field(default=None, max_length=12)
+    call_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    data_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    note_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    header_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     note: str | None = Field(default=None, max_length=60)
     pos_call: list[float] | None = _POS
     pos_data: list[float] | None = _POS

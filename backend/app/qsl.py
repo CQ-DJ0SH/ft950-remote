@@ -55,6 +55,10 @@ DEFAULTS = {
     "test_to": "",
     "image": "", "op": "", "qth": "", "rig": "Yaesu FT-950", "pwr": "", "ant": "",
     "qsl_text": "TNX", "note": "TNX QSO 73",
+    "call_color": "#f2b13a",        # own callsign on the card and in the mail header (amber)
+    "data_color": "#ffffff",        # data block values (labels: the same, fainter)
+    "note_color": "#78dcc8",        # the note
+    "header_color": "#79726a",      # the mail's title bar (warm steel; gradient and edges follow)
     "pos_call": [0.025, 0.04], "pos_data": [0.025, 0.60], "pos_note": [0.62, 0.86],
     "subject": "QSL card {MY} - {CALL} {DATE} {BAND} {MODE}",
     "body": ("Dear {NAME},\n\n"
@@ -213,8 +217,16 @@ def _layout(cfg: dict, q: dict, my_call: str, w: int):
     fl, fv, fs = _font(FONT_LABEL, round(17 * s)), _font(FONT_BOLD, round(30 * s)), _font(FONT_REG, round(27 * s))
     pad, gap = round(22 * s), round(30 * s)
     ncol = max(len(r) for r in rows)
-    col_w = [max((max(fl.getlength(r[i][0]), fv.getlength(r[i][1])) for r in rows if i < len(r)), default=0)
-             for i in range(ncol)]
+    # the other station's call: at most as wide as 10 characters (DJ0ABC/QRP);
+    # a longer one (VP2V/DJ0ABC/QRP) is drawn smaller, so the block does not
+    # grow into the callsign label or the note
+    call_max = fv.getlength("W" * 10)
+    call = rows[0][0][1]
+    fcall = fv
+    if fv.getlength(call) > call_max:
+        fcall = _font(FONT_BOLD, max(8, int(fv.size * call_max / fv.getlength(call))))
+    col_w = [max((max(fl.getlength(r[i][0]), (fcall if (r is rows[0] and i == 0) else fv).getlength(r[i][1]))
+                  for r in rows if i < len(r)), default=0) for i in range(ncol)]
     row_w = sum(col_w) + gap * (ncol - 1)
     row_h, row_gap = round(62 * s), round(14 * s)
     # station lines side by side: as many columns as fit under the QSO row,
@@ -261,11 +273,26 @@ def _layout(cfg: dict, q: dict, my_call: str, w: int):
     l, t, r, b = fc.getbbox(label or " ", anchor="ls")
     cw = round(r - l + 2 * ch_pad)
     chh = round(b - t + 2 * ch_pad * 0.8)
-    return dict(s=s, rows=rows, col_w=col_w, gap=gap, row_h=row_h, row_gap=row_gap, lines=lines, note=note,
+    return dict(s=s, rows=rows, col_w=col_w, gap=gap, fcall=fcall, row_h=row_h, row_gap=row_gap, lines=lines, note=note,
                 fn=fn, n_pad=n_pad, note_box=(nl, nt, nr, nb), note_size=note_size,
                 sgrid=sgrid, lab_ws=lab_ws, val_ws=val_ws, sgap=sgap, col_x=col_x,
                 pad=pad, lh=lh, fl=fl, fv=fv, fs=fs, fc=fc, data=(bw, bh), call=(cw, chh),
                 ch_pad=ch_pad, call_box=(l, t, r, b), label=label)
+
+
+def _rgb(color, default=(242, 177, 58)) -> tuple[int, int, int]:
+    """#rrggbb -> (r, g, b); anything else: the default amber."""
+    m = re.fullmatch(r"#?([0-9a-fA-F]{6})", (color or "").strip())
+    return tuple(int(m.group(1)[i:i + 2], 16) for i in (0, 2, 4)) if m else default
+
+
+def _hex(rgb) -> str:
+    return "#%02x%02x%02x" % tuple(max(0, min(255, round(c))) for c in rgb)
+
+
+def _shade(rgb, f: float) -> str:
+    """f > 0: towards white by f, f < 0: towards black by -f."""
+    return _hex([c + (255 - c) * f if f > 0 else c * (1 + f) for c in rgb])
 
 
 def _call_label(call: str, font) -> str:
@@ -315,24 +342,26 @@ def render(cfg: dict, q: dict, my_call: str, image: Optional[str] = None,
     d.rounded_rectangle((cx, cy, cx + L["call"][0], cy + L["call"][1]), r, fill=(10, 14, 18, BLOCK_ALPHA))
     l, t, _r, b = L["call_box"]                 # the glyphs' own box: centred whatever the font
     d.text((cx + L["ch_pad"] - l, cy + (L["call"][1] - (b - t)) / 2 - t), L["label"],
-           font=L["fc"], fill=(255, 255, 255, 255), anchor="ls")
+           font=L["fc"], fill=(*_rgb(cfg.get("call_color")), 255), anchor="ls")
     # data block
     bw, bh = L["data"]
     d.rounded_rectangle((x, y, x + bw, y + bh), r, fill=(10, 14, 18, BLOCK_ALPHA))
     px, py = x + L["pad"], y + L["pad"]
-    dim, white = (160, 172, 184, 255), (255, 255, 255, 255)
+    dc = _rgb(cfg.get("data_color"), (255, 255, 255))
+    dim, white = (*dc, 165), (*dc, 255)          # labels: the value colour, fainter
     for row in L["rows"]:
         px = x + L["pad"]
         for (lab, val), cw_ in zip(row, L["col_w"]):
             d.text((px, py), lab, font=L["fl"], fill=dim)
-            d.text((px, py + round(24 * L["s"])), val, font=L["fv"], fill=white)
+            f = L["fcall"] if (row is L["rows"][0] and lab == "TO RADIO") else L["fv"]
+            d.text((px, py + round(24 * L["s"]) + (L["fv"].size - f.size) * 0.8), val, font=f, fill=white)
             px += cw_ + L["gap"]
         py += L["row_h"] + L["row_gap"]
     ly = py - L["row_gap"]
     if L["lines"]:
         ly += round(18 * L["s"])
         d.line((x + L["pad"], ly - round(9 * L["s"]), x + bw - L["pad"], ly - round(9 * L["s"])),
-               fill=(255, 255, 255, 60), width=max(1, round(L["s"])))
+               fill=(*dc, 60), width=max(1, round(L["s"])))
         for row in L["sgrid"]:
             for (k, v), lw, cx0 in zip(row, L["lab_ws"], L["col_x"]):
                 px = x + L["pad"] + cx0
@@ -345,7 +374,7 @@ def render(cfg: dict, q: dict, my_call: str, image: Optional[str] = None,
         d.rounded_rectangle((nx, ny, nx + nw, ny + nh), r, fill=(10, 14, 18, BLOCK_ALPHA))
         l, t, _r, b = L["note_box"]
         d.text((nx + L["n_pad"] - l, ny + (nh - (b - t)) / 2 - t), L["note"], font=L["fn"],
-               fill=(120, 220, 200, 255), anchor="ls")
+               fill=(*_rgb(cfg.get("note_color"), (120, 220, 200)), 255), anchor="ls")
     out = Image.alpha_composite(card, over).convert("RGB")
     buf = io.BytesIO()
     out.save(buf, "JPEG", quality=88)
@@ -409,32 +438,42 @@ def build_mail(cfg: dict, q: dict, my_call: str, to: str, card: bytes) -> EmailM
     cid = make_msgid(domain="qsl.card")
     tcid = make_msgid(domain="qsl.card")
     tpng, tw, th = header_png()
-    paras = "".join(f"<p style=\"margin:0 0 14px\">{html.escape(p).replace(chr(10), '<br>')}</p>"
+    # the own call with a slashed zero as on the card (HTML only - the
+    # plain-text part keeps 0, so the call can be copied as it is)
+    me, me_o = html.escape(my_call.upper()), html.escape(my_call.upper().replace("0", "Ø"))
+    paras = "".join(f"<p style=\"margin:0 0 14px\">"
+                    f"{re.sub(rf'\b{re.escape(me)}\b', me_o, html.escape(p)).replace(chr(10), '<br>')}</p>"
                     for p in text.split("\n\n"))
+    # header: the own call written as on the card's label (slashed zero), both
+    # calls in the amber of the radio's lamps
+    amber = "#%02x%02x%02x" % _rgb(cfg.get("call_color"))
+    hdr_me = me_o
+    # title bar: one colour (Settings ▸ QSL), lighter at the top, darker below
+    hc = _rgb(cfg.get("header_color"), (121, 114, 106))
+    hb, h_top, h_bot = _hex(hc), _shade(hc, 0.25), _shade(hc, -0.17)
+    h_edge_t, h_edge_b = _shade(hc, 0.45), _shade(hc, -0.43)
     m.add_alternative(f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark"><title>{html.escape(subject)}</title></head>
-<body style="margin:0;padding:0;background:#eef1f4;font-family:Arial,Helvetica,sans-serif;color:#18202a">
-<div style="max-width:640px;margin:0 auto;background:#ffffff">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#5b6872"
-    style="background:#5b6872;background-image:linear-gradient(180deg,#8995a0 0%,#66737e 45%,#55616b 100%);
-    border-top:1px solid #a9b3bc;border-bottom:1px solid #3a434b">
+<body style="margin:0;padding:0;background:#ece8e3;font-family:Arial,Helvetica,sans-serif;color:#231f1b">
+<div style="max-width:640px;margin:0 auto;background:#f7f5f2">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{hb}"
+    style="background:{hb};background-image:linear-gradient(180deg,{h_top} 0%,{hb} 45%,{h_bot} 100%);
+    border-top:1px solid {h_edge_t};border-bottom:1px solid {h_edge_b}">
     <tr><td align="center" style="padding:20px 16px 8px"><a href="{REPO}" target="_blank" style="text-decoration:none">
       <img src="cid:{tcid[1:-1]}" alt="{TITLE}" width="{tw}"
       style="display:block;margin:0 auto;border:0;width:100%;max-width:{tw}px;height:auto"></a></td></tr>
     <tr><td align="center" style="padding:0 24px 16px;color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:.06em;
       text-shadow:0 1px 2px rgba(0,0,0,.45)">
-      QSL {html.escape(my_call.upper())} &rarr; {html.escape(f['CALL'])}</td></tr>
+      QSL <span style="color:{amber}">{hdr_me}</span> &rarr; <span style="color:{amber}">{html.escape(f['CALL'])}</span></td></tr>
   </table>
   <div style="padding:22px 24px;font-size:15px;line-height:1.55">{paras}
     <img src="cid:{cid[1:-1]}" alt="QSL card {html.escape(my_call.upper())}" width="592"
-      style="display:block;width:100%;max-width:592px;height:auto;margin:18px 0 6px;border-radius:8px;border:1px solid #d5dbe1">
-    <p style="margin:6px 0 0;font-size:12px;color:#6b7785">{html.escape(f['DATE'])} {html.escape(f['UTC'])} UTC &middot;
-      {html.escape(f['BAND'])} &middot; {html.escape(f['MODE'])} &middot; RST {html.escape(f['RST'])}</p>
+      style="display:block;width:100%;max-width:592px;height:auto;margin:18px 0 4px;border-radius:8px;border:1px solid #ddd5ca">
   </div>
-  <div style="padding:14px 24px;background:#f5f7f9;border-top:1px solid #e1e6eb;font-size:12px;color:#6b7785;text-align:center">
-    Sent with <a href="{REPO}" target="_blank" style="color:#16313d;font-weight:bold;text-decoration:none">FT-950 Remote</a>
-    &middot; <a href="{REPO}" target="_blank" style="color:#2a7f8f">github.com/CQ-DJ0SH/ft950-remote</a></div>
+  <div style="padding:12px 24px;border-top:1px solid #e6e0d8;font-size:11px;color:#9a9188;text-align:center">
+    Sent with <a href="{REPO}" target="_blank" style="color:#7d6a52;font-weight:bold;text-decoration:none">FT-950 Remote</a>
+    &middot; <a href="{REPO}" target="_blank" style="color:#9a7a4a;text-decoration:none">github.com/CQ-DJ0SH/ft950-remote</a></div>
 </div></body></html>""", subtype="html")
     m.get_payload()[1].add_related(tpng, maintype="image", subtype="png", cid=tcid,
                                    filename="ft950-remote.png", disposition="inline")

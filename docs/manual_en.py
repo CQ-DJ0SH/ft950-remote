@@ -317,6 +317,12 @@ EN = [
         "Hunt and the time left as m:ss (∞: no switch-off). It calls only while a browser shows "
         "the DIGI panel. Whom it calls, the minimum SNR, the switch-off time "
         "(default 180 min, 0 = never) and the no-reply list are in Settings ▸ FT8.",
+        "SKIP in the Sessions header (amber while a QSO runs) ends the QSO in "
+        "progress at once: TX to that station stops, and the rest goes on — CQ "
+        "calls again (or takes a waiting caller), Auto Hunt and Auto Answer go to "
+        "the next station. A station Auto Hunt was calling goes on the no-reply "
+        "list, so it is not picked again straight away; the session shows as "
+        "skipped. HALT, by contrast, stops everything.",
         "The sequencer follows WSJT-X: call, report, R-report, RR73, 73; it can "
         "log automatically: Auto-log in the Sessions header (default on) logs every "
         "completed QSO to Wavelog, and Settings ▸ Log can send it to the QRZ.com "
@@ -557,7 +563,10 @@ EN = [
           "callsign is in it — then there is something to log."),
     ("p", "Recent QSOs: a click marks a row, Ctrl/Cmd-click adds or removes one, "
           "Shift-click marks a range. QRZ Visit, Map Display and QSL Card (shows the "
-          "card) work on the last clicked row, Send QSL on all marked ones. The QSL "
+          "card) work on the last clicked row, Send QSL on all marked ones. The list "
+          "follows changes made on the Pi by itself (checked every 5 s): QSOs "
+          "logged automatically and QSL cards sent by AUTO QSL appear at once, the "
+          "latter with a notice. The QSL "
           "column shows ✓ sent, ✗ not sent, ⊘ skipped — hover for why."),
 
     ("h1", "14  QSL card by e-mail"),

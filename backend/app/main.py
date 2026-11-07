@@ -1369,6 +1369,27 @@ async def qsl_preview(req: QslPreviewReq) -> dict:
     return {"jpeg": base64.b64encode(jpg).decode(), "boxes": boxes}
 
 
+@app.post("/api/qsl/mail-preview")
+async def qsl_mail_preview(req: QslPreviewReq) -> Response:
+    """The HTML mail as the recipient sees it, with the settings as they stand
+    in the form (not saved) and the pictures inline - nothing is sent."""
+    import base64
+    cfg = {**qslcard.load_cfg(), **req.model_dump(exclude_none=True, exclude={"ts", "width"})}
+    q = _qso_for(req.ts)
+
+    def build() -> str:
+        card, _ = qslcard.render(cfg, q, settings.my_call or "MYCALL")
+        m = qslcard.build_mail({**cfg, "from_addr": cfg.get("from_addr") or "you@example.org"}, q,
+                               settings.my_call or "MYCALL", "station@example.org", card)
+        page = m.get_body(("html",)).get_content()
+        for part in m.walk():
+            if part["Content-ID"]:
+                data = base64.b64encode(part.get_payload(decode=True)).decode()
+                page = page.replace("cid:" + part["Content-ID"][1:-1], f"data:{part.get_content_type()};base64,{data}")
+        return page
+    return Response(await asyncio.to_thread(_qsl, build), media_type="text/html")
+
+
 @app.get("/api/qsl/card")
 async def qsl_card(ts: str | None = None) -> Response:
     q = _qso_for(ts)

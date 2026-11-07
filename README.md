@@ -61,7 +61,8 @@ decoding, plus voice operation over WebRTC.
     Auto Answer and **Auto Hunt** (calls new stations' CQs one after the
     other; a station that never answers is not called again; switches itself
     off, default 180 min); **directed CQ** (CQ DX, EU, … POTA, SOTA) and
-    **DX Call** for a station typed in; FT8/FT4 waveform generation for
+    **DX Call** for a station typed in; **SKIP** ends the QSO in progress
+    and lets CQ / Hunt / Auto Answer go on; FT8/FT4 waveform generation for
     transmit
   - several callers to one CQ wait in a **queue** (new DXCC first) and are
     answered one after the other; a caller decoded while our CQ is on the air
@@ -108,7 +109,8 @@ decoding, plus voice operation over WebRTC.
   - QRZ.com XML lookup and logbook upload (by hand, or its own auto-log)
   - AUTO WAVELOG · AUTO QRZ · AUTO QSL switches in the LOG title
   - worked-before index downloaded from Wavelog
-  - Recent QSOs: mark several (Ctrl/Shift-click) for Send QSL
+  - Recent QSOs: mark several (Ctrl/Shift-click) for Send QSL; the list
+    follows auto-log and AUTO QSL on the Pi by itself
 - **QSL card by e-mail**:
   - your own picture with the QSO data drawn on it on the Pi: callsign label,
     data block and note, each dragged into place in a live preview

@@ -346,6 +346,12 @@ DE = [
         "Restzeit als m:ss (∞: keine Abschaltung). Er ruft nur an, solange ein Browser das DIGI-Feld "
         "zeigt. Wen er anruft, das Mindest-SNR, die Abschaltzeit (Standard 180 min, "
         "0 = nie) und die Liste stehen unter Settings ▸ FT8.",
+        "SKIP im Kopf der Sessions (bernsteinfarben, solange ein QSO läuft) beendet "
+        "das laufende QSO sofort: TX zu dieser Station stoppt, der Rest läuft weiter "
+        "— CQ ruft wieder (oder nimmt einen wartenden Anrufer), Auto Hunt und Auto "
+        "Answer gehen zur nächsten Station. Eine Station, die Auto Hunt gerade "
+        "anrief, kommt auf die No-Reply-Liste und wird nicht gleich wieder "
+        "gewählt; die Session steht als skipped da. HALT dagegen hält alles an.",
         "Die Ablaufsteuerung folgt WSJT-X: Anruf, Rapport, R-Rapport, RR73, 73; "
         "mit Auto-log im Kopf der Sessions (Standard an) wird jedes fertige QSO "
         "automatisch nach Wavelog geloggt, und unter Settings ▸ Log kann es "
@@ -608,7 +614,10 @@ DE = [
     ("p", "Recent QSOs: Ein Klick markiert eine Zeile, Strg/Cmd-Klick nimmt eine "
           "hinzu oder heraus, Umschalt-Klick markiert einen Bereich. QRZ Visit, Map "
           "Display und QSL Card (zeigt die Karte) gelten für die zuletzt geklickte "
-          "Zeile, Send QSL für alle markierten. Die Spalte QSL zeigt ✓ gesendet, ✗ "
+          "Zeile, Send QSL für alle markierten. Die Liste folgt Änderungen auf dem Pi "
+          "von selbst (Prüfung alle 5 s): automatisch geloggte QSOs und von AUTO QSL "
+          "verschickte Karten erscheinen sofort, Letztere mit einem Hinweis. Die "
+          "Spalte QSL zeigt ✓ gesendet, ✗ "
           "nicht gesendet, ⊘ übersprungen — der Hover sagt, warum."),
 
     ("h1", "14  QSL-Karte per E-Mail"),

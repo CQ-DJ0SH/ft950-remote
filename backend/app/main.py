@@ -1275,6 +1275,13 @@ async def cw_status() -> dict:
             "sending": bool(_cw_job and not _cw_job.done())}
 
 
+@app.get("/api/cw/diag")
+async def cw_diag() -> dict:
+    """Read-only: keyer, memory 5 type, key jacks and memory 5 content."""
+    _require_radio()
+    return await asyncio.to_thread(service.radio.cw_diag)
+
+
 @app.post("/api/cw/enable")
 async def cw_enable(req: OnOffReq) -> dict:
     skimmer.set_enabled(req.on)
@@ -1311,6 +1318,9 @@ async def cw_send(req: CwSendReq) -> dict:
     cw = await asyncio.to_thread(service.radio.get_cw)
     if not cw["breakin"]:
         raise HTTPException(400, "Switch break-in (BK-IN) on first — the keyer only transmits with break-in")
+    changed = await service.run(service.radio.prepare_cw_memory)
+    if changed:
+        log.info("CW: set %s for keyer-memory playback", ", ".join(changed))
     _cw_job = asyncio.create_task(_cw_send(req.text.upper(), cw["wpm"]))
     return {"ok": True, "seconds": round(cw_duration_s(req.text, cw["wpm"]), 1)}
 

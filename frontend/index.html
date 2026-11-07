@@ -530,6 +530,7 @@
       <span id="rt-macro-btns"></span>
       <span class="spacer"></span>
       <label class="cw-call" title="TX frequency: the centre between mark and space, in Hz of audio (clicking a signal sets it to that station)">TX <input type="number" id="rt-txhz" min="300" max="2600" step="5"> Hz</label>
+      <button class="btn sm" id="rt-txhz-def" title="Back to the default TX frequency: 2210 Hz (mark 2125 / space 2295 Hz)">DEFAULT</button>
     </div>
     <div class="cw-tx">
       <input type="text" id="rt-msg" placeholder="text to send in RTTY (AFSK on the DATA input: radio in DATA-L or DATA-U)…" autocomplete="off" autocapitalize="characters" spellcheck="false">
@@ -545,8 +546,9 @@
       <button class="btn sm toggle" id="cw-on" title="Decode every CW signal in the receive passband (runs on the Pi while switched on)">DECODE</button>
       <span class="panel-stat" id="cw-stat"></span>
       <span class="spacer"></span>
-      <label class="cw-ctl" title="Keyer speed of the radio (KS)">WPM <input type="number" id="cw-wpm" min="4" max="60" step="1"></label>
+      <label class="cw-ctl" title="Keyer speed of the radio (KS), 4 … 60 WPM">WPM <input type="range" id="cw-wpm" min="4" max="60" step="1" aria-label="Keyer speed (WPM)"><b id="cw-wpm-val">—</b></label>
       <span class="cw-ro" id="cw-pitch" title="CW pitch of the radio (KP, set on the radio)">— Hz</span>
+      <button class="btn sm toggle" id="cw-mon" title="Monitor: hear your own CW here in the browser while the radio sends it (the radio's own sidetone does not reach the Pi)">MON</button>
       <button class="btn sm toggle" id="cw-bk" title="Break-in (BI) — the radio's keyer only transmits with break-in on">BK-IN</button>
       <button class="btn sm" id="cw-clear" title="Clear the decoded text">CLEAR</button>
       <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>

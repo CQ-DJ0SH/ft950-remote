@@ -1310,7 +1310,9 @@ body.radio-off .panel{opacity:.32; filter:grayscale(.6) brightness(.78)}
 :root[data-theme="light"] .cwp{--accent:#0b8389; --accent-glow:#12a2a8}
 .cwp .panel-head{flex-wrap:wrap; row-gap:6px}
 .cw-ctl{display:flex; align-items:center; gap:6px; font:600 11px var(--font-ui); letter-spacing:.12em; color:var(--text-dim)}
-.cw-ctl input{width:56px; font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:4px 6px}
+.cw-ctl input[type=range]{width:110px}
+.cw-ctl b{min-width:2ch; text-align:right; font:600 12px var(--font-mono); color:var(--text)}
+.cw-ctl input[type=number]{width:56px; font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:4px 6px}
 .cw-ro{font:600 12px var(--font-mono); color:var(--text-dim); margin:0 4px}
 .cw-grid{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:12px}
 .cw-tbl{height:260px}

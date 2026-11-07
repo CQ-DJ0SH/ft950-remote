@@ -65,7 +65,7 @@ Spalte „UI“: **V** = großes VFO-Panel, **D** = DIGI/FT8-Drawer,
 | `KP` | Key Pitch | S/R | 00 = 300 Hz … 15 = 1050 Hz (50-Hz-Schritte) | C |
 | `KR` | Keyer | S/R | 0 off, 1 on | C |
 | `KS` | Key Speed | S/R | 004–060 WPM | C |
-| `KY` | CW-Keying | S | 1–5 Keyer-Memory, 6–A Message-Keyer abspielen — **kein Freitext** | C |
+| `KY` | CW-Keying | S | `KM`-Text spielt mit 6–A (Speicher 1–5), nicht 1–5 — **kein Freitext** | C |
 | `LK` | Dial Lock | S/R | 0 off, 1 on | V |
 | `LM` | Load Message (DVS-6) | S/R | 0 Stop, 1–5 Kanal | S |
 | `MA` | Memory → VFO-A | S | — | M |
@@ -185,7 +185,8 @@ pro Menüpunkt.
    `RF` (0–3 vs. 1–6) → zwei getrennte Mappings, nie eine Tabelle für beides.
 3. **`SH` ist kontextabhängig** (§3).
 4. **`KY` kann keinen Freitext senden.** Workaround: Text per `KM` in Speicher
-   1–5 schreiben (50 Zeichen), dann `KY1`…`KY5` abspielen; längere Texte über
+   1–5 schreiben (50 Zeichen), dann mit `KY6`…`KYA` abspielen (Speicher 1…5 — wie hamlib; `KY1`…`KY5`
+   spielt nichts, Speichertyp in Menü 019–023 auf TEXT, Keyer an `KR1`); längere Texte über
    die fünf Speicher rotieren. (Menü 048 „CW PC KEYING“ beachten.)
 5. **Ein Objektformat für vier Befehle** (`IF`/`OI`/`MR`/`MW`) → ein Parser.
 6. **Clarifier ist richtungsbehaftet über die Befehlswahl** (`RU`/`RD`), nicht

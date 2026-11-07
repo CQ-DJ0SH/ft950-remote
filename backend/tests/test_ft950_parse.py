@@ -299,3 +299,20 @@ def test_set_contour_follows_answer_width():
     r._serial = _StateSerial({"CO00": "CO000000;", "CO01": "CO010015;"}, ["CO00", "CO01"])
     r.set_contour(on=True, pos=30)
     assert r._serial.sent == ["CO010030", "CO000001"]
+
+
+def test_cw_memory_prepared_for_text_playback():
+    # live state when CW did not go out: keyer off, memory 5 = MESSAGE
+    state = {"KR": "KR0;", "EX023": "EX0231;"}
+    r = _radio(state)
+    orig = r._serial.write
+    def write(d):
+        cmd = d.decode().rstrip(";")
+        if cmd == "KR1":
+            state["KR"] = "KR1;"
+        elif cmd == "EX0230":
+            state["EX023"] = "EX0230;"
+        orig(d)
+    r._serial.write = write
+    assert r.prepare_cw_memory(5) == ["keyer on", "EX023 CW memory 5 = TEXT"]
+    assert r.prepare_cw_memory(5) == []      # already right: nothing written

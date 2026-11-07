@@ -1654,6 +1654,11 @@ let seqTxHz = null;
 // Messages (globeAnswer: RX window, Adopt Frequency, log form, then the call);
 // its clicks do not reach the waterfall, which would move the TX frequency
 const wfCallDecodes = new Map();
+// hover text: call, country and SNR, the message, how to call
+const wfCallTip = (it) => {
+  const d = it.d, snr = d.snr != null ? `${d.snr > 0 ? "+" : ""}${d.snr} dB` : "";
+  return [[it.call, d.dxcc, snr].filter(Boolean).join(" · "), d.msg, "double-click: call"].filter(Boolean).join("\n");
+};
 $("wf-calls").addEventListener("click", (e) => { if (e.target.closest(".wc")) e.stopPropagation(); });
 $("wf-calls").addEventListener("dblclick", (e) => {
   const el = e.target.closest(".wc");
@@ -1691,7 +1696,7 @@ function wfCalls(list) {
     const left = (it.x / w * 100).toFixed(2);
     // in their own strip under the waterfall: a short line up to the signal, the call below it
     out.push(`<span class="wt ${it.cls}" style="left:${left}%"></span>` +
-             `<span class="wc ${it.cls}" data-call="${esc(it.call)}" title="${esc(it.d.msg || it.call)} · double-click: call" style="left:${left}%;top:${7 + row * 12}px">${esc(it.call)}</span>`);
+             `<span class="wc ${it.cls}" data-call="${esc(it.call)}" title="${esc(wfCallTip(it))}" style="left:${left}%;top:${7 + row * 12}px">${esc(it.call)}</span>`);
     wfCallDecodes.set(it.call, it.d);
   }
   box.innerHTML = out.join("");
@@ -4073,12 +4078,14 @@ function renderCw(s) {
     if (c && Date.now() - cwCallTouched > 20000) $("cw-call").value = c;   // don't overwrite a hand-typed call
   }
 }
+// keyer speed slider: value shown while dragging, sent to the radio 180 ms after the last move
+const setCwWpm = slider("cw-wpm", (v) => `${v}`, async (wpm) => { try { await api("/api/cw/speed", { wpm }); } finally { loadCw(); } });
 async function loadCw() {
   try {
     const s = await api("/api/cw");
     cwRadio = s.radio;
     if (s.radio) {
-      if (document.activeElement !== $("cw-wpm")) $("cw-wpm").value = s.radio.wpm;
+      setCwWpm(s.radio.wpm);
       $("cw-pitch").textContent = `${s.radio.pitch} Hz`;
       $("cw-bk").classList.toggle("on", !!s.radio.breakin);
     }
@@ -4091,7 +4098,6 @@ setInterval(loadCw, 10000);
 $("cw-on").onclick = async () => { try { renderCw(await api("/api/cw/enable", { on: !cwState.enabled })); } catch { /* toast */ } };
 $("cw-clear").onclick = async () => { try { renderCw(await api("/api/cw/clear", {})); $("cw-text").textContent = ""; } catch { /* toast */ } };
 $("cw-bk").onclick = async () => { try { await api("/api/cw/breakin", { on: !$("cw-bk").classList.contains("on") }); loadCw(); } catch { /* toast */ } };
-$("cw-wpm").onchange = async (e) => { try { await api("/api/cw/speed", { wpm: +e.target.value }); loadCw(); } catch { loadCw(); } };
 $("cw-zb").onclick = () => {
   const sel = cwState.channels.find((c) => c.id === cwSel);
   const rf = sel && cwRf(sel.hz);
@@ -4103,6 +4109,7 @@ $("cw-send").onclick = async () => {
   try {
     const r = await api("/api/cw/send", { text });
     toast(`Sending CW (${r.seconds} s)`);
+    if (cwMon) cwSidetone(text, cwRadio?.wpm || 20, cwRadio?.pitch || 700);
     $("cw-msg").value = "";
     const row = document.createElement("div");
     row.innerHTML = `<span class="t">${new Date().toISOString().slice(11, 19)}</span>${esc(text.toUpperCase())}`;
@@ -4111,6 +4118,72 @@ $("cw-send").onclick = async () => {
   } catch { /* toast */ }
 };
 $("cw-msg").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("cw-send").click(); } });
+// MON: hear your own CW in the browser. The radio's sidetone and monitor only
+// reach its speaker, not the Pi, so the page plays the same text as Morse at
+// the radio's speed and pitch, chunked and paced like the backend (≤ 50
+// characters, then the chunk's length + 0.2 s). Made here, never transmitted.
+const MORSE = { A: ".-", B: "-...", C: "-.-.", D: "-..", E: ".", F: "..-.", G: "--.", H: "....", I: "..",
+  J: ".---", K: "-.-", L: ".-..", M: "--", N: "-.", O: "---", P: ".--.", Q: "--.-", R: ".-.", S: "...",
+  T: "-", U: "..-", V: "...-", W: ".--", X: "-..-", Y: "-.--", Z: "--..", 0: "-----", 1: ".----",
+  2: "..---", 3: "...--", 4: "....-", 5: ".....", 6: "-....", 7: "--...", 8: "---..", 9: "----.",
+  ".": ".-.-.-", ",": "--..--", "?": "..--..", "/": "-..-.", "=": "-...-", "+": ".-.-.", "-": "-....-", "@": ".--.-." };
+let cwMon = store.get("cwMon", true), cwTone = null;
+const cwMonShow = () => $("cw-mon").classList.toggle("on", cwMon);
+cwMonShow();
+$("cw-mon").onclick = () => { cwMon = !cwMon; store.set("cwMon", cwMon); cwMonShow(); if (!cwMon) cwSidetoneStop(true); };
+function cwChunks(text) {
+  const out = []; let chunk = "";
+  for (const w of text.toUpperCase().split(/\s+/).filter(Boolean)) {
+    if (chunk.length + w.length + 1 > 50) { out.push(chunk); chunk = ""; }
+    chunk = (chunk + " " + w).trim();
+  }
+  if (chunk) out.push(chunk);
+  return out;
+}
+function cwSidetone(text, wpm, pitch) {
+  try {
+    cwSidetoneStop(true);
+    chimeCtx = chimeCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (chimeCtx.state === "suspended") chimeCtx.resume();
+    const ctx = chimeCtx, sr = ctx.sampleRate, u = 1.2 / Math.max(4, wpm);
+    let t = ctx.currentTime + 0.35;                      // the radio starts after KM + KY
+    cwTone = [];
+    for (const c of cwChunks(text)) {
+      // key-down spans in seconds from the chunk start
+      const on = []; let x = 0;
+      for (const ch of c + " ") {
+        if (ch === " ") { x += 4 * u; continue; }        // 7 between words, 3 already counted
+        const code = MORSE[ch];
+        if (!code) continue;
+        for (const el of code) { const len = (el === "." ? 1 : 3) * u; on.push([x, x + len]); x += len + u; }
+        x += 2 * u;                                      // 3 between letters
+      }
+      // one buffer per chunk: a continuous sine keyed with 6 ms raised-cosine
+      // edges - sample exact, so no clicks between elements or letters
+      const n = Math.ceil(x * sr), data = new Float32Array(n), edge = Math.round(0.006 * sr), w = 2 * Math.PI * pitch / sr;
+      for (const [a, b] of on) {
+        const i0 = Math.round(a * sr), i1 = Math.min(n, Math.round(b * sr)), len = i1 - i0;
+        for (let i = i0; i < i1; i++) {
+          const k = i - i0, e = Math.min(1, k / edge, (len - k) / edge);
+          data[i] = 0.15 * (e < 1 ? 0.5 - 0.5 * Math.cos(Math.PI * e) : 1) * Math.sin(w * i);
+        }
+      }
+      const buf = ctx.createBuffer(1, Math.max(1, n), sr);
+      buf.copyToChannel(data, 0);
+      const o = ctx.createBufferSource();
+      o.buffer = buf; o.connect(ctx.destination); o.start(t);
+      cwTone.push({ o, start: t });
+      t += x + 0.25;                                     // backend pause between chunks
+    }
+  } catch { /* no audio */ }
+}
+// all = also the chunk now playing (MON off); else only the chunks not yet
+// started - the radio finishes the one it is playing
+function cwSidetoneStop(all) {
+  if (!cwTone || !chimeCtx) return;
+  const now = chimeCtx.currentTime;
+  for (const x of cwTone) if (all || x.start > now) { try { x.o.stop(); } catch { /* not started */ } }
+}
 // CW macros: click puts the text into the send line (Enter / SEND transmits)
 const CW_MACROS = [
   ["CQ", "CQ CQ DE {MY} {MY} K"], ["CALL", "{CALL} DE {MY} K"],
@@ -4138,7 +4211,7 @@ function cwCallFrom(text) {
 let cwCallTouched = 0;
 $("cw-call").addEventListener("input", () => { cwCallTouched = Date.now(); });
 $("cw-sent-clear").onclick = () => { $("cw-sent").innerHTML = ""; };
-$("cw-stop").onclick = () => api("/api/cw/stop", {}).then(() => toast("CW stopped after the current chunk")).catch(() => {});
+$("cw-stop").onclick = () => (cwSidetoneStop(false), api("/api/cw/stop", {})).then(() => toast("CW stopped after the current chunk")).catch(() => {});
 
 // ---------------------------------------------------------------- RTTY skimmer + AFSK
 let rtState = { channels: [] }, rtSel = null;
@@ -4191,6 +4264,7 @@ let rtCallTouched = 0;
 $("rt-call").addEventListener("input", () => { rtCallTouched = Date.now(); });
 $("rt-txhz").value = store.get("rttyTxHz", 2210);
 $("rt-txhz").onchange = (e) => store.set("rttyTxHz", Math.max(300, Math.min(2600, +e.target.value || 2210)));
+$("rt-txhz-def").onclick = () => { $("rt-txhz").value = 2210; store.set("rttyTxHz", 2210); };
 async function loadRtty() { try { renderRtty(await api("/api/rtty")); } catch { /* backend down */ } }
 ws("/ws/rtty", (m) => { if (m.t === "rtty") renderRtty(m); });
 loadRtty();

@@ -356,7 +356,13 @@ class FT950:
     # -- CW keyer (the radio keys: exact timing, no audio path involved) ----
     def get_cw(self) -> dict:
         return {"wpm": self._num("KS", 2), "pitch": 300 + 50 * self._num("KP", 2),
-                "breakin": self._flag("BI")}
+                "breakin": self._flag("BI"), "keyer": self._flag("KR")}
+
+    def cw_diag(self) -> dict:
+        """Everything the keyer-memory playback depends on (read only)."""
+        return {**self.get_cw(), "ex023_mem5_type": self.get_menu(23),
+                "ex037_front_jack": self.get_menu(37), "ex039_rear_jack": self.get_menu(39),
+                "km5": self.query("KM5")}
 
     def set_cw_speed(self, wpm: int) -> None:
         self.set_verified(f"KS{max(4, min(60, int(wpm))):03d}", "KS")
@@ -364,13 +370,30 @@ class FT950:
     def set_breakin(self, on: bool) -> None:
         self.set_verified(f"BI{int(on)}", "BI")
 
+    def prepare_cw_memory(self, slot: int = 5) -> list[str]:
+        """Text playback needs the internal keyer on (KR1) and the memory set
+        to TEXT, not MESSAGE (menus 019-023 = 0) - else KY plays the (empty)
+        paddle recording and nothing is sent. Returns what was changed."""
+        changed = []
+        if not self._flag("KR"):
+            self.set_verified("KR1", "KR")
+            changed.append("keyer on")
+        menu = 18 + slot
+        if self.get_menu(menu) != "0":
+            self.set_menu(menu, "0")
+            changed.append(f"EX{menu:03d} CW memory {slot} = TEXT")
+        return changed
+
     def cw_play(self, text: str, slot: int = 5) -> None:
         """Write ``text`` (≤ 50 chars) into keyer memory ``slot`` and play it.
         Memory 5 is used as the scratch slot for remote CW."""
+        self.prepare_cw_memory(slot)
         with self._lock:
             self.send(f"KM{slot}{text[:50]}")
             time.sleep(0.05)
-            self.send(f"KY{slot}")
+            # text written with KM plays back with KY6…KYA (memory 1…5), as
+            # hamlib does it for the FT-950 - KY1…5 plays nothing
+            self.send(f"KY{'6789A'[slot - 1]}")
 
     # -- VRF (the LCD's FLT: VRF / THRU) -------------------------------------
     def set_vrf(self, on: bool) -> None:

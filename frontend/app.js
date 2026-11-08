@@ -2881,8 +2881,9 @@ async function sendQsl(e) {
   btn.disabled = true;
   try {
     let info = {};
-    try { info = await api("/api/qsl/recipient?call=" + encodeURIComponent(e.call)); } catch { /* no lookup */ }
-    const again = e.qsl?.ok ? ` (already sent to ${e.qsl.to})` : "";
+    try { info = await api(`/api/qsl/recipient?call=${encodeURIComponent(e.call)}&ts=${encodeURIComponent(e.ts)}`); } catch { /* no lookup */ }
+    const again = e.qsl?.ok ? ` (already sent to ${e.qsl.to})`
+      : info.dupe ? ` — this station already got a card today (${info.dupe})` : "";
     const qrz = info.declined ? `\n\n⚠ QRZ.com: this station wants no QSL card — ${info.declined}`
       : info.hint ? `\n\nQRZ.com: ${info.hint}` : "";
     const to = prompt(`Send the QSL card for ${e.call} (${e.band} ${e.mode})${again} to:${qrz}`, info.email || e.qsl?.to || "");
@@ -2905,20 +2906,25 @@ async function sendQslMany(all) {
     `${done.length ? `\n${done.length} marked QSO${done.length === 1 ? "" : "s"} already got a card and ${done.length === 1 ? "is" : "are"} skipped.` : ""}`)) return;
   const btn = $("recent-qsl");
   btn.disabled = true;
-  const sent = [], none = [], declined = [], failed = [];
+  const sent = [], none = [], declined = [], failed = [], dupes = [];
   try {
     for (const [i, e] of list.entries()) {
       btn.textContent = `Sending ${i + 1}/${list.length} …`;
       let info = {};
-      try { info = await api("/api/qsl/recipient?call=" + encodeURIComponent(e.call)); } catch { /* no lookup */ }
+      try { info = await api(`/api/qsl/recipient?call=${encodeURIComponent(e.call)}&ts=${encodeURIComponent(e.ts)}`); } catch { /* no lookup */ }
+      if (info.dupe) { dupes.push(e.call); continue; }
       if (info.declined) { declined.push(e.call); continue; }
       if (!info.email) { none.push(e.call); continue; }
       qslByPage.add(e.ts);
-      try { await api("/api/qsl/send", { ts: e.ts, to: info.email }); sent.push(e.call); } catch { failed.push(e.call); }
+      try {
+        const r = await api("/api/qsl/send", { ts: e.ts, to: info.email, skip_dupe: true });
+        if (r.skipped) dupes.push(e.call); else sent.push(e.call);           // a dupe within this batch
+      } catch { failed.push(e.call); }
     }
   } finally {
     const parts = [`QSL cards sent: ${sent.length}`];
     if (done.length) parts.push(`already sent before: ${done.map((e) => e.call).join(", ")}`);
+    if (dupes.length) parts.push(`card already sent today (same band and mode): ${dupes.join(", ")}`);
     if (declined.length) parts.push(`skipped, no QSL wanted: ${declined.join(", ")}`);
     if (none.length) parts.push(`no e-mail on QRZ.com: ${none.join(", ")}`);
     if (failed.length) parts.push(`failed: ${failed.join(", ")}`);

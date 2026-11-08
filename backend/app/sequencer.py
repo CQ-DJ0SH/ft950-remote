@@ -84,6 +84,9 @@ def ft_call(call: str) -> str:
     return call if std_call(call) else f"<{call}>"
 
 
+_GRID4 = re.compile(r"^[A-R]{2}[0-9]{2}$")
+
+
 class Sequencer:
     def __init__(self, digi, tx, logbook, manager, settings) -> None:
         self.digi, self.tx, self.logbook = digi, tx, logbook
@@ -450,13 +453,24 @@ class Sequencer:
 
     def _advance(self, d: dict) -> None:
         k, s = d.get("kind"), self.session
+        # "R <grid>" (WSJT-X contest style: acknowledgement with the locator
+        # instead of an R-report) - F4ERS answered our report with it and it
+        # was taken for text: it acknowledges our report like an R-report
+        parts = (d.get("msg") or "").split()
+        if k == "text" and len(parts) == 4 and parts[2] == "R" and _GRID4.match(parts[3]):
+            if self.step in ("report", "call", "rr73"):
+                s["grid"] = s.get("grid") or parts[3]
+                s["acked"] = True                  # no report from them: RST rcvd stays empty
+                self.step, self.tries = "rr73", 0
+            return
         if k == "report" and self.step in ("call", "report"):
             s["their_report"] = d["msg"].split()[-1]
             self.step, self.tries = "rreport", 0
         elif k == "rreport" and self.step in ("report", "rr73", "call", "done"):
             s["their_report"] = d["msg"].split()[-1].lstrip("R")
             self.step, self.tries = "rr73", 0          # (again) RR73
-        elif k in ("RR73", "RRR") and self.step in ("rreport", "call", "73"):
+        elif k in ("RR73", "RRR") and self.step in ("rreport", "call", "73", "report"):
+            # at "report" too (as WSJT-X): their RR73 says our report arrived
             self.step, self.tries = "73", 0
         elif k in ("RR73", "RRR") and self.step == "done" and self._last_tx_was_73() \
                 and self.tries < MAX_TRIES:
@@ -464,9 +478,16 @@ class Sequencer:
             # (tries keep counting, so a partner that never hears us ends it)
             self.step = "73"
         elif k == "73":
-            self._complete()
-            if self.step in ("rr73", "done"):
-                self.step = "done"
+            # a bare 73 completes the QSO only once the reports went across -
+            # F4ERS sent one right after our report: it was logged (and its
+            # QSL card mailed) while we still waited for its report
+            if self.step in ("rr73", "done", "73") or s.get("their_report") or s.get("acked"):
+                self._complete()
+                if self.step in ("rr73", "done"):
+                    self.step = "done"
+            else:
+                log.info("%s: 73 before the reports went across (step %s) - not a complete QSO",
+                         s["call"], self.step)
         elif k == "grid" and self.step == "report":
             s["grid"] = s.get("grid") or (d.get("grid") or "")
 

@@ -732,3 +732,31 @@ def test_session_follows_a_partner_that_moves():
     assert s.session["df"] == 395 and s.step == "rr73"
     lo, hi = s.early_range()
     assert lo <= 395 <= hi                                       # the partner pass searches there now
+
+
+def _f4ers():
+    s = _seq(); s.kind, s.step = "cq", "cq"
+    s._complete = lambda sess=None: setattr(s, "_completed", True)
+    asyncio.run(s.on_decodes([_d("DJ0SH F4ERS JN07", df=1404)], 15.0, "FT8", False))
+    s._log_tx(s._next_message(), 30.0, {})                    # our report
+    return s
+
+
+def test_bare_73_before_the_reports_does_not_complete():
+    s = _f4ers()
+    asyncio.run(s.on_decodes([_d("DJ0SH F4ERS 73", t0=45.0, df=1404)], 45.0, "FT8", False))
+    assert not getattr(s, "_completed", False) and s.step == "report"
+
+
+def test_r_grid_acknowledges_like_an_r_report():
+    s = _f4ers()
+    asyncio.run(s.on_decodes([_d("DJ0SH F4ERS R JN07", t0=45.0, df=1404)], 45.0, "FT8", False))
+    assert s.step == "rr73" and s._next_message() == "F4ERS DJ0SH RR73"
+    asyncio.run(s.on_decodes([_d("DJ0SH F4ERS 73", t0=75.0, df=1404)], 75.0, "FT8", False))
+    assert s._completed
+
+
+def test_rr73_at_the_report_step_answers_73():
+    s = _f4ers()
+    asyncio.run(s.on_decodes([_d("DJ0SH F4ERS RR73", t0=45.0, df=1404)], 45.0, "FT8", False))
+    assert s.step == "73" and s._next_message() == "F4ERS DJ0SH 73"

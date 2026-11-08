@@ -1332,12 +1332,34 @@ def _qsl_send(q: dict, to: str = "", ts: str | None = None) -> dict:
     return info
 
 
+def _qsl_dupe(entry: dict) -> dict | None:
+    """Another recent QSO with the same station, band and mode whose card
+    already went out the same UTC day - one card is enough (F4ERS got two
+    when its QSO was logged twice)."""
+    call, band, mode = (entry.get("call") or "").upper(), entry.get("band"), (entry.get("mode") or "").upper()
+    day = time.strftime("%Y%m%d", time.gmtime())
+    for e in logbook.recent():
+        q = e.get("qsl") or {}
+        if (e.get("ts") != entry.get("ts") and q.get("ok") and (e.get("call") or "").upper() == call
+                and e.get("band") == band and (e.get("mode") or "").upper() == mode
+                and time.strftime("%Y%m%d", time.gmtime(q.get("t") or 0)) == day):
+            return e
+    return None
+
+
 def _qsl_auto(entry: dict) -> None:
     """After a successful log, with Settings ▸ QSL ▸ auto on: send in the background."""
     if not qslcard.load_cfg().get("auto") or (entry.get("qsl") or {}).get("ok"):
         return
 
     def run() -> None:
+        dup = _qsl_dupe(entry)
+        if dup:
+            logbook.set_qsl(entry["ts"], {"t": time.time(), "ok": False, "skipped": True, "to": "",
+                                          "message": f"skipped — card already sent today ({dup['band']} "
+                                                     f"{dup['mode']}, to {dup['qsl'].get('to')})"})
+            log.info("QSL card to %s skipped: already sent today", entry.get("call"))
+            return
         info = _qsl_info(entry.get("call", ""))
         if info["declined"]:                    # the station asks for no card (QRZ.com)
             logbook.set_qsl(entry["ts"], {"t": time.time(), "ok": False, "skipped": True, "to": "",
@@ -1444,9 +1466,13 @@ async def qsl_card(ts: str | None = None) -> Response:
 
 
 @app.get("/api/qsl/recipient")
-async def qsl_recipient(call: str) -> dict:
-    """E-mail address and QSL preferences (hint, declined) from QRZ.com."""
-    return {"call": call.upper(), **await asyncio.to_thread(_qsl_info, zero_call(call))}
+async def qsl_recipient(call: str, ts: str | None = None) -> dict:
+    """E-mail address and QSL preferences (hint, declined) from QRZ.com; with
+    ts also whether this station got its card today already (dupe)."""
+    r = {"call": call.upper(), **await asyncio.to_thread(_qsl_info, zero_call(call))}
+    if ts and (e := logbook.entry(ts)) and (dup := _qsl_dupe(e)):
+        r["dupe"] = f"{dup['band']} {dup['mode']}, {time.strftime('%H:%M', time.gmtime(dup['qsl'].get('t') or 0))} UTC"
+    return r
 
 
 @app.post("/api/qsl/send")
@@ -1454,7 +1480,11 @@ async def qsl_send(req: QslSendReq) -> dict:
     """ts: the card for that recent QSO; no ts: a test card (sample QSO) to
     ``to`` or the test recipient of Settings ▸ QSL."""
     if req.ts:
-        return await asyncio.to_thread(_qsl, _qsl_send, _qso_for(req.ts), req.to or "", req.ts)
+        e = _qso_for(req.ts)
+        if req.skip_dupe and (dup := _qsl_dupe(e)):
+            return {"ok": False, "skipped": True,
+                    "message": f"{e['call']}: card already sent today ({dup['band']} {dup['mode']})"}
+        return await asyncio.to_thread(_qsl, _qsl_send, e, req.to or "", req.ts)
     to = req.to or qslcard.load_cfg().get("test_to") or ""
     if not to:
         raise HTTPException(400, "no test recipient (Settings ▸ QSL)")

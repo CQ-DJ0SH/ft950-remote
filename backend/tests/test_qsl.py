@@ -217,3 +217,21 @@ def test_header_colour_drives_the_title_bar():
     html = m.get_body(("html",)).get_content()
     assert 'bgcolor="#204060"' in html and "background:#204060" in html
     assert qsl._shade((32, 64, 96), 0.25) > "#204060" and qsl._shade((32, 64, 96), -0.17) < "#204060"
+
+
+def test_one_card_per_station_band_mode_and_day(monkeypatch):
+    import time as _t
+    from app import main
+    now = _t.time()
+    recent = [
+        {"ts": "b", "call": "F4ERS", "band": "20m", "mode": "FT8", "qsl": None},
+        {"ts": "a", "call": "F4ERS", "band": "20m", "mode": "FT8", "qsl": {"ok": True, "t": now, "to": "x@y.fr"}},
+        {"ts": "c", "call": "F4ERS", "band": "40m", "mode": "FT8", "qsl": None},
+        {"ts": "d", "call": "F4ERS", "band": "20m", "mode": "FT8", "qsl": {"ok": True, "t": now - 3 * 86400}},
+    ]
+    monkeypatch.setattr(main.logbook, "recent", lambda: recent)
+    assert main._qsl_dupe(recent[0])["ts"] == "a"          # same call, band, mode, card today
+    assert main._qsl_dupe(recent[2]) is None               # other band
+    assert main._qsl_dupe(recent[1]) is None               # itself does not count
+    recent[1]["qsl"]["t"] = now - 3 * 86400                # card on another day
+    assert main._qsl_dupe(recent[0]) is None

@@ -196,6 +196,7 @@ class QslPreviewReq(QslConfigReq):
 
 class QslSendReq(BaseModel):
     ts: str | None = None                   # a recent log entry; None = test card
+    skip_dupe: bool = False                 # several marked: skip a station already carded today
     to: str | None = Field(default=None, max_length=120, pattern=r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 

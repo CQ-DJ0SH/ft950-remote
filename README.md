@@ -48,7 +48,10 @@ decoding, plus voice operation over WebRTC.
     is kept (pre-roll)
 - **DIGI (FT8/FT4)**:
   - decoding with WSJT-X's own decoder `jt9` (adaptive depth, early and
-    partner passes, the passband split over three CPU cores); the decoder is
+    partner passes, the passband split over three CPU cores); the early pass
+    searches the whole band in ~0.6 s before the period ends, so the next
+    message goes out at about +1 s (timing measured in
+    `docs/FT8-DECODING.md` §13); the decoder is
     chosen in Settings ▸ FT8 — see [FT8 decoder performance](#ft8-decoder-performance-pi-5)
   - received / my messages / sessions tables with DXCC and worked-before flags
   - waterfall with TX (red) and RX (green) markers; **Adopt Frequency** moves TX
@@ -113,9 +116,11 @@ decoding, plus voice operation over WebRTC.
     follows auto-log and AUTO QSL on the Pi by itself
 - **QSL card by e-mail**:
   - your own picture with the QSO data drawn on it on the Pi: callsign label,
-    data block and note, each dragged into place in a live preview
-  - HTML mail with the card inline, sent through your own SMTP account (login
-    on 587/465, or relay by address); test login and a test card
+    data block and note, each dragged into place in a live preview, each with
+    its own colour; long calls are drawn smaller instead of widening the block
+  - HTML mail with the card inline, the page's title plate on a steel title bar
+    (colour in Settings), sent through your own SMTP account (login on
+    587/465, or relay by address); mail preview, test login and a test card
   - address from QRZ.com; one QSO, several marked ones or automatically after
     every log; stations whose QRZ.com entry says no QSL (NO QSL, LOTW ONLY, …)
     and QSOs that already got a card are skipped

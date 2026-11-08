@@ -376,7 +376,12 @@ class DigiService:
                     pass
                 rng = self.early_range()
                 if rng is not None and self.config["enabled"] and t0 not in self.tx_periods:
-                    asyncio.create_task(self._early(mode, t0, rng))
+                    # always the whole band: the early pass runs while the
+                    # partner transmits, before our next start, so its range
+                    # costs no time - and it finds a partner that moved
+                    # (the narrow partner pass after the period does not)
+                    full = (int(self.config["low_hz"]), int(self.config["high_hz"]))
+                    asyncio.create_task(self._early(mode, t0, full))
                 now = time.time()
             try:
                 await asyncio.wait_for(self._stop.wait(), max(0.0, due - now))
@@ -491,7 +496,14 @@ class DigiService:
         try:
             wav, _, _ = await asyncio.to_thread(self._write_slice, mode, t0, x, "early")
             t = time.monotonic()
-            text = await self._jt9(mode, wav, 1, rng, sub="early")
+            # the whole band over three cores: ~0.6 s instead of 1.6 s, so it
+            # is done before the period ends - on one core it ended ~1.6 s
+            # into our next period, past the sequencer's deadline (1.55 s)
+            full = (int(self.config["low_hz"]), int(self.config["high_hz"]))
+            if tuple(rng) == full:
+                text = await self._jt9_parallel(mode, wav, 1, sub="e")
+            else:
+                text = await self._jt9(mode, wav, 1, rng, sub="early")
             wav.unlink(missing_ok=True)            # one-shot: never piles up in /run
             decodes = self._enrich(parse_jt9(text), mode, t0, vfo.get("freq_hz"))
             log.debug("early %s: %d decodes in %.1f s", mode, len(decodes), time.monotonic() - t)
@@ -563,29 +575,30 @@ class DigiService:
         if self.depth[mode] != d:
             log.info("%s decode took %.1f s → depth %d", mode, seconds, self.depth[mode])
 
-    async def _jt9_parallel(self, mode: str, wav: Path, depth: int) -> str:
-        """The full pass, split over PARTS cores. Each part gets its own
-        working dir (jt9 writes scratch files next to the WAV and in -a)."""
+    async def _jt9_parallel(self, mode: str, wav: Path, depth: int, sub: str = "p") -> str:
+        """The whole band, split over PARTS cores (the full pass, and the
+        early pass with sub="e"). Each part gets its own working dir (jt9
+        writes scratch files next to the WAV and in -a)."""
         if self.config.get("jt9_mt") and mode == "FT8":
             # MTft8: one process, PARTS threads, the whole band
-            return await self._jt9(mode, wav, depth, threads=PARTS)
+            return await self._jt9(mode, wav, depth, sub="" if sub == "p" else sub, threads=PARTS)
         rngs = split_band(self.config["low_hz"], self.config["high_hz"],
                           last_df=self._last_df.get(mode))
         if len(rngs) == 1:
-            return await self._jt9(mode, wav, depth)
+            return await self._jt9(mode, wav, depth, sub="" if sub == "p" else sub)
         jobs = []
         for i, rng in enumerate(rngs):
-            part = wav.parent / f"p{i}"
+            part = wav.parent / f"{sub}{i}"
             part.mkdir(exist_ok=True)
             link = part / wav.name
             link.unlink(missing_ok=True)
             os.link(wav, link)
-            jobs.append(self._jt9(mode, link, depth, rng, sub=f"p{i}"))
+            jobs.append(self._jt9(mode, link, depth, rng, sub=f"{sub}{i}"))
         try:
             outs = await asyncio.gather(*jobs)
         finally:
             for i in range(len(rngs)):
-                (wav.parent / f"p{i}" / wav.name).unlink(missing_ok=True)
+                (wav.parent / f"{sub}{i}" / wav.name).unlink(missing_ok=True)
         return "".join(outs)
 
     async def _jt9(self, mode: str, wav: Path, depth: int,

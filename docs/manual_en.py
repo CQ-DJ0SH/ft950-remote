@@ -317,6 +317,13 @@ EN = [
         "Hunt and the time left as m:ss (∞: no switch-off). It calls only while a browser shows "
         "the DIGI panel. Whom it calls, the minimum SNR, the switch-off time "
         "(default 180 min, 0 = never) and the no-reply list are in Settings ▸ FT8.",
+        "Timing: the next message is decided about 0.7 s into the period and goes "
+        "on the air at about +1 s (the latest start is +2 s). An early pass at "
+        "13.4 s searches the whole band, split over three cores (~0.6 s), while "
+        "the other station is still sending — callers, a partner who moved and "
+        "an empty period are known before our next start. Right after the period "
+        "a narrow partner pass (~0.4 s) checks the partner's frequency; the full "
+        "pass (~1.5 s) fills the tables. Measurements: docs/FT8-DECODING.md §13.",
         "SKIP in the Sessions header (amber while a QSO runs) ends the QSO in "
         "progress at once: TX to that station stops, and the rest goes on — CQ "
         "calls again (or takes a waiting caller), Auto Hunt and Auto Answer go to "
@@ -575,14 +582,23 @@ EN = [
           "your callsign as a label (in the nameplate font, 0 as Ø), the data block "
           "(to radio, date, UTC, band, mode, RST, QSL and below it OP, QTH, RIG, PWR, "
           "ANT side by side) and a note of its own. The mail is HTML with the card in "
-          "it, the page's title plate in the header, a link to this project and a "
-          "plain-text part; it goes out through your own mail account."),
+          "it, the page's title plate in the header (steel title bar, both calls in "
+          "amber), a link to this project and a plain-text part; it goes out through "
+          "your own mail account. In the HTML part your own call is written with Ø as "
+          "on the card; the plain-text part keeps the 0, so the call can be copied."),
     ("img", "manual/set-qsl.jpg", 120),
     ("ul", [
         "Settings ▸ QSL ▸ Card: + adds pictures (rotated and reduced to 2000 px on "
         "the Pi), a click picks one. The preview is drawn by the Pi exactly as the "
         "card will be; drag the callsign, the data block and the note into place. "
         "The note takes placeholders, e.g. TNX {CALL} 73; empty lines are left out.",
+        "Colours: Callsign colour (the label on the card and both calls in the mail "
+        "header, default amber), Data block colour (values; the labels and the "
+        "divider take it fainter, default white) and Note colour (default "
+        "turquoise) — each with a reset button; the preview follows at once. The "
+        "other station's call is never wider than 10 characters (DJ0ABC/QRP): a "
+        "longer one is drawn smaller, so the data block does not grow into the "
+        "other blocks.",
         "Mail server: SMTP server, port and security, username and password (stays "
         "on the Pi, never sent back to the browser), sender. With a username the "
         "Pi logs in (587 STARTTLS or 465 SSL/TLS) — the mail then gets your "
@@ -591,7 +607,10 @@ EN = [
         "its DKIM signer and SPF must know that address too. Test login only logs "
         "in, it sends nothing.",
         "E-mail: subject and text with placeholders {CALL} {NAME} {MY} {OP} {DATE} "
-        "{UTC} {BAND} {MODE} {RST} {FREQ}. Send test card mails a card for a sample "
+        "{UTC} {BAND} {MODE} {RST} {FREQ}. Title colour sets the mail's title bar "
+        "(the gradient and edges follow from it; STEEL resets it). Preview mail "
+        "opens the mail as the recipient sees it, with the form as it stands — "
+        "sample QSO, nothing saved or sent. Send test card mails a card for a sample "
         "QSO to the test recipient.",
         "Sending: mark QSOs in Recent QSOs and click Send QSL. The address comes "
         "from QRZ.com (XML lookup, Settings ▸ Log). For one QSO the confirmation "

@@ -262,3 +262,43 @@ wartete vor jedem Lauf, bis kein Live-`jt9` aktiv war. Bei „D3 single“
 überschnitten sich trotzdem 16 von 20 Läufen, die Pi-5-Zeiten dort sind
 also eher zu hoch. Auf dem Pi 4 liefen TM-V71 Remote, pyMC und ein
 untätiges headless Chromium. Temperatur Pi 5 danach 49 °C, keine Drosselung.
+
+## 13. Zeitlicher Ablauf des Sequencers (2026-11-08, Pi 5, 20 m)
+
+Ausgewertet: die QSOs am Morgen (PA3CPS, DJ0WJ, F6FDY, G8IXM, SP1EG, S55A,
+SP7TF) aus dem Journal (`TX decision … into the period`, `FT8 TX … start`)
+und den Session-Nachrichten.
+
+| Schritt | gemessen | Grenze |
+|---|---|---|
+| Entscheidung im QSO | +0,66 … +0,90 s nach Periodenbeginn | Deadline +1,55 s |
+| TX-Start im QSO | +0,98 … +1,22 s | spätester Start +2,0 s |
+| CQ ohne Anrufer (vorher) | Entscheidung +1,55 s (Deadline), Start +1,84 … +1,91 s | |
+| Partnerdurchlauf (schmal, D2) | 0,33 … 0,47 s | |
+| Volldurchlauf (D2, 3 Kerne) | 1,36 … 1,61 s, Ergebnis ~1,9 s nach Periodenende | zu spät für die nächste Entscheidung |
+| Frühdurchlauf ganzes Band, D1, 1 Kern | 1,56 s | endete ~1,6 s in unserer Periode |
+| Frühdurchlauf ganzes Band, D1, 3 Kerne | **0,60 s**, 41 statt 30 Decodes | fertig bei ~14 s |
+
+Gefundene Schwächen und Korrekturen:
+
+1. **CQ ohne Anrufer startete spät.** Ein Frühdurchlauf ohne Treffer galt
+   nicht als „Periode erledigt“; der Sequencer wartete auf den Volldurchlauf
+   (~1,9 s) und lief in die Deadline. Jetzt erledigt der Frühdurchlauf die
+   Periode auch ohne Anrufer, solange kein QSO läuft. Ein Anrufer, den erst
+   der Volldurchlauf findet, wird wie vorher eingeschoben (CQ-Abbruch) oder
+   für die nächste Periode vorgemerkt.
+2. **Frühdurchlauf nur um den Partner.** Während eines QSOs suchte er nur
+   die Frequenz der Gegenstation; neue Anrufer (SP1EG) und ein Partner, der
+   die Frequenz wechselt, kamen erst mit dem Volldurchlauf. Jetzt sucht er
+   immer das ganze Band, auf drei Kerne verteilt (`_jt9_parallel(…, sub="e")`)
+   — er läuft während der Sendung der Gegenstation, vor unserem nächsten
+   Start, und kostet so keine Zeit. Der schmale Partnerdurchlauf nach dem
+   Periodenende bleibt.
+3. **Session folgte dem Partner nicht.** F6FDY wechselte im QSO von 2381 auf
+   395 Hz; der Partnerdurchlauf suchte weiter bei 2381 Hz, das R-12 kam erst
+   mit dem Volldurchlauf, und der Report ging ein fünftes Mal hinaus statt
+   RR73. Jetzt übernimmt die Session die Frequenz jeder Antwort.
+
+Kein Fehler: G8IXM bekam den Report dreimal, weil die Station (−17 … −23 dB)
+ihren Locator wiederholte, uns also nicht gehört hatte — WSJT-X verhält sich
+genauso.

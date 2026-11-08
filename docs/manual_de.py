@@ -346,6 +346,14 @@ DE = [
         "Restzeit als m:ss (∞: keine Abschaltung). Er ruft nur an, solange ein Browser das DIGI-Feld "
         "zeigt. Wen er anruft, das Mindest-SNR, die Abschaltzeit (Standard 180 min, "
         "0 = nie) und die Liste stehen unter Settings ▸ FT8.",
+        "Zeitablauf: Die nächste Nachricht wird etwa 0,7 s nach Periodenbeginn "
+        "entschieden und geht bei etwa +1 s hinaus (spätester Start +2 s). Ein "
+        "Frühdurchlauf bei 13,4 s durchsucht das ganze Band, auf drei Kerne verteilt "
+        "(~0,6 s), noch während die Gegenstation sendet — Anrufer, ein Partner, der "
+        "die Frequenz gewechselt hat, und eine leere Periode sind vor unserem "
+        "nächsten Start bekannt. Direkt nach der Periode prüft ein schmaler "
+        "Partnerdurchlauf (~0,4 s) die Frequenz der Gegenstation; der Volldurchlauf "
+        "(~1,5 s) füllt die Tabellen. Messungen: docs/FT8-DECODING.md §13.",
         "SKIP im Kopf der Sessions (bernsteinfarben, solange ein QSO läuft) beendet "
         "das laufende QSO sofort: TX zu dieser Station stoppt, der Rest läuft weiter "
         "— CQ ruft wieder (oder nimmt einen wartenden Anrufer), Auto Hunt und Auto "
@@ -626,9 +634,11 @@ DE = [
           "das eigene Rufzeichen als Schild (in der Schrift des Namensschilds, 0 als "
           "Ø), der Datenblock (an Station, Datum, UTC, Band, Betriebsart, RST, QSL und "
           "darunter OP, QTH, RIG, PWR, ANT nebeneinander) und eine eigene Notiz. Die "
-          "Mail ist HTML mit der Karte darin, dem Titelschild der Seite im Kopf, einem "
-          "Link zu diesem Projekt und einem Textteil; sie geht über das eigene "
-          "Mailkonto hinaus."),
+          "Mail ist HTML mit der Karte darin, dem Titelschild der Seite im Kopf "
+          "(Titelleiste in Stahl, beide Rufzeichen in Bernstein), einem Link zu diesem "
+          "Projekt und einem Textteil; sie geht über das eigene Mailkonto hinaus. Im "
+          "HTML-Teil steht das eigene Rufzeichen wie auf der Karte mit Ø; der Textteil "
+          "behält die 0, damit es sich kopieren lässt."),
     ("img", "manual/set-qsl.jpg", 120),
     ("ul", [
         "Settings ▸ QSL ▸ Card: + fügt Bilder hinzu (auf dem Pi gedreht und auf "
@@ -636,6 +646,13 @@ DE = [
         "genau wie die Karte; Rufzeichen, Datenblock und Notiz werden an ihren Platz "
         "gezogen. Die Notiz kennt Platzhalter, z. B. TNX {CALL} 73; leere Zeilen "
         "fallen weg.",
+        "Farben: Callsign colour (das Schild auf der Karte und beide Rufzeichen im "
+        "Mailkopf, Standard Bernstein), Data block colour (die Werte; Beschriftung "
+        "und Trennlinie nehmen sie blasser, Standard Weiß) und Note colour (Standard "
+        "Türkis) — jeweils mit Knopf zum Zurücksetzen; die Vorschau folgt sofort. "
+        "Das Rufzeichen der Gegenstation wird nie breiter als 10 Zeichen "
+        "(DJ0ABC/QRP): ein längeres wird kleiner gezeichnet, so wächst der "
+        "Datenblock nicht in die anderen Blöcke.",
         "Mail server: SMTP-Server, Port und Verschlüsselung, Benutzername und Passwort "
         "(bleibt auf dem Pi, geht nie zurück an den Browser), Absender. Mit "
         "Benutzername meldet sich der Pi an (587 STARTTLS oder 465 SSL/TLS) — die "
@@ -645,8 +662,11 @@ DE = [
         "müssen diese Adresse dann auch kennen. Test login meldet sich nur an und "
         "sendet nichts.",
         "E-Mail: Betreff und Text mit Platzhaltern {CALL} {NAME} {MY} {OP} {DATE} "
-        "{UTC} {BAND} {MODE} {RST} {FREQ}. Send test card schickt eine Karte für ein "
-        "Beispiel-QSO an den Testempfänger.",
+        "{UTC} {BAND} {MODE} {RST} {FREQ}. Title colour stellt die Titelleiste der "
+        "Mail (Verlauf und Kanten folgen daraus; STEEL setzt sie zurück). Preview "
+        "mail öffnet die Mail so, wie der Empfänger sie sieht, mit dem Formular, wie "
+        "es gerade steht — Beispiel-QSO, nichts wird gespeichert oder gesendet. Send "
+        "test card schickt eine Karte für ein Beispiel-QSO an den Testempfänger.",
         "Versand: QSOs in Recent QSOs markieren und Send QSL klicken. Die Adresse "
         "kommt von QRZ.com (XML-Abfrage, Settings ▸ Log). Bei einem QSO zeigt die "
         "Rückfrage sie änderbar an, mit den QSL-Hinweisen von QRZ.com (eQSL / LoTW / "

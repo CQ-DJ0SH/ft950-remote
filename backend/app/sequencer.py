@@ -264,9 +264,11 @@ class Sequencer:
 
     # -- decoder interface ------------------------------------------------------
     def early_range(self) -> Optional[tuple[int, int]]:
-        """Early pass while a sequence runs - narrow once the partner's
-        frequency is known (0.4 s instead of 2-3 s) - and, over the whole
-        band, while Auto Hunt or Auto Answer waits for a station: picked from
+        """Whether the quick passes run, and the partner pass's range: narrow
+        around the partner once its frequency is known (0.4 s instead of 1.4-1.6
+        s) - it follows the partner when it moves. The early pass (13.4 s, while
+        the partner transmits) always searches the whole band (digi.py). Also
+        on while Auto Hunt or Auto Answer waits for a station: picked from
         the early pass, the call goes out at the start of the next period
         instead of up to 30 s later (the full pass ends 1.4-1.9 s into it,
         often past the latest start)."""
@@ -431,7 +433,13 @@ class Sequencer:
         # complete slice: nothing from them there settles the period as well -
         # we repeat at once instead of waiting for the full pass (1.5-2.5 s, so
         # every repeat went out ~1.9 s late). The 13.4 s early pass does not.
-        if early and not relevant and not (partner and self.session):
+        # Calling CQ with no QSO running, the early pass settles the period
+        # too: nobody in it means the next CQ goes out on time (it waited for
+        # the full pass, ~1.9 s, past the deadline - every unanswered CQ
+        # started 1.85 s late). A caller only the full pass finds is cut in
+        # (preempt) or queued for the next period, as before.
+        cq_idle = self.kind == "cq" and not self.session and not partner
+        if early and not relevant and not (partner and self.session) and not cq_idle:
             await self.publish()
             return
         self._seen[t0] = True
@@ -738,6 +746,11 @@ class Sequencer:
                 m["other"] = True            # the decode that started it (their CQ, their RR73 to someone)
             self.session["msgs"].append(m)
             self.session["snr"] = d.get("snr", self.session["snr"])
+            if d.get("df") is not None and not m.get("other"):
+                # the partner may move (F6FDY went from 2381 to 395 Hz): the
+                # partner pass follows, or it searches the old frequency and
+                # every later reply only comes with the full pass, too late
+                self.session["df"] = d["df"]
             self.session["my_report"] = report(self.session["snr"])
             if d.get("grid"):
                 self.session["grid"] = d["grid"]

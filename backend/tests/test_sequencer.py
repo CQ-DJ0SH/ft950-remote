@@ -708,3 +708,27 @@ def test_skip_without_a_running_qso_does_nothing():
     s.kind, s.mode, s.step = "cq", "FT8", "cq"
     asyncio.run(s.skip())
     assert s.kind == "cq" and s.tx.stopped == 0
+
+
+def test_cq_without_callers_is_settled_by_the_early_pass():
+    s = _seq(); s.kind, s.step = "cq", "cq"
+    asyncio.run(s.on_decodes([_d("CQ K1ABC FN42")], 45.0, "FT8", True))      # early: nobody for us
+    assert s._seen.get(45.0)                                                   # next CQ goes out on time
+
+
+def test_in_a_qso_an_early_nothing_still_waits_for_more():
+    s = _seq()
+    s.session = s._new_session(_d("CQ OH6IH KP13")); s.step = "call"
+    asyncio.run(s.on_decodes([_d("CQ K1ABC FN42")], 45.0, "FT8", True))
+    assert not s._seen.get(45.0)
+
+
+def test_session_follows_a_partner_that_moves():
+    s = _seq(); s.kind, s.step = "cq", "cq"
+    asyncio.run(s.on_decodes([_d("DJ0SH F6FDY JN33", df=2381)], 15.0, "FT8", False))
+    assert s.session["df"] == 2381
+    s._log_tx(s._next_message(), 30.0, {})
+    asyncio.run(s.on_decodes([_d("DJ0SH F6FDY R-12", t0=45.0, df=395)], 45.0, "FT8", True))
+    assert s.session["df"] == 395 and s.step == "rr73"
+    lo, hi = s.early_range()
+    assert lo <= 395 <= hi                                       # the partner pass searches there now

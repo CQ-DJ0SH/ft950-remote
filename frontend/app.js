@@ -465,6 +465,33 @@ function fmtHzGroups(hz) {
 }
 // 10 MHz … 1 Hz ("14.195.000", as VFO-B); a leading zero stays
 // an unlit digit ("!" is DSEG's all-segments-off glyph).
+// Amateur bands per frequency plan - the LCD's AFU lamp (Settings ▸ Appearance ▸ LCD).
+// Up to 6 m: the FT-950 tunes to 56 MHz. 60 m in Region 2 / USA: the five
+// channels' span (5330.5 - 5406.4 kHz).
+const BANDS_COMMON = [["2200 m", 135700, 137800], ["630 m", 472000, 479000],
+  ["30 m", 10100000, 10150000], ["20 m", 14000000, 14350000], ["17 m", 18068000, 18168000],
+  ["15 m", 21000000, 21450000], ["12 m", 24890000, 24990000], ["10 m", 28000000, 29700000]];
+const FREQ_PLANS = {
+  de: { name: "Germany", bands: [["160 m", 1810000, 2000000], ["80 m", 3500000, 3800000],
+    ["60 m", 5351500, 5366500], ["40 m", 7000000, 7200000], ["6 m", 50030000, 51000000]] },
+  r1: { name: "IARU Region 1", bands: [["160 m", 1810000, 2000000], ["80 m", 3500000, 3800000],
+    ["60 m", 5351500, 5366500], ["40 m", 7000000, 7200000], ["6 m", 50000000, 52000000]] },
+  r2: { name: "IARU Region 2 / USA", bands: [["160 m", 1800000, 2000000], ["80 m", 3500000, 4000000],
+    ["60 m", 5330500, 5406400], ["40 m", 7000000, 7300000], ["6 m", 50000000, 54000000]] },
+  r3: { name: "IARU Region 3", bands: [["160 m", 1800000, 2000000], ["80 m", 3500000, 3900000],
+    ["60 m", 5351500, 5366500], ["40 m", 7000000, 7300000], ["6 m", 50000000, 54000000]] },
+};
+let afuOn = store.get("afuOn", true), afuPlan = store.get("afuPlan", "de"), afuHz = 0;
+function renderAfu(hz) {
+  if (hz != null) afuHz = hz;
+  const plan = FREQ_PLANS[afuPlan] || FREQ_PLANS.de;
+  const b = [...BANDS_COMMON, ...plan.bands].find(([, lo, hi]) => afuHz >= lo && afuHz <= hi);
+  const el = $("afu");
+  el.hidden = !afuOn;
+  el.classList.toggle("on", !!b);
+  el.title = b ? `Amateur band ${b[0]} (${plan.name}): ${(b[1] / 1e6).toFixed(4)} – ${(b[2] / 1e6).toFixed(4)} MHz`
+               : `Outside the amateur bands (${plan.name})`;
+}
 function renderFreq(hz) {
   const s = String(Math.max(0, hz)).padStart(8, "0");
   let html = "";
@@ -474,6 +501,7 @@ function renderFreq(hz) {
     html += `<span class="dg s8${lead ? " lead" : ""}" data-w="${10 ** (7 - i)}">${lead ? "!" : s[i]}</span>`;
   }
   freqEl.innerHTML = html;
+  renderAfu(hz);
   if (!alignVfoBLine.done) { alignVfoBLine.done = true; requestAnimationFrame(alignVfoBLine); }   // first real digits
 }
 
@@ -4802,6 +4830,122 @@ for (const b of document.querySelectorAll(".rt-mac")) {
   };
 }
 
+// ---------------------------------------------------------------- JTTY
+// WSJT-X 3.2+'s keyboard mode: messages instead of channels - every message
+// a row (growing while it arrives), a click follows that station's frequency
+// (its conversation in Text, CALL and TX taken over). Sent any time.
+let jtState = { msgs: [], enabled: false }, jtSelHz = null, jtCallTouched = 0, jtBandsBuilt = false;
+const JT_NEAR = 15;                                   // Hz: the same station
+const JT_TX_MODES = ["DATA-U", "USB"];
+const jtUtc = (t) => new Date(t * 1000).toISOString().slice(11, 19);
+function renderJtty(s) {
+  jtState = s;
+  $("jt-on").classList.toggle("on", !!s.enabled);
+  if (!jtBandsBuilt && s.bands) {
+    $("jt-band").innerHTML = `<option value="">—</option>` +
+      s.bands.map(([b, hz]) => `<option value="${hz}">${b} m · ${(hz / 1e6).toFixed(3)}</option>`).join("");
+    jtBandsBuilt = true;
+  }
+  const mode = radio.vfo?.mode;
+  const stat = s.sending ? "SENDING"
+    : s.state === "starting" ? "STARTING … (decoder set-up, ~25 s)"
+    : s.state === "error" ? `ERROR: ${s.error}`
+    : !s.available ? "jttyd not installed (decoder/jttyd)"
+    : mode && !JT_TX_MODES.includes(mode) ? `TX needs DATA-U / USB (radio: ${mode})` : "";
+  $("jt-stat").textContent = stat;
+  $("jt-stat").classList.toggle("rt-sending", !!s.sending);
+  $("jt-send").disabled = !!s.sending;
+  const msgs = s.msgs || [];
+  $("jt-count").textContent = s.enabled ? `${msgs.length} message${msgs.length === 1 ? "" : "s"}` : "";
+  const body = $("jt-body"), tbl = body.closest(".tbl");
+  const atEnd = tbl.scrollTop + tbl.clientHeight >= tbl.scrollHeight - 8;
+  if (!s.enabled || !msgs.length) {
+    body.innerHTML = `<tr class="empty"><td colspan="4">${s.enabled ? (s.state === "ready" ? "Listening … no JTTY message in the passband yet." : "Starting the decoder …") : "Switch DECODE on — every JTTY message in the passband gets a row. Click one to follow that station."}</td></tr>`;
+  } else {
+    body.innerHTML = msgs.slice(-80).map((m) => {
+      const sel = jtSelHz != null && Math.abs(m.hz - jtSelHz) <= JT_NEAR;
+      return `<tr data-hz="${m.hz}" class="${sel ? "sel" : ""}${m.term === 0 ? " jt-growing" : ""}"><td>${jtUtc(m.utc)}</td>` +
+        `<td class="n">${Math.round(m.hz)}</td><td class="n">${m.snr}</td>` +
+        `<td class="msg"><span>${esc(m.text)}${m.term === 0 ? " …" : ""}</span></td></tr>`;
+    }).join("");
+    for (const tr of body.querySelectorAll("tr[data-hz]")) tr.onclick = () => {
+      jtSelHz = +tr.dataset.hz;
+      $("jt-txhz").value = Math.round(jtSelHz); store.set("jttyTxHz", Math.round(jtSelHz));   // answer on its frequency
+      jtCallTouched = 0;
+      renderJtty(jtState);
+    };
+    if (atEnd) tbl.scrollTop = tbl.scrollHeight;
+  }
+  // Text: the selected station's conversation (every message on its frequency)
+  const near = jtSelHz == null ? [] : msgs.filter((m) => Math.abs(m.hz - jtSelHz) <= JT_NEAR);
+  $("jt-sel-lbl").textContent = jtSelHz == null ? "no station selected"
+    : `${Math.round(jtSelHz)} Hz · ${near.length} message${near.length === 1 ? "" : "s"}`;
+  const t = $("jt-text");
+  const tEnd = t.scrollTop + t.clientHeight >= t.scrollHeight - 8;
+  t.textContent = near.map((m) => `${jtUtc(m.utc)}  ${m.text}${m.term === 0 ? " …" : ""}`).join("\n");
+  if (tEnd) t.scrollTop = t.scrollHeight;
+  if (near.length) {
+    const c = cwCallFrom(near.map((m) => m.text).join(" ").toUpperCase());
+    if (c && Date.now() - jtCallTouched > 20000) $("jt-call").value = c;
+  }
+}
+$("jt-call").addEventListener("input", () => { jtCallTouched = Date.now(); });
+$("jt-txhz").value = store.get("jttyTxHz", 1500);
+$("jt-txhz").onchange = (e) => store.set("jttyTxHz", Math.max(300, Math.min(2600, Math.round(+e.target.value) || 1500)));
+$("jt-txhz-def").onclick = () => { $("jt-txhz").value = 1500; store.set("jttyTxHz", 1500); };
+async function loadJtty() { try { renderJtty(await api("/api/jtty")); } catch { /* backend down */ } }
+ws("/ws/jtty", (m) => { if (m.t === "jtty") renderJtty(m); });
+loadJtty();
+setInterval(loadJtty, 10000);
+$("jt-on").onclick = async () => {
+  $("jt-on").disabled = true;
+  try { renderJtty(await api("/api/jtty/enable", { on: !jtState.enabled })); } catch { /* toast */ } finally { $("jt-on").disabled = false; }
+};
+$("jt-clear").onclick = async () => { try { jtSelHz = null; renderJtty(await api("/api/jtty/clear", {})); } catch { /* toast */ } };
+$("jt-band").onchange = async (e) => {
+  const hz = +e.target.value;
+  if (!hz) return;
+  try {
+    await api("/api/frequency", { hz, vfo: "A" });
+    await api("/api/mode", { mode: "DATA-U" });
+    toast(`JTTY: VFO A ${(hz / 1e6).toFixed(3)} MHz DATA-U`);
+  } catch { /* toast */ }
+  e.target.value = "";
+};
+$("jt-send").onclick = async () => {
+  const text = $("jt-msg").value.trim().toUpperCase().replace(/\s+/g, " ");
+  if (!text) return;
+  const hz = Math.max(300, Math.min(2600, Math.round(+$("jt-txhz").value) || 1500));
+  try {
+    await api("/api/jtty/send", { text, hz });
+    toast(`Sending JTTY at ${hz} Hz`);
+    $("jt-msg").value = "";
+    const row = document.createElement("div");
+    row.innerHTML = `<span class="t">${new Date().toISOString().slice(11, 19)}</span>${esc(text)}`;
+    $("jt-sent").appendChild(row);
+    $("jt-sent").scrollTop = $("jt-sent").scrollHeight;
+  } catch { /* toast */ }
+};
+$("jt-msg").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("jt-send").click(); } });
+$("jt-stop").onclick = () => api("/api/jtty/stop", {}).then(() => toast("JTTY stopped")).catch(() => {});
+$("jt-sent-clear").onclick = () => { $("jt-sent").innerHTML = ""; };
+// JTTY macros: short, so JTTY's compact atoms (calls, 599, grids) carry them
+const JT_MACROS = [
+  ["CQ", "CQ CQ {MY} {MY} {LOC}"], ["CALL", "{CALL} {MY} {MY}"], ["599", "{CALL} 599 {LOC}"],
+  ["TU", "{CALL} TU 73 {MY}"], ["AGN", "AGN?"], ["QRZ", "QRZ? {MY}"],
+];
+$("jt-macro-btns").innerHTML = JT_MACROS.map(([n]) => `<button class="btn sm jt-mac" data-n="${n}">${n}</button>`).join("");
+for (const b of document.querySelectorAll(".jt-mac")) {
+  const tpl = JT_MACROS.find(([n]) => n === b.dataset.n)[1];
+  b.title = tpl;
+  b.onclick = () => {
+    const call = $("jt-call").value.trim().toUpperCase();
+    if (tpl.includes("{CALL}") && !call) { toast("No callsign — select a station or type one into CALL", true); $("jt-call").focus(); return; }
+    $("jt-msg").value = tpl.replaceAll("{MY}", cwMy.call).replaceAll("{LOC}", cwMy.loc).replaceAll("{CALL}", call);
+    $("jt-msg").focus();
+  };
+}
+
 // ---------------------------------------------------------------- Settings ▸ Appearance
 // Panels on/off and their accent colours, per browser (as TM-V71 Remote's Panels tab).
 // VFO, PTT and Audio always stay (`fixed`: no tile, only an accent colour) - the radio
@@ -4812,6 +4956,7 @@ const PANELS = [
   { key: "audio", sel: "#audiop", name: "Audio · WebRTC", fixed: true },
   { key: "digi", sel: "#digi", name: "DIGI · FT8/FT4" },
   { key: "rtty", sel: "#rttyp", name: "RTTY" },
+  { key: "jtty", sel: "#jttyp", name: "JTTY" },
   { key: "cw", sel: "#cwp", name: "CW" },
   { key: "hackrf", sel: "#hackrf", name: "HackRF waterfall" },
   { key: "log", sel: "#log", name: "Log · Wavelog" },
@@ -4836,9 +4981,13 @@ function setPanelHidden(key, hidden) {
     if (key === "hackrf") hrfPanelToggled();      // hidden: the sweep stops, shown: resumes
   });
 }
+// the station's defaults (Settings ▸ Appearance ▸ SAVE AS DEFAULT, kept on the
+// Pi): every browser starts with them, its own colours win
+let accentDefaults = {};
+api("/api/ui/accents").then((r) => { accentDefaults = r.accents || {}; applyAccents(); }).catch(() => {});
 function applyAccents() {
   for (const p of PANELS) {
-    const el = panelEl(p), c = accents[p.key];
+    const el = panelEl(p), c = accents[p.key] || accentDefaults[p.key];
     if (!el) continue;
     if (c) { el.style.setProperty("--accent", c); el.style.setProperty("--accent-glow", c); }
     else { el.style.removeProperty("--accent"); el.style.removeProperty("--accent-glow"); }
@@ -4852,6 +5001,8 @@ function accentNow(el) {                        // the accent in effect, as #rrg
 }
 function renderAppearance() {
   $("peak-hold").checked = peakOn;
+  $("afu-on").checked = afuOn;
+  $("afu-plan").value = afuPlan;
   const box = $("panel-list");
   box.textContent = "";
   for (const p of PANELS) {
@@ -4878,7 +5029,7 @@ function renderAppearance() {
     const row = document.createElement("div");
     row.className = "color-row";
     row.innerHTML = `<input type="color" value="${accentNow(el)}" aria-label="${esc(p.name)} accent">` +
-      `<span class="cname">${esc(p.name)}${accents[p.key] ? "" : ' <small class="dim">(theme)</small>'}</span>` +
+      `<span class="cname">${esc(p.name)}${accents[p.key] ? "" : accentDefaults[p.key] ? ' <small class="dim">(default)</small>' : ' <small class="dim">(theme)</small>'}</span>` +
       `<span class="cprev acc-prev">${esc(p.name.split(" ")[0])}</span>` +
       `<button type="button" class="mini-btn" title="Back to the theme colour">Reset</button>`;
     const prev = row.querySelector(".acc-prev");
@@ -4889,6 +5040,7 @@ function renderAppearance() {
       prev.style.color = prev.style.borderColor = e.target.value;
       row.querySelector(".cname small")?.remove();
     };
+    row.querySelector("button").title = "Back to the default colour (the station's, else the theme's)";
     row.querySelector("button").onclick = () => {
       delete accents[p.key];
       applyAccents();
@@ -4914,10 +5066,30 @@ $("peak-hold").onchange = (e) => {
   $("tx-meters").classList.toggle("no-peak", !peakOn);
   $("pk-clr").hidden = !peakOn;                 // nothing to clear without peak hold
 };
+// this browser's colours as the default for every browser (stored on the Pi)
+$("appearance-default").onclick = async () => {
+  const all = {};
+  for (const p of PANELS) { const el = panelEl(p); if (el) all[p.key] = accentNow(el); }
+  if (!confirm("Save these accent colours as the default for every browser?\nA browser's own colours still win.")) return;
+  try {
+    const r = await api("/api/ui/accents", { accents: all });
+    accentDefaults = r.accents;
+    accents = {};                                  // this browser now follows the defaults
+    store.set("accents", accents);
+    applyAccents();
+    renderAppearance();
+    toast("Accent colours saved as the default for every browser");
+  } catch { /* toast */ }
+};
+// AFU lamp: on/off and the frequency plan - shown at once, kept with SAVE
+$("afu-on").onchange = (e) => { afuOn = e.target.checked; renderAfu(); };
+$("afu-plan").onchange = (e) => { afuPlan = e.target.value; renderAfu(); };
 $("appearance-save").onclick = () => {
   store.set("panelsOff", [...panelsOff]);
   store.set("accents", accents);
   store.set("peakHold", peakOn);
+  store.set("afuOn", afuOn);
+  store.set("afuPlan", afuPlan);
   toast("Appearance saved");
 };
 // closing Settings without SAVE drops the preview: back to the saved panels and colours
@@ -4928,6 +5100,7 @@ function revertAppearance() {
   applyAccents();
   peakOn = store.get("peakHold", true);
   $("tx-meters").classList.toggle("no-peak", !peakOn);
+  afuOn = store.get("afuOn", true); afuPlan = store.get("afuPlan", "de"); renderAfu();
   for (const p of PANELS) if (was.has(p.key) !== panelsOff.has(p.key)) setPanelHidden(p.key, panelsOff.has(p.key));
 }
 applyPanels();

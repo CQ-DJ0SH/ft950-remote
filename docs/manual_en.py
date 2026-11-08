@@ -42,6 +42,9 @@ EN = [
         "the radio's keyer with macros, WPM slider and a browser sidetone (MON); a CW "
         "assistant moves a QSO on with one key (QSO or contest style, serial numbers "
         "on demand, auto CQ, caller detection, logging).",
+        "JTTY, WSJT-X 3.2+'s keyboard mode: typed like RTTY at any time, with FEC "
+        "(readable to about -15 dB); every message in the passband, conversation per "
+        "station, macros, transmit through the DATA input.",
         "HackRF waterfall relayed from TM-V71 Remote, following the amateur band of VFO A.",
         "Logging to Wavelog and QRZ.com, auto-log switchable in the LOG title; "
         "worked-before index from Wavelog.",
@@ -167,7 +170,10 @@ EN = [
           "SWR counts only with some power out. Values keep a fixed number of "
           "digits (SWR as 1.5:1), so nothing jumps. "
           "The needle moves like a moving-coil meter: damped, rising in about "
-          "0.35 s and falling back a little slower."),
+          "0.35 s and falling back a little slower. "
+          "AFU above MHz lights green while VFO A is inside an amateur band of the "
+          "frequency plan chosen in Settings ▸ Appearance (Germany, IARU Region 1, 2 / "
+          "USA or 3); its tooltip names the band and its limits."),
     ("h2", "Tuning"),
     ("ul", [
         "Mouse wheel or drag on a digit of the LCD frequency.",
@@ -542,7 +548,36 @@ EN = [
         "received, name, QTH, start and end time, with SERIAL also STX/SRX.",
     ]),
 
-    ("h1", "12  HackRF waterfall"),
+    ("h1", "12  JTTY"),
+    ("img", "manual/jtty.png", 174),
+    ("p", "JTTY is the keyboard mode of WSJT-X 3.2 and later, by Joe Taylor K1JT, "
+          "Steve Franke K9AN, Rob Sherwood G4KLA and the WSJT-X team (GPL v3). It is "
+          "worked like RTTY — both sides type and send whenever they like, there are "
+          "no T/R periods — but with forward error correction: 4-GFSK at 31.25 baud, "
+          "127 Hz wide, frames of 1.89 s, readable down to about −15 dB where 45.45-baud "
+          "RTTY is long gone. Calls, reports and locators travel in compact form."),
+    ("ul", [
+        "DECODE starts jttyd on the Pi (decoder/jttyd, built against WSJT-X 3.3's "
+        "decoder). It first sets up its tables on a test signal of its own (STARTING, "
+        "about 25 s), then listens over the whole passband — about 12 % of one core.",
+        "Every message is a row: UTC, audio frequency, SNR, text; one still arriving "
+        "is shown in italics with … . A click follows that station: Text shows its "
+        "conversation (every message on its frequency), CALL takes its call, TX its "
+        "frequency.",
+        "Sending: the send line or the macros CQ, CALL, 599, TU, AGN, QRZ (kept short, "
+        "so JTTY's compact atoms carry them); Enter or SEND transmits at once — no "
+        "waiting for a period. The radio must be in DATA-U or USB; the drive is the FT8 "
+        "TX drive. STOP and Halt TRX end it; while the FT8 sequencer runs, JTTY does "
+        "not transmit. DEFAULT puts TX on 1500 Hz, the middle of the calling range.",
+        "BAND tunes VFO A to a JTTY dial frequency in DATA-U (WSJT-X 3.3's list, "
+        "preliminary): 1.839, 3.572, 7.078, 10.140, 14.090, 18.104, 21.090, 24.920, "
+        "28.090, 50.160 MHz. 20 m at 14.090 MHz is the suggested first meeting place.",
+        "WSJT-X's decoder listens on the receive frequency and 1200–1800 Hz; jttyd "
+        "sets its tolerance to the whole passband, so every JTTY signal is found — "
+        "measured without loss of sensitivity.",
+    ]),
+
+    ("h1", "13  HackRF waterfall"),
     ("img", "manual/hackrf.png", 174),
     ("p", "The HackRF One sits on the second Pi with TM-V71 Remote. FT-950 Remote "
           "relays its waterfall (Settings ▸ General ▸ HackRF source). With follow "
@@ -554,7 +589,7 @@ EN = [
           "40 m instead of about 50 from the normal 2 MHz row. The mouse shows "
           "frequency and level under the pointer."),
 
-    ("h1", "13  Log"),
+    ("h1", "14  Log"),
     ("p", "The LOG panel logs to Wavelog (API key and station profile) and "
           "the QRZ.com logbook — each with its own button beside the callsign: LOG "
           "WAVELOG and LOG QRZ.COM (the form stays, so a QSO can go to both; a ✓ "
@@ -565,7 +600,7 @@ EN = [
           "green when set up. Three switches (filled = on): AUTO WAVELOG logs QSOs "
           "completed by the sequencer to Wavelog (as Auto-log in Sessions and "
           "Settings ▸ Log), AUTO QRZ to the QRZ.com logbook as well, AUTO QSL sends "
-          "the QSL card by e-mail after every successful log (chapter 14). The LOG "
+          "the QSL card by e-mail after every successful log (chapter 15). The LOG "
           "buttons are only outlined while the form is empty and filled once a "
           "callsign is in it — then there is something to log."),
     ("p", "Recent QSOs: a click marks a row, Ctrl/Cmd-click adds or removes one, "
@@ -576,7 +611,7 @@ EN = [
           "latter with a notice. The QSL "
           "column shows ✓ sent, ✗ not sent, ⊘ skipped — hover for why."),
 
-    ("h1", "14  QSL card by e-mail"),
+    ("h1", "15  QSL card by e-mail"),
     ("img", "manual/qsl-card.jpg", 150),
     ("p", "A QSL card is your own picture with the QSO data drawn on it on the Pi: "
           "your callsign as a label (in the nameplate font, 0 as Ø), the data block "
@@ -629,7 +664,7 @@ EN = [
         "backend/app/assets/ — all gitignored).",
     ]),
 
-    ("h1", "15  Settings"),
+    ("h1", "16  Settings"),
     ("img", "manual/set-general.png", 120),
     ("ul", [
         "General: callsign, locator, CAT port and baud rate, Shelly and auto "
@@ -663,13 +698,15 @@ EN = [
         "auto-log to Wavelog (as Auto-log in Sessions) and, separately, auto-log to "
         "the QRZ.com logbook (needs its API key).",
         "QSL: card picture and layout, mail server, e-mail text, test card, "
-        "automatic sending (chapter 14).",
+        "automatic sending (chapter 15).",
         "Memories: the 32 memory keys with CTCSS, split and VFO B.",
-        "Appearance (per browser): hide the DIGI, RTTY, CW, HackRF and Log panels (VFO, "
-        "PTT and Audio always stay; hiding the HackRF stops its sweep), an accent "
-        "colour per panel with Reset, and peak hold of the LCD meters (PO · SWR · ALC · "
-        "ID · VDD) on/off. "
-        "Changes show at once and are kept with SAVE.",
+        "Appearance (per browser): hide the DIGI, RTTY, JTTY, CW, HackRF and Log panels "
+        "(VFO, PTT and Audio always stay; hiding the HackRF stops its sweep), an accent "
+        "colour per panel with Reset, peak hold of the LCD meters (PO · SWR · ALC · "
+        "ID · VDD) on/off, and the AFU lamp on/off with its frequency plan. "
+        "Changes show at once and are kept with SAVE. SAVE AS DEFAULT stores this "
+        "browser's accent colours on the Pi as the default for every browser — a "
+        "browser's own colours still win.",
         "Pi Hardware: load, temperature, memory, disk and a 24 h graph; below it the "
         "WSJT-X decoder (jt9) on its own — the last pass (CPU seconds, run time, "
         "parts), its memory (the parallel parts added up, peak) and the CPU of the "
@@ -691,7 +728,7 @@ EN = [
           "pause (cycle bar, meters, spectrum, waterfalls) to save the browser's CPU; "
           "data and decoding go on, and the waterfalls draw what came in on close."),
 
-    ("h1", "16  Remote power"),
+    ("h1", "17  Remote power"),
     ("p", "A Shelly relay (Gen1 or Gen2/Plus/Pro, detected automatically) "
           "switches the radio's 13.8 V. The power switch in the title bar turns it "
           "on and off — before cutting the supply, a transmission and the sequencer "
@@ -699,7 +736,7 @@ EN = [
           "the radio is off a plate covers the page. Auto power-off switches the "
           "radio off when no browser has had the page open for the set time."),
 
-    ("h1", "17  Troubleshooting"),
+    ("h1", "18  Troubleshooting"),
     ("ul", [
         "CAT offline: check the by-id port and menu 026 = 3 (38400 Bd).",
         "No receive audio: CONNECT, then check RX GAIN and that MUTE/DROP are off.",
@@ -712,7 +749,7 @@ EN = [
         "in Settings ▸ General.",
     ]),
 
-    ("h1", "18  Technical reference"),
+    ("h1", "19  Technical reference"),
     ("diagram", "system", "en"),
     ("h2", "Backend"),
     ("ul", [
@@ -723,7 +760,8 @@ EN = [
         "digi.py: UTC-anchored slices, jt9 in parallel sub-bands, adaptive depth, "
         "early and partner passes; sequencer.py: the QSO state machine.",
         "voice.py: WebRTC hub, PTT lease, pre-roll, AGC, compressor, pre-emphasis.",
-        "cw.py: the CW skimmer; rtty.py: the RTTY skimmer and AFSK; dec_history.py: "
+        "cw.py: the CW skimmer; rtty.py: the RTTY skimmer and AFSK; jtty.py with "
+        "decoder/jttyd: JTTY receive and transmit; dec_history.py: "
         "the decoder figures; hackrf_proxy.py; shelly.py; recorder.py.",
         "propagation.py: VOACAP band conditions — the ring of 36 paths, one run per "
         "UTC day, the day/night halves; GET /api/propagation.",

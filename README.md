@@ -22,7 +22,8 @@ decoding, plus voice operation over WebRTC.
     green dashes, CONTOUR/NOTCH in two rows); mode lamps (LSB USB CW AM FM RTTY PKT REV)
   - seven-segment frequency to 1 Hz, tunable by mouse wheel or drag on a digit;
     VFO-B under it, a digital S meter, clarifier scale; unlit segments shown
-    dimmed as on the real LCD
+    dimmed as on the real LCD; **AFU** above MHz lit green inside an amateur
+    band (frequency plan: Germany, IARU Region 1, 2 / USA or 3)
   - PO / SWR / ALC / ID (amps) / **VDD** (supply voltage, also during TX) bars with
     red zones, **peak hold** until the next transmission (VDD keeps the lowest
     voltage) and CLEAR PH
@@ -102,6 +103,12 @@ decoding, plus voice operation over WebRTC.
   auto CQ with a listening pause, the caller's call taken from the skimmer
   (confirmed by you), double-click a signal to answer it, logging as CW with
   RST, name, QTH and STX/SRX
+- **JTTY** (WSJT-X 3.2+'s keyboard mode, by K1JT, K9AN, G4KLA and the
+  WSJT-X team): typed like RTTY at any time, with FEC — readable to about
+  −15 dB. `decoder/jttyd` runs WSJT-X 3.3's streaming receiver over the whole
+  passband (~12 % of one core): every message a row, a click follows the
+  station (its conversation, CALL, TX frequency); macros, transmit through the
+  DATA input, BAND menu with the JTTY dial frequencies
 - **HackRF waterfall**: panadapter or wideband sweep from a HackRF One on
   another Pi, relayed from TM-V71 Remote's `/ws/hackrf`; follow shows the
   whole amateur band of VFO A; click tunes VFO A

@@ -71,8 +71,26 @@ needs measuring again.
   priority, e.g. `systemd-run --unit=jt9-shadow --property=Nice=19
   --property=CPUSchedulingPolicy=idle python3 tools/shadow.py`.
 
+## jttyd — JTTY for the JTTY panel
+
+`jttyd/jttyd.cpp` drives the JTTY mode of WSJT-X 3.2+ through its own C
+interface in `libwsjt_fort.a` of the 3.3 build: the streaming receiver
+(`jtty_rx_*`) on 12 kHz audio from stdin, one JSON line per receive update,
+and the transmit encoder (`jtty_tx_encode/segment/render`) with `--tx TEXT`.
+
+    WSJTX_BUILD=/opt/jt9-fast/build-33 jttyd/build.sh
+    install -m 755 jttyd/jttyd /usr/local/bin/jttyd
+
+Measured on a Pi 5: one receive step (0.47 s of audio) over the whole band
+in ~30 ms; the decoder sets up its tables (20–35 s) on the first signal it
+finds — the backend warms it up on a test signal of its own. Complete
+messages down to about −15 dB, the same with the tolerance over the whole
+band as on the receive frequency.
+
 ## Licence
 
 WSJT-X is © Joe Taylor K1JT and the WSJT Development Team, GPL-3.0. The Rust
 crates here are ports of its `osd174_91.f90` and `osd174_91var.f90` and are
-GPL-3.0 as well, like the rest of this repository.
+GPL-3.0 as well, like the rest of this repository. JTTY is by Joe Taylor
+K1JT, Steve Franke K9AN, Rob Sherwood G4KLA and the WSJT-X team; `jttyd`
+links their code and is GPL-3.0 too.

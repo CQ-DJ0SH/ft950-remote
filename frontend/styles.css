@@ -2173,3 +2173,23 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 /* a button alone in a form-grid cell: aligned like the inputs, and only the
    button itself is clickable (inside a <label> the whole cell triggered it) */
 .form-grid .btn-cell{display:flex; align-items:flex-end; justify-content:flex-start}
+
+/* JTTY: its own accent (blue), not RTTY's rose it would inherit as .rttyp */
+.rttyp.jttyp{--accent:#345ece; --accent-glow:#4a74e0}
+:root[data-theme="light"] .rttyp.jttyp{--accent:#24439a; --accent-glow:#345ece}
+/* JTTY: a message still arriving */
+#jt-body tr.jt-growing td.msg{color:var(--text-dim); font-style:italic}
+.jttyp #jt-band{font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:3px 6px}
+
+/* LCD: AFU over MHz - lit green inside an amateur band, otherwise an unlit segment */
+.lcd .freq-side{display:inline-flex; flex-direction:column; align-items:flex-start; align-self:flex-end;
+  margin-left:8px; line-height:1}
+.lcd .freq-side .freq-unit{margin-left:0}
+.lcd .afu{font:800 13px var(--font-ui); letter-spacing:.14em; color:var(--lg); opacity:.10; margin-bottom:6px;
+  transition:opacity .2s, text-shadow .2s}
+.lcd .afu.on{opacity:1; text-shadow:0 0 6px #7fd36a88}
+.lcd .afu[hidden]{display:block; visibility:hidden}     /* off: no lamp, the MHz keeps its place */
+.afu-plan-tile{display:flex; align-items:center; justify-content:space-between; gap:10px;
+  font:600 10px var(--font-ui); letter-spacing:.16em; color:var(--text-dim)}       /* as the switch tiles */
+.afu-plan-tile select{font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg);
+  border:1px solid var(--edge); border-radius:6px; padding:4px 6px}

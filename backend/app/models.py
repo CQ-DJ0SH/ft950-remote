@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BaseModel, BeforeValidator, Field, field_validator
 
 
 def zero_call(v):
@@ -318,6 +318,26 @@ class DigiConfigReq(BaseModel):
 
 class CwSpeedReq(BaseModel):
     wpm: int = Field(ge=4, le=60)
+
+
+class AccentDefaultsReq(BaseModel):
+    """Panel key -> #rrggbb; an empty dict clears the station defaults."""
+    accents: dict[str, str] = Field(default_factory=dict, max_length=20)
+
+    @field_validator("accents")
+    @classmethod
+    def _colours(cls, v: dict[str, str]) -> dict[str, str]:
+        import re as _re
+        for k, c in v.items():
+            if not _re.fullmatch(r"[a-z]{2,12}", k) or not _re.fullmatch(r"#[0-9a-fA-F]{6}", c):
+                raise ValueError(f"bad accent {k}: {c}")
+        return {k: c.lower() for k, c in v.items()}
+
+
+class JttySendReq(BaseModel):
+    # JTTY folds text to upper case; letters, digits, space and its punctuation
+    text: str = Field(min_length=1, max_length=400, pattern=r"^[A-Za-z0-9 .,?/:;'()!+=#\-]+$")
+    hz: float = Field(ge=300, le=2600)                 # audio frequency of the signal
 
 
 class RttySendReq(BaseModel):

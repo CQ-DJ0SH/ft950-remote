@@ -28,7 +28,8 @@ KEYS = {"my_call", "my_grid", "serial_port", "audio_device",
         # Hunt: {"K1ABC": {"t": 1761480000.0, "dxcc": …, "snr": …, "band": …}}: the no-reply list
         "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes",
         "psk_report", "psk_antenna",
-        "qsl"}                           # QSL card by e-mail (Settings ▸ QSL; holds the SMTP password)            # PSK Reporter spots (Settings ▸ FT8)
+        "qsl",                           # QSL card by e-mail (Settings ▸ QSL; holds the SMTP password)
+        "accent_defaults"}               # panel accent colours for every browser (Settings ▸ Appearance)            # PSK Reporter spots (Settings ▸ FT8)
 
 
 def load() -> dict:

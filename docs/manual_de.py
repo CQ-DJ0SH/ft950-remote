@@ -45,6 +45,9 @@ DE = [
         "WPM-Regler und Mithörton im Browser (MON); ein CW-Assistent bringt ein QSO mit "
         "einer Taste weiter (QSO- oder Contest-Stil, Seriennummer bei Bedarf, Auto-CQ, "
         "Anrufer-Erkennung, Logbuch).",
+        "JTTY, die Tastaturbetriebsart von WSJT-X 3.2+: getippt wie RTTY, jederzeit, "
+        "mit Fehlerkorrektur (lesbar bis etwa −15 dB); jede Meldung im Durchlassbereich, "
+        "Gespräch pro Station, Makros, Senden über den DATA-Eingang.",
         "HackRF-Wasserfall, weitergereicht von TM-V71 Remote, der dem Amateurfunkband "
         "von VFO A folgt.",
         "Logbuch in Wavelog und QRZ.com, Auto-Log in der LOG-Titelzeile schaltbar; "
@@ -183,7 +186,11 @@ DE = [
           "Ausgangsleistung. Die Werte haben feste Stellenzahlen (SWR als 1.5:1), "
           "damit nichts springt. Die Nadel bewegt sich wie bei einem "
           "Drehspulinstrument: gedämpft, sie steigt in etwa 0,35 s an und fällt "
-          "etwas langsamer zurück."),
+          "etwas langsamer zurück. "
+          "AFU über MHz leuchtet grün, solange VFO A in einem Amateurfunkband des "
+          "Frequenzplans liegt, der unter Settings ▸ Appearance gewählt ist "
+          "(Deutschland, IARU Region 1, 2 / USA oder 3); der Tooltip nennt Band und "
+          "Grenzen."),
     ("h2", "Abstimmen"),
     ("ul", [
         "Mausrad oder Ziehen an einer Ziffer der LCD-Frequenz.",
@@ -591,7 +598,38 @@ DE = [
         "Name, QTH, Beginn und Ende nach Wavelog und QRZ.com, mit SERIAL auch STX/SRX.",
     ]),
 
-    ("h1", "12  HackRF-Wasserfall"),
+    ("h1", "12  JTTY"),
+    ("img", "manual/jtty.png", 174),
+    ("p", "JTTY ist die Tastaturbetriebsart von WSJT-X ab 3.2, von Joe Taylor K1JT, "
+          "Steve Franke K9AN, Rob Sherwood G4KLA und dem WSJT-X-Team (GPL v3). Sie wird "
+          "wie RTTY betrieben — beide Seiten tippen und senden, wann sie wollen, es gibt "
+          "keine Durchgänge —, aber mit Fehlerkorrektur: 4-GFSK mit 31,25 Baud, 127 Hz "
+          "breit, Rahmen von 1,89 s, lesbar bis etwa −15 dB, wo 45,45-Baud-RTTY längst "
+          "unlesbar ist. Rufzeichen, Rapporte und Locatoren gehen in kompakter Form."),
+    ("ul", [
+        "DECODE startet jttyd auf dem Pi (decoder/jttyd, gebaut gegen den Decoder von "
+        "WSJT-X 3.3). Es legt zuerst an einem eigenen Testsignal seine Tabellen an "
+        "(STARTING, etwa 25 s) und hört dann den ganzen Durchlassbereich ab — etwa "
+        "12 % eines Kerns.",
+        "Jede Meldung ist eine Zeile: UTC, NF-Frequenz, SNR, Text; eine, die noch "
+        "hereinkommt, steht kursiv mit … . Ein Klick verfolgt diese Station: Text zeigt "
+        "ihr Gespräch (jede Meldung auf ihrer Frequenz), CALL übernimmt ihr Rufzeichen, "
+        "TX ihre Frequenz.",
+        "Senden: die Sendezeile oder die Makros CQ, CALL, 599, TU, AGN, QRZ (kurz "
+        "gehalten, damit JTTYs kompakte Atome sie tragen); Enter oder SEND sendet "
+        "sofort — kein Warten auf einen Durchgang. Das Funkgerät muss in DATA-U oder "
+        "USB stehen; der Pegel ist der FT8-Sendepegel. STOP und Halt TRX beenden es; "
+        "solange die FT8-Ablaufsteuerung läuft, sendet JTTY nicht. DEFAULT setzt TX "
+        "auf 1500 Hz, die Mitte des Anrufbereichs.",
+        "BAND stimmt VFO A auf eine JTTY-Frequenz in DATA-U ab (Liste von WSJT-X 3.3, "
+        "vorläufig): 1,839, 3,572, 7,078, 10,140, 14,090, 18,104, 21,090, 24,920, "
+        "28,090, 50,160 MHz. 20 m auf 14,090 MHz ist der empfohlene erste Treffpunkt.",
+        "Der Decoder von WSJT-X hört auf der Empfangsfrequenz und 1200–1800 Hz; jttyd "
+        "setzt seine Toleranz auf den ganzen Durchlassbereich, so wird jedes "
+        "JTTY-Signal gefunden — gemessen ohne Verlust an Empfindlichkeit.",
+    ]),
+
+    ("h1", "13  HackRF-Wasserfall"),
     ("img", "manual/hackrf.png", 174),
     ("p", "Der HackRF One hängt am zweiten Pi mit TM-V71 Remote. FT-950 Remote "
           "reicht dessen Wasserfall weiter (Settings ▸ General ▸ HackRF source). Mit "
@@ -603,7 +641,7 @@ DE = [
           "820 Punkte für 40 m statt etwa 50 aus der normalen 2-MHz-Zeile. Die Maus "
           "zeigt Frequenz und Pegel unter dem Zeiger."),
 
-    ("h1", "13  Logbuch"),
+    ("h1", "14  Logbuch"),
     ("p", "Das Feld LOG loggt in Wavelog (API-Schlüssel und Stationsprofil) und "
           "ins QRZ.com-Logbuch — jeweils mit eigenem Knopf neben dem Rufzeichen: LOG "
           "WAVELOG und LOG QRZ.COM (das Formular bleibt stehen, so kann ein QSO in "
@@ -616,7 +654,7 @@ DE = [
           "von der Ablaufsteuerung beendete QSOs nach Wavelog (wie Auto-log in "
           "Sessions und Settings ▸ Log), AUTO QRZ zusätzlich ins QRZ.com-Logbuch, "
           "AUTO QSL schickt nach jedem erfolgreichen Log die QSL-Karte per E-Mail "
-          "(Kapitel 14). Die LOG-Knöpfe sind nur umrandet, solange das Formular leer "
+          "(Kapitel 15). Die LOG-Knöpfe sind nur umrandet, solange das Formular leer "
           "ist, und gefüllt, sobald ein Rufzeichen darin steht — dann gibt es etwas "
           "zu loggen."),
     ("p", "Recent QSOs: Ein Klick markiert eine Zeile, Strg/Cmd-Klick nimmt eine "
@@ -628,7 +666,7 @@ DE = [
           "Spalte QSL zeigt ✓ gesendet, ✗ "
           "nicht gesendet, ⊘ übersprungen — der Hover sagt, warum."),
 
-    ("h1", "14  QSL-Karte per E-Mail"),
+    ("h1", "15  QSL-Karte per E-Mail"),
     ("img", "manual/qsl-card.jpg", 150),
     ("p", "Eine QSL-Karte ist das eigene Bild, auf das der Pi die QSO-Daten zeichnet: "
           "das eigene Rufzeichen als Schild (in der Schrift des Namensschilds, 0 als "
@@ -686,7 +724,7 @@ DE = [
         "in .gitignore).",
     ]),
 
-    ("h1", "15  Einstellungen"),
+    ("h1", "16  Einstellungen"),
     ("img", "manual/set-general.png", 120),
     ("ul", [
         "General: Rufzeichen, Locator, CAT-Port und Baudrate, Shelly und "
@@ -722,12 +760,15 @@ DE = [
         "nach Wavelog (wie Auto-log in Sessions) und, davon getrennt, Auto-log ins "
         "QRZ.com-Logbuch (braucht dessen API-Key).",
         "QSL: Kartenbild und Anordnung, Mailserver, E-Mail-Text, Testkarte, "
-        "automatischer Versand (Kapitel 14).",
+        "automatischer Versand (Kapitel 15).",
         "Memories: die 32 Speichertasten mit CTCSS, Split und VFO B.",
-        "Appearance (pro Browser): die Felder DIGI, RTTY, CW, HackRF und Log ausblenden "
-        "(VFO, PTT und Audio bleiben immer; ein ausgeblendetes HackRF stoppt den "
-        "Sweep), eine Akzentfarbe pro Feld mit Reset, und Peak Hold der LCD-Anzeigen "
-        "(PO · SWR · ALC · ID · VDD) ein/aus. Änderungen wirken sofort und bleiben mit SAVE.",
+        "Appearance (pro Browser): die Felder DIGI, RTTY, JTTY, CW, HackRF und Log "
+        "ausblenden (VFO, PTT und Audio bleiben immer; ein ausgeblendetes HackRF stoppt "
+        "den Sweep), eine Akzentfarbe pro Feld mit Reset, Peak Hold der LCD-Anzeigen "
+        "(PO · SWR · ALC · ID · VDD) ein/aus und die AFU-Lampe ein/aus mit ihrem "
+        "Frequenzplan. Änderungen wirken sofort und bleiben mit SAVE. SAVE AS DEFAULT "
+        "legt die Akzentfarben dieses Browsers auf dem Pi als Standard für jeden "
+        "Browser ab — eigene Farben eines Browsers gehen weiter vor.",
         "Pi Hardware: Last, Temperatur, Arbeitsspeicher, Datenträger und ein "
         "24-h-Verlauf; darunter der WSJT-X-Decoder (jt9) für sich — der letzte "
         "Durchlauf (CPU-Sekunden, Laufzeit, Teile), sein Speicher (die parallelen "
@@ -752,7 +793,7 @@ DE = [
           "Spektrum, Wasserfälle), um die CPU des Browsers zu schonen; Daten und "
           "Dekodierung laufen weiter, die Wasserfälle zeichnen beim Schließen nach."),
 
-    ("h1", "16  Fernein- und -ausschalten"),
+    ("h1", "17  Fernein- und -ausschalten"),
     ("p", "Ein Shelly-Relais (Gen1 oder Gen2/Plus/Pro, wird automatisch erkannt) "
           "schaltet die 13,8 V des Funkgeräts. Der Netzschalter in der Titelleiste "
           "schaltet ein und aus — bevor die Versorgung getrennt wird, werden eine "
@@ -762,7 +803,7 @@ DE = [
           "Funkgerät aus, wenn die Seite für die eingestellte Zeit in keinem Browser "
           "mehr offen war."),
 
-    ("h1", "17  Fehlersuche"),
+    ("h1", "18  Fehlersuche"),
     ("ul", [
         "CAT offline: by-id-Port prüfen und Menü 026 = 3 (38400 Bd).",
         "Kein Empfangston: CONNECT, dann RX GAIN prüfen und ob MUTE/DROP aus sind.",
@@ -776,7 +817,7 @@ DE = [
         "Settings ▸ General einen Locator eintragen.",
     ]),
 
-    ("h1", "18  Technische Referenz"),
+    ("h1", "19  Technische Referenz"),
     ("diagram", "system", "de"),
     ("h2", "Backend"),
     ("ul", [
@@ -790,7 +831,8 @@ DE = [
         "QSO-Zustandsautomat.",
         "voice.py: WebRTC-Hub, PTT-Freigabe, Vorlauf (Pre-Roll), AGC, Kompressor, "
         "Höhenanhebung.",
-        "cw.py: der CW-Skimmer; rtty.py: RTTY-Skimmer und AFSK; dec_history.py: "
+        "cw.py: der CW-Skimmer; rtty.py: RTTY-Skimmer und AFSK; jtty.py mit "
+        "decoder/jttyd: JTTY Empfang und Senden; dec_history.py: "
         "die Decoder-Werte; hackrf_proxy.py; shelly.py; recorder.py.",
         "propagation.py: VOACAP-Bandbedingungen — der Ring aus 36 Pfaden, ein Lauf "
         "pro UTC-Tag, die Tag- und Nachthälfte; GET /api/propagation.",

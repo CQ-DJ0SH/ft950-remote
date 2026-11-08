@@ -24,6 +24,7 @@ from .pskreporter import PskReporter
 from .recorder import Recorder
 from .cw import CWSkimmer, cw_duration_s
 from .rtty import RTTYSkimmer, duration_s as rtty_duration_s
+from .jtty import JttyReceiver
 from .shelly import ShellyError, ShellySwitch
 from .propagation import Propagation
 from .hackrf_proxy import DEFAULT_URL as HACKRF_DEFAULT, HackRFError, HackRFProxy
@@ -36,7 +37,7 @@ from .config import APP_VERSION, settings
 from .digi import DECODERS as DIGI_DECODERS, MODES as DIGI_MODES, DigiService, decoder_available, decoder_config, decoder_tag
 from .ft950 import (AGC_SET, ATT, BANDS, MODES, PREAMP, ROOF_SET, WIDTHS,
                     FT950Error, width_column)
-from .models import (QslConfigReq, QslPreviewReq, QslSendReq, RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
+from .models import (AccentDefaultsReq, JttySendReq, QslConfigReq, QslPreviewReq, QslSendReq, RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
                      ClarReq, ContourReq, IfShiftReq, LevelReq, NotchReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
@@ -75,6 +76,9 @@ cw_manager = ConnectionManager()
 rtty_skimmer = RTTYSkimmer()
 capture.subscribe(rtty_skimmer.feed)
 rtty_manager = ConnectionManager()
+jtty_rx = JttyReceiver()
+capture.subscribe(jtty_rx.feed)
+jtty_manager = ConnectionManager()
 digi = DigiService(capture, digi_manager, lambda: service.status,
                    settings.digi_work_dir, settings.digi_keep_slices,
                    settings.digi_data_dir)
@@ -184,6 +188,7 @@ async def lifespan(app: FastAPI):
     autooff = asyncio.create_task(_auto_power_off_loop())
     cwloop = asyncio.create_task(_cw_broadcast_loop())
     rttyloop = asyncio.create_task(_rtty_broadcast_loop())
+    jttyloop = asyncio.create_task(_jtty_broadcast_loop())
     psk.start()
     opus_mono.install()                     # before the first peer builds an encoder
     if _rt.get("codec_playback") is not None:
@@ -201,6 +206,8 @@ async def lifespan(app: FastAPI):
     autooff.cancel()
     cwloop.cancel()
     rttyloop.cancel()
+    jttyloop.cancel()
+    jtty_rx.set_enabled(False)              # jttyd ends with the service
     await psk.flush()                       # what was heard since the last upload
     await psk.stop()
     for pc in list(pcs):
@@ -1247,6 +1254,19 @@ async def log_qso(req: QsoReq) -> dict:
                                    station_callsign=settings.my_call, my_grid=settings.my_grid)
 
 
+# -- panel accent colours: the station's defaults (Settings ▸ Appearance) ----------
+@app.get("/api/ui/accents")
+async def ui_accents() -> dict:
+    """Colours every browser starts with; a browser's own choice wins."""
+    return {"accents": runtime.load().get("accent_defaults") or {}}
+
+
+@app.post("/api/ui/accents")
+async def ui_accents_save(req: AccentDefaultsReq) -> dict:
+    runtime.save({"accent_defaults": req.accents})
+    return {"accents": req.accents}
+
+
 # -- QSL card by e-mail (Settings ▸ QSL) ----------------------------------------
 def _qsl_info(call: str) -> dict:
     """The station's e-mail address and QSL preferences from QRZ.com (needs
@@ -1620,6 +1640,83 @@ async def rtty_stop() -> dict:
 @app.websocket("/ws/rtty")
 async def ws_rtty(ws: WebSocket) -> None:
     await _stream(ws, rtty_manager)
+
+
+# -- JTTY: keyboard mode of WSJT-X 3.2+, any time, FEC (jtty.py, decoder/jttyd) --
+async def _jtty_broadcast_loop() -> None:
+    last = -1
+    while True:
+        await asyncio.sleep(0.25)
+        if jtty_manager.count and jtty_rx.version != last:
+            last = jtty_rx.version
+            await jtty_manager.broadcast({"t": "jtty", **_jtty_view()})
+
+
+_jtty_job: asyncio.Task | None = None
+
+
+def _jtty_view() -> dict:
+    return {**jtty_rx.snapshot(), "sending": bool(_jtty_job and not _jtty_job.done()),
+            "my_call": settings.my_call or ""}
+
+
+async def _jtty_send(text: str, hz: float) -> None:
+    try:
+        await tx.send_jtty(text, hz, settings.my_call or "")
+    except Exception as exc:  # noqa: BLE001
+        log.warning("JTTY TX failed: %s", exc)
+    finally:
+        jtty_rx.version += 1                    # the panel sees "sending" end
+
+
+@app.get("/api/jtty")
+async def jtty_status() -> dict:
+    return _jtty_view()
+
+
+@app.post("/api/jtty/enable")
+async def jtty_enable(req: OnOffReq) -> dict:
+    await asyncio.to_thread(jtty_rx.set_enabled, req.on)
+    return _jtty_view()
+
+
+@app.post("/api/jtty/clear")
+async def jtty_clear() -> dict:
+    jtty_rx.clear()
+    return _jtty_view()
+
+
+@app.post("/api/jtty/send")
+async def jtty_send(req: JttySendReq) -> dict:
+    """Send text in JTTY: 4-GFSK on the DATA input (radio in DATA-U / USB),
+    at any time - JTTY has no periods."""
+    global _jtty_job
+    if sequencer.kind or sequencer.hunt:
+        raise HTTPException(409, "The FT8 sequencer is running — stop it first (Halt TRX)")
+    if _jtty_job and not _jtty_job.done():
+        raise HTTPException(409, "still sending")
+    try:
+        tx._check()
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    _jtty_job = asyncio.create_task(_jtty_send(req.text, req.hz))
+    jtty_rx.version += 1
+    return {"ok": True}
+
+
+@app.post("/api/jtty/stop")
+async def jtty_stop() -> dict:
+    if tx.state.get("active") == "jtty":
+        await tx.stop()
+    if _jtty_job and not _jtty_job.done():
+        _jtty_job.cancel()
+    jtty_rx.version += 1
+    return {"ok": True}
+
+
+@app.websocket("/ws/jtty")
+async def ws_jtty(ws: WebSocket) -> None:
+    await _stream(ws, jtty_manager)
 
 
 # -- HF band conditions (VOACAP for the own locator; the strip under DIGI) -------

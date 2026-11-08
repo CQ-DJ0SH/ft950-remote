@@ -144,7 +144,7 @@
           <span class="tx-read" id="tx-read" title="Set TX power (PC) — lit while the radio transmits">PWR <b id="tx-pwr">—</b> W</span>
           <span class="lf-info"><span hidden><span id="rxtx">RX A · TX A</span> · <span id="memmode">VFO</span> · </span><span id="width-tag">—</span></span>
         </div>
-        <div class="freq-line"><span class="freq" id="freq" title="Mouse wheel or drag on a digit: tune">--.---.---</span><span class="freq-unit">MHz</span></div>
+        <div class="freq-line"><span class="freq" id="freq" title="Mouse wheel or drag on a digit: tune">--.---.---</span><span class="freq-side"><span class="afu" id="afu" title="Lit when VFO A is in an amateur band">AFU</span><span class="freq-unit">MHz</span></span></div>
         <div class="vfo-b" title="VFO B (OI)"><span class="lbl">VFO-B</span><span class="freq-b" id="freq-b">—</span><span class="freq-unit small">MHz</span><span class="mode-b" id="mode-b"></span></div>
         <div class="dsm" title="S meter (receive), as the needle shows it"><div class="dsm-scale" id="dsm-scale"></div><div class="dsm-bar" id="dsm-bar"></div></div>
         <div class="lf-bottom">
@@ -536,6 +536,57 @@
       <input type="text" id="rt-msg" placeholder="text to send in RTTY (AFSK on the DATA input: radio in DATA-L or DATA-U)…" autocomplete="off" autocapitalize="characters" spellcheck="false">
       <button class="btn rt-send" id="rt-send">SEND</button>
       <button class="btn halt" id="rt-stop" title="Stop transmitting at once">STOP</button>
+    </div>
+    </div>
+  </section>
+
+  <!-- JTTY: the keyboard mode of WSJT-X 3.2+ (K1JT, K9AN, G4KLA and the WSJT-X team) -->
+  <section class="panel cwp rttyp jttyp" id="jttyp">
+    <div class="panel-head">
+      <h2>JTTY</h2>
+      <button class="btn sm toggle" id="jt-on" title="Decode JTTY over the whole passband (jttyd with WSJT-X 3.3's decoder, runs on the Pi while switched on; the first start takes ~25 s)">DECODE</button>
+      <span class="panel-stat" id="jt-stat"></span>
+      <span class="spacer"></span>
+      <span class="cw-ro" title="JTTY: 4-GFSK, 31.25 baud, 127 Hz wide, FEC - typed like RTTY, any time, no periods; readable to about -15 dB">31.25 Bd · 127 Hz</span>
+      <label class="cw-call" title="JTTY dial frequencies of WSJT-X 3.3 (preliminary) - sets VFO A and DATA-U">BAND
+        <select id="jt-band"><option value="">—</option></select></label>
+      <button class="btn sm" id="jt-clear" title="Clear the received messages">CLEAR</button>
+      <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
+    </div>
+    <div class="cw-body">
+      <div class="cw-grid">
+        <div class="pane cw-sig-pane">
+          <div class="pane-head"><h3>Messages</h3><span class="chk" id="jt-count"></span></div>
+          <div class="tbl cw-tbl">
+            <table class="msgs">
+              <colgroup><col style="width:70px"><col style="width:58px"><col style="width:46px"><col></colgroup>
+              <thead><tr><th>UTC</th><th class="n">Freq</th><th class="n">SNR</th><th>Text</th></tr></thead>
+              <tbody id="jt-body"><tr class="empty"><td colspan="4">Switch DECODE on — every JTTY message in the passband gets a row. Click one to follow that station.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="side">
+          <div class="pane">
+            <div class="pane-head"><h3>Text</h3><span class="chk" id="jt-sel-lbl">no station selected</span></div>
+            <div class="cw-text rt-text" id="jt-text" aria-live="polite"></div>
+          </div>
+          <div class="pane">
+            <div class="pane-head"><h3>Sent</h3><span class="spacer"></span><button class="btn sm" id="jt-sent-clear" title="Clear list">✕</button></div>
+            <div class="cw-sent" id="jt-sent"></div>
+          </div>
+        </div>
+      </div>
+    <div class="cw-macros">
+      <label class="cw-call" title="Callsign for the macros — taken from the selected station, editable">CALL <input type="text" id="jt-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <span id="jt-macro-btns"></span>
+      <span class="spacer"></span>
+      <label class="cw-call" title="TX frequency in Hz of audio (clicking a message sets it to that station)">TX <input type="number" id="jt-txhz" min="300" max="2600" step="1"> Hz</label>
+      <button class="btn sm" id="jt-txhz-def" title="Back to 1500 Hz, the middle of JTTY's calling range (1200-1800 Hz)">DEFAULT</button>
+    </div>
+    <div class="cw-tx">
+      <input type="text" id="jt-msg" placeholder="text to send in JTTY (on the DATA input: radio in DATA-U / USB) — any time, no periods…" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button class="btn rt-send" id="jt-send">SEND</button>
+      <button class="btn halt" id="jt-stop" title="Stop transmitting at once">STOP</button>
     </div>
     </div>
   </section>
@@ -1038,6 +1089,10 @@
         <span class="logo-label">LCD</span>
         <div class="panel-list">
           <label class="switch-label panel-tile" title="PO · SWR · ALC · ID · VDD: the highest reading (VDD: the lowest) of a transmission stays marked, and after it the values show these peaks (PEAK HOLD) until the next TX"><span class="panel-row-txt">Peak hold (PO · SWR · ALC · ID · VDD)</span><input type="checkbox" class="switch" id="peak-hold"></label>
+          <label class="switch-label panel-tile" title="AFU over MHz lit green while VFO A is inside an amateur band of the frequency plan below"><span class="panel-row-txt">AFU lamp (inside an amateur band)</span><input type="checkbox" class="switch" id="afu-on"></label>
+          <label class="panel-tile afu-plan-tile" title="Band limits the AFU lamp uses">
+            <span class="panel-row-txt">Frequency plan</span>
+            <select id="afu-plan"><option value="de">Germany</option><option value="r1">IARU Region 1</option><option value="r2">IARU Region 2 / USA</option><option value="r3">IARU Region 3</option></select></label>
         </div>
       </div>
       <div class="mixer-field">
@@ -1049,6 +1104,7 @@
         <button class="btn-ghost" id="panels-all" type="button">SHOW ALL</button>
         <button class="btn-ghost" id="accents-reset" type="button">RESET COLOURS</button>
         <button class="btn-ghost" data-close>CLOSE</button>
+        <button class="btn-ghost" id="appearance-default" type="button" title="Save these accent colours on the Pi as the default for every browser (a browser's own colours still win)">SAVE AS DEFAULT</button>
         <button class="btn-primary" id="appearance-save" type="button">SAVE</button>
       </div>
     </section>

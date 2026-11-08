@@ -288,6 +288,35 @@ class Transmitter:
             await self.stop()
         return {"sent": True, "seconds": round(dur, 1)}
 
+    async def send_jtty(self, text: str, hz: float, my_call: str = "") -> dict:
+        """Send ``text`` in JTTY: jttyd renders the 4-GFSK tones, played like
+        FT8 / RTTY through the DATA input. Any time - JTTY has no periods.
+        Returns when it is over (or stop() / Halt TRX ended it)."""
+        from . import jtty
+        hz = max(300.0, min(2600.0, float(hz)))
+        wave, info = await asyncio.to_thread(jtty.waveform, text, hz, RATE, my_call)
+        dur = len(wave) / RATE
+        async with self._lock:
+            if self.state["active"]:
+                await self._stop_locked()
+            self._check()
+            await asyncio.to_thread(self.service.radio.ptt, True)
+            await asyncio.sleep(PTT_LEAD_S)
+            amp = 0.98 * self.level * 32767           # same drive as FT8 / TUNE
+            out = BufferOut(self.device_getter(), (wave * amp).astype(np.int16))
+            out.start()
+            self._tone = out
+            now = time.time()
+            self.state = {"active": "jtty", "hz": hz, "since": now, "until": now + dur,
+                          "message": info.get("text") or text}
+            self._watchdog = asyncio.create_task(self._expire(dur + 3.0))
+            log.info("JTTY TX at %.0f Hz, %d frames, %.1f s: %r", hz, info.get("frames", 0), dur,
+                     (info.get("text") or text)[:60])
+        await asyncio.to_thread(out.done.wait, dur + 4)
+        if self.state["active"] == "jtty":
+            await self.stop()
+        return {"sent": True, "seconds": round(dur, 1), "text": info.get("text") or text}
+
     async def _voice_guard(self) -> None:
         while True:
             await asyncio.sleep(0.25)

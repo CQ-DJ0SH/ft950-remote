@@ -2193,3 +2193,17 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
   font:600 10px var(--font-ui); letter-spacing:.16em; color:var(--text-dim)}       /* as the switch tiles */
 .afu-plan-tile select{font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg);
   border:1px solid var(--edge); border-radius:6px; padding:4px 6px}
+/* JTTY: own transmissions - in the list and in the conversation - in the TX red */
+#jt-body tr.jt-tx td{color:var(--tx)}
+#jt-body tr.jt-tx td.msg{font-weight:600}
+#jt-text .jt-line{display:flex; gap:10px; align-items:baseline; white-space:pre-wrap}
+#jt-text .jt-line .t{color:var(--text-dim); flex:none}
+#jt-text .jt-line .d{flex:none; font-size:.78em; font-weight:700; letter-spacing:.08em; padding:0 5px;
+  border-radius:3px; border:1px solid currentColor; opacity:.85}
+#jt-text .jt-line.rx .d{color:var(--accent)}
+#jt-text .jt-line.tx{color:var(--tx)}
+#jt-text .jt-line.tx .x{font-weight:600}
+/* RTTY / CW: our transmission in the received text, in the TX red on a line of its own */
+.cw-text .stx{display:block; margin:4px 0; color:var(--tx); font-weight:600; white-space:pre-wrap}
+.cw-text .stx b{font-size:.75em; font-weight:700; letter-spacing:.08em; padding:0 5px; margin-right:8px;
+  border:1px solid currentColor; border-radius:3px}

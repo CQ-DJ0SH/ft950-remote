@@ -4,6 +4,8 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+
+import numpy as np
 import logging
 import urllib.request
 import uuid
@@ -70,14 +72,38 @@ capture = AudioCapture(settings.audio_device)
 capture.gain_db = float(_rt.get("rx_level_db") or 0)
 recorder = Recorder()
 capture.subscribe(recorder.feed)
+
+# The keyboard-mode receivers must not read our own transmission: the radio
+# puts it on its audio out (monitor / sidetone) and it came back as an echo
+# of the TX text. While we transmit, and RX_HOLD_S after it (T/R switching),
+# they get silence - silence, not nothing, so JTTY's stream keeps its time.
+RX_HOLD_S = 0.6
+_rx_quiet_until = 0.0
+
+
+def _transmitting() -> bool:
+    global _rx_quiet_until
+    now = time.monotonic()
+    if service.status.get("tx") or ("tx" in globals() and tx.state.get("active")):
+        _rx_quiet_until = now + RX_HOLD_S
+        return True
+    return now < _rx_quiet_until
+
+
+def _rx_only(feed):
+    def gated(mono, t=0.0):
+        feed(np.zeros_like(mono) if _transmitting() else mono, t)
+    return gated
+
+
 skimmer = CWSkimmer()
-capture.subscribe(skimmer.feed)
+capture.subscribe(_rx_only(skimmer.feed))
 cw_manager = ConnectionManager()
 rtty_skimmer = RTTYSkimmer()
-capture.subscribe(rtty_skimmer.feed)
+capture.subscribe(_rx_only(rtty_skimmer.feed))
 rtty_manager = ConnectionManager()
 jtty_rx = JttyReceiver()
-capture.subscribe(jtty_rx.feed)
+capture.subscribe(_rx_only(jtty_rx.feed))
 jtty_manager = ConnectionManager()
 digi = DigiService(capture, digi_manager, lambda: service.status,
                    settings.digi_work_dir, settings.digi_keep_slices,
@@ -1531,6 +1557,8 @@ async def cw_send(req: CwSendReq) -> dict:
     if changed:
         log.info("CW: set %s for keyer-memory playback", ", ".join(changed))
     _cw_job = asyncio.create_task(_cw_send(req.text.upper(), cw["wpm"]))
+    # TX block in the text of the signal we are zero-beat with (at the pitch)
+    skimmer.mark_tx(float(cw.get("pitch") or 700), " ".join(req.text.split()))
     return {"ok": True, "seconds": round(cw_duration_s(req.text, cw["wpm"]), 1)}
 
 
@@ -1623,6 +1651,7 @@ async def rtty_send(req: RttySendReq) -> dict:
         raise HTTPException(400, str(exc)) from exc
     upper = _rtty_upper_mark() != rtty_skimmer.rev
     _rtty_job = asyncio.create_task(_rtty_send(req.text, req.hz, upper))
+    rtty_skimmer.mark_tx(req.hz, " ".join(req.text.split()))      # TX block in the station's text
     rtty_skimmer.version += 1
     return {"ok": True, "seconds": round(rtty_duration_s(req.text), 1)}
 
@@ -1661,10 +1690,13 @@ def _jtty_view() -> dict:
 
 
 async def _jtty_send(text: str, hz: float) -> None:
+    m = jtty_rx.add_sent(text, hz)              # TX line in the list and the conversation
     try:
-        await tx.send_jtty(text, hz, settings.my_call or "")
+        r = await tx.send_jtty(text, hz, settings.my_call or "")
+        jtty_rx.sent_done(m, r.get("text", ""), ok=True)
     except Exception as exc:  # noqa: BLE001
         log.warning("JTTY TX failed: %s", exc)
+        jtty_rx.sent_done(m, ok=False)
     finally:
         jtty_rx.version += 1                    # the panel sees "sending" end
 

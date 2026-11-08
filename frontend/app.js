@@ -4360,6 +4360,21 @@ new MutationObserver(() => {
 })();
 
 // ---------------------------------------------------------------- CW skimmer + keyer
+// RTTY / CW text with our transmissions in it: each is remembered with the
+// count of characters received when it went out (c.tx[].at); the text
+// scrolls, so its first character is number c.n - text.length
+function streamHtml(c) {
+  const text = c.text || "", start = (c.n ?? text.length) - text.length;
+  const marks = (c.tx || []).map((x) => ({ ...x, pos: x.at - start })).filter((x) => x.pos >= 0)
+    .sort((a, b) => a.pos - b.pos || a.t - b.t);
+  let out = "", last = 0;
+  for (const m of marks) {
+    out += esc(text.slice(last, m.pos));
+    out += `<span class="stx"><b>TX</b>${esc(m.text)}</span>`;
+    last = m.pos;
+  }
+  return out + esc(text.slice(last));
+}
 let cwState = { channels: [] }, cwSel = null, cwRadio = null;
 function cwRf(pitch) {
   // FT-950 CW: the display shows the carrier; a signal heard at `pitch` Hz is
@@ -4418,7 +4433,7 @@ function renderCw(s) {
   $("cw-zb").disabled = !sel;
   $("cw-sel-lbl").textContent = sel ? `${Math.round(sel.hz)} Hz · ${(cwRf(sel.hz) / 1000).toFixed(2)} kHz · ${sel.wpm} WPM` : "no signal selected";
   if (sel) {
-    const t = $("cw-text"); t.textContent = sel.text; t.scrollTop = t.scrollHeight;
+    const t = $("cw-text"); t.innerHTML = streamHtml(sel); t.scrollTop = t.scrollHeight;
     const c = cwCallFrom(sel.text);
     // don't overwrite a hand-typed call, nor the one of a running QSO
     // (only before a QSO: while calling CQ the caller comes from cwHear)
@@ -4777,7 +4792,7 @@ function renderRtty(s) {
   if (sel) {
     const t = $("rt-text");
     const atEnd = t.scrollTop + t.clientHeight >= t.scrollHeight - 8;
-    t.textContent = sel.text;
+    t.innerHTML = streamHtml(sel);
     if (atEnd) t.scrollTop = t.scrollHeight;
     const c = cwCallFrom(sel.text.toUpperCase());
     if (c && Date.now() - rtCallTouched > 20000) $("rt-call").value = c;
@@ -4838,6 +4853,9 @@ let jtState = { msgs: [], enabled: false }, jtSelHz = null, jtCallTouched = 0, j
 const JT_NEAR = 15;                                   // Hz: the same station
 const JT_TX_MODES = ["DATA-U", "USB"];
 const jtUtc = (t) => new Date(t * 1000).toISOString().slice(11, 19);
+// growing RX "…", own TX "sending …" / "not sent"
+const jtSuffix = (m) => m.dir === "tx" ? (m.sending ? " · sending …" : m.term === 2 ? " · not sent" : "")
+  : m.term === 0 ? " …" : "";
 function renderJtty(s) {
   jtState = s;
   $("jt-on").classList.toggle("on", !!s.enabled);
@@ -4864,9 +4882,11 @@ function renderJtty(s) {
   } else {
     body.innerHTML = msgs.slice(-80).map((m) => {
       const sel = jtSelHz != null && Math.abs(m.hz - jtSelHz) <= JT_NEAR;
-      return `<tr data-hz="${m.hz}" class="${sel ? "sel" : ""}${m.term === 0 ? " jt-growing" : ""}"><td>${jtUtc(m.utc)}</td>` +
-        `<td class="n">${Math.round(m.hz)}</td><td class="n">${m.snr}</td>` +
-        `<td class="msg"><span>${esc(m.text)}${m.term === 0 ? " …" : ""}</span></td></tr>`;
+      const tx = m.dir === "tx";
+      const cls = [sel ? "sel" : "", tx ? "jt-tx" : "", !tx && m.term === 0 ? "jt-growing" : ""].filter(Boolean).join(" ");
+      return `<tr data-hz="${m.hz}" class="${cls}"><td>${jtUtc(m.utc)}</td>` +
+        `<td class="n">${Math.round(m.hz)}</td><td class="n">${tx ? "TX" : m.snr}</td>` +
+        `<td class="msg"><span>${esc(m.text)}${jtSuffix(m)}</span></td></tr>`;
     }).join("");
     for (const tr of body.querySelectorAll("tr[data-hz]")) tr.onclick = () => {
       jtSelHz = +tr.dataset.hz;
@@ -4882,10 +4902,16 @@ function renderJtty(s) {
     : `${Math.round(jtSelHz)} Hz · ${near.length} message${near.length === 1 ? "" : "s"}`;
   const t = $("jt-text");
   const tEnd = t.scrollTop + t.clientHeight >= t.scrollHeight - 8;
-  t.textContent = near.map((m) => `${jtUtc(m.utc)}  ${m.text}${m.term === 0 ? " …" : ""}`).join("\n");
+  // both sides of the conversation: RX as received, TX in the transmit colour
+  t.innerHTML = near.map((m) => {
+    const tx = m.dir === "tx";
+    return `<div class="jt-line ${tx ? "tx" : "rx"}"><span class="t">${jtUtc(m.utc)}</span>` +
+      `<span class="d">${tx ? "TX" : "RX"}</span><span class="x">${esc(m.text)}${jtSuffix(m)}</span></div>`;
+  }).join("");
   if (tEnd) t.scrollTop = t.scrollHeight;
-  if (near.length) {
-    const c = cwCallFrom(near.map((m) => m.text).join(" ").toUpperCase());
+  const heard = near.filter((m) => m.dir !== "tx");          // the call comes from what they sent
+  if (heard.length) {
+    const c = cwCallFrom(heard.map((m) => m.text).join(" ").toUpperCase());
     if (c && Date.now() - jtCallTouched > 20000) $("jt-call").value = c;
   }
 }

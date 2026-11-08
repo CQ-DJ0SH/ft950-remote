@@ -75,6 +75,8 @@ class Channel:
         self.id = Channel._ids
         self.hz = hz                               # centre between mark and space
         self.text = ""
+        self.nchars = 0                            # characters received (text scrolls, this counts on)
+        self.tx: deque[dict] = deque(maxlen=12)    # our transmissions: at = nchars when sent
         self.figs = False
         self._tail_m = np.zeros(AVG_N - 1, complex)
         self._tail_s = np.zeros(AVG_N - 1, complex)
@@ -154,6 +156,7 @@ class Channel:
         if ch in "\0\r\x07":
             return ""
         self.text = (self.text + ch)[-TEXT_MAX:]
+        self.nchars += 1
         return ch
 
     @property
@@ -166,7 +169,8 @@ class Channel:
 
     def view(self) -> dict:
         return {"id": self.id, "hz": round(self.hz, 1), "snr": round(self.snr_db),
-                "q": round(self.quality * 100), "text": self.text[-1500:]}
+                "q": round(self.quality * 100), "text": self.text[-1500:],
+                "n": self.nchars, "tx": [dict(x) for x in self.tx]}
 
 
 class RTTYSkimmer:
@@ -260,7 +264,21 @@ class RTTYSkimmer:
         with self._lock:
             for c in self.channels:
                 c.text = ""
+                c.tx.clear()
             self.version += 1
+
+    def mark_tx(self, hz: float, text: str, tol: float = 60.0) -> bool:
+        """Our transmission into the conversation of the signal at ``hz``:
+        remembered with the count of characters received so far, so the panel
+        puts it at that point of the text (which scrolls)."""
+        with self._lock:
+            near = [c for c in self.channels if abs(c.hz - hz) <= tol]
+            if not near:
+                return False
+            c = min(near, key=lambda c: abs(c.hz - hz))
+            c.tx.append({"at": c.nchars, "text": text.upper(), "t": time.time()})
+            self.version += 1
+            return True
 
     def snapshot(self) -> dict:
         with self._lock:

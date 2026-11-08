@@ -122,7 +122,7 @@ class JttyReceiver:
                     # do not give the clock)
                     now = time.time()
                     m = self.msgs.get(d["id"]) or {"id": d["id"], "utc": now - max(0.0, d["latest"] - d["start"])}
-                    m.update(hz=round(d["f"], 1), text=d["text"], snr=d["snr"], term=d["term"], t=now)
+                    m.update(dir="rx", hz=round(d["f"], 1), text=d["text"], snr=d["snr"], term=d["term"], t=now)
                     self.msgs[d["id"]] = m
                     if len(self.msgs) > MAX_MSGS:
                         for k in sorted(self.msgs, key=lambda k: self.msgs[k]["t"])[:len(self.msgs) - MAX_MSGS]:
@@ -183,6 +183,24 @@ class JttyReceiver:
                 except subprocess.TimeoutExpired:
                     proc.kill()
         self.version += 1
+
+    def add_sent(self, text: str, hz: float) -> dict:
+        """Our own transmission into the list (dir "tx"), so the conversation
+        shows both sides; sending=True until it is over."""
+        with self._lock:
+            self._tx_n = getattr(self, "_tx_n", 0) - 1          # negative ids: never jttyd's
+            m = {"id": self._tx_n, "dir": "tx", "hz": round(float(hz), 1), "text": text.upper(),
+                 "snr": None, "term": 0, "utc": time.time(), "t": time.time(), "sending": True}
+            self.msgs[m["id"]] = m
+            self.version += 1
+            return m
+
+    def sent_done(self, m: dict, text: str = "", ok: bool = True) -> None:
+        with self._lock:
+            m["sending"], m["term"] = False, 1 if ok else 2
+            if text:
+                m["text"] = text                  # what JTTY's frames carry (canonical form)
+            self.version += 1
 
     def clear(self) -> None:
         with self._lock:

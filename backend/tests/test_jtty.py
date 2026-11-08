@@ -41,3 +41,12 @@ def test_send_request_validation():
     for bad in ({"text": "", "hz": 1500}, {"text": "CQ", "hz": 100}, {"text": "ÄÖÜ", "hz": 1500}):
         with pytest.raises(ValidationError):
             JttySendReq(**bad)
+
+
+def test_sent_messages_join_the_list_as_tx():
+    r = jtty.JttyReceiver()
+    m = r.add_sent("dl1abc 599 jo62", 1502)
+    s = r.snapshot()["msgs"]
+    assert s[0]["dir"] == "tx" and s[0]["id"] < 0 and s[0]["sending"] and s[0]["text"] == "DL1ABC 599 JO62"
+    r.sent_done(m, "DL1ABC 599 JO62")
+    assert r.snapshot()["msgs"][0]["term"] == 1 and not r.snapshot()["msgs"][0]["sending"]

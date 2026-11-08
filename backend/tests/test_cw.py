@@ -49,3 +49,15 @@ def test_dot_noise_channel_is_hidden():
     assert not c.plausible
     c.text = "CQ CQ DE DL1ABC DL1ABC K TEST 5NN TU "
     assert c.plausible
+
+
+def test_tx_mark_follows_the_received_count():
+    from app.cw import CWSkimmer, Channel
+    s = CWSkimmer()
+    c = Channel(702.0); s.channels.append(c)
+    c.text, c.nchars = "CQ DE DL1ABC K ", 15
+    assert s.mark_tx(700.0, "dl1abc de dj0sh k")
+    assert c.view()["tx"][0]["at"] == 15 and c.view()["tx"][0]["text"] == "DL1ABC DE DJ0SH K"
+    assert not s.mark_tx(1200.0, "x")                    # nobody near that frequency
+    s.clear()
+    assert c.view()["tx"] == []

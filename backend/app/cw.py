@@ -136,6 +136,8 @@ class Channel:
         self.hz = hz
         self.timing = Timing()
         self.text = ""
+        self.nchars = 0                            # characters received (text scrolls, this counts on)
+        self.tx: deque[dict] = deque(maxlen=12)    # our transmissions: at = nchars when sent
         self.noise, self.peak = 1e-6, 1e-5
         self.on = False
         self.last_mark = time.monotonic()
@@ -161,6 +163,7 @@ class Channel:
             if ch == " " and (not self.text or self.text.endswith(" ")):
                 return ""
             self.text = (self.text + ch)[-TEXT_MAX:]
+            self.nchars += 1
         return ch
 
     @property
@@ -175,7 +178,8 @@ class Channel:
 
     def view(self) -> dict:
         return {"id": self.id, "hz": round(self.hz, 1), "wpm": round(self.timing.wpm_ok),
-                "snr": round(self.snr_db), "text": self.text[-160:], "on": self.on}
+                "snr": round(self.snr_db), "text": self.text[-400:], "on": self.on,
+                "n": self.nchars, "tx": [dict(x) for x in self.tx]}
 
 
 class CWSkimmer:
@@ -266,7 +270,21 @@ class CWSkimmer:
         with self._lock:
             for c in self.channels:
                 c.text = ""
+                c.tx.clear()
             self.version += 1
+
+    def mark_tx(self, hz: float, text: str, tol: float = 60.0) -> bool:
+        """Our transmission into the conversation of the signal at ``hz``:
+        remembered with the count of characters received so far, so the panel
+        puts it at that point of the text (which scrolls)."""
+        with self._lock:
+            near = [c for c in self.channels if abs(c.hz - hz) <= tol]
+            if not near:
+                return False
+            c = min(near, key=lambda c: abs(c.hz - hz))
+            c.tx.append({"at": c.nchars, "text": text.upper(), "t": time.time()})
+            self.version += 1
+            return True
 
     def snapshot(self) -> dict:
         with self._lock:

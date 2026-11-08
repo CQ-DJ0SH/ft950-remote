@@ -45,3 +45,13 @@ def test_noise_alone_shows_nothing():
 def test_duration_matches_waveform():
     t = "CQ CQ DE DJ0SH"
     assert abs(rtty.duration_s(t) - len(rtty.waveform(t, 1500, False)) / 48000) < 0.05
+
+
+def test_rtty_tx_mark_at_the_tx_frequency():
+    from app.rtty import RTTYSkimmer, Channel
+    s = RTTYSkimmer()
+    a, b = Channel(1500.0), Channel(2210.0)
+    s.channels += [a, b]
+    b.nchars = 42
+    assert s.mark_tx(2215.0, "DL1ABC DE DJ0SH")
+    assert b.view()["tx"] == [{"at": 42, "text": "DL1ABC DE DJ0SH", "t": b.view()["tx"][0]["t"]}] and a.view()["tx"] == []

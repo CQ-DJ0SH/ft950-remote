@@ -131,7 +131,7 @@ sequencer.closing = _rt.get("ft_closing") or "RR73"
 # older lists kept only the time: {"K1ABC": 1761480000.0}
 sequencer.hunt_blocked = {c: (v if isinstance(v, dict) else {"t": float(v)})
                           for c, v in (_rt.get("hunt_blocked") or {}).items()}
-for _k in ("hunt_target", "hunt_min_snr", "hunt_minutes"):
+for _k in ("hunt_target", "hunt_min_snr", "hunt_minutes", "hunt_both"):
     if _rt.get(_k) is not None:
         setattr(sequencer, _k, _rt[_k])
 def _save_hunt_blocked(blocked: dict) -> None:
@@ -686,7 +686,7 @@ async def get_settings() -> dict:
             "ft_closing": sequencer.closing,
             "psk_report": psk.enabled, "psk_antenna": psk.antenna, "psk_dest": psk.dest,
             "hunt_target": sequencer.hunt_target, "hunt_min_snr": sequencer.hunt_min_snr,
-            "hunt_minutes": sequencer.hunt_minutes,
+            "hunt_minutes": sequencer.hunt_minutes, "hunt_both": sequencer.hunt_both,
             "hunt_blocked": sorted(({"call": c, **v} for c, v in sequencer.hunt_blocked.items()),
                                    key=lambda r: -r.get("t", 0)),         # newest first "digi_colors": _rt.get("digi_colors") or {},
             "cert": _cert_info(), "ca_available": CA_CERT.is_file(),
@@ -719,7 +719,7 @@ async def save_settings(req: SettingsReq) -> dict:
         cols = {**(_rt.get("digi_colors") or {}), **upd["digi_colors"]}
         upd["digi_colors"] = _rt["digi_colors"] = {k: v for k, v in cols.items() if v}
     runtime.save(upd)
-    for k in ("hunt_target", "hunt_min_snr", "hunt_minutes"):
+    for k in ("hunt_target", "hunt_min_snr", "hunt_minutes", "hunt_both"):
         if k in upd:
             _rt[k] = upd[k]
             setattr(sequencer, k, upd[k])

@@ -1753,10 +1753,13 @@ const hzAt = (e) => {
 };
 // a TX frequency picked by hand switches AF off, so the next click on a station
 // (or Auto Answer / Auto Hunt) does not move it away again
+// the click is the middle of the box (the signal's centre); the TX frequency
+// itself stays its lowest tone, as in WSJT-X, so half the bandwidth lower
 $("wf-wrap").addEventListener("click", (e) => {
-  if (e.shiftKey) { setBox("rx", hzAt(e)); return; }   // Shift+click: RX window only
+  const at = hzAt(e) - (SIGNAL_BW[digiMode] || 50) / 2;
+  if (e.shiftKey) { setBox("rx", at); return; }        // Shift+click: RX window only
   if (afOn()) { $("af").onclick(); toast("Adopt Frequency off: TX frequency set by hand"); }
-  setBox("tx", hzAt(e));
+  setBox("tx", at);
 });
 $("set-rx-box").checked = rxBoxOn;
 $("set-rx-box").onchange = (e) => { rxBoxOn = e.target.checked; store.set("rxBox", rxBoxOn); placeBoxes(); };
@@ -2005,6 +2008,7 @@ async function loadFt8() {
   $("set-hunt-target").value = s.hunt_target || "band";
   $("set-hunt-snr").value = s.hunt_min_snr ?? -24;
   $("set-hunt-min").value = s.hunt_minutes ?? 180;
+  $("set-hunt-both").checked = !!s.hunt_both;
   $("set-psk").checked = !!s.psk_report;
   $("set-psk-ant").value = s.psk_antenna || "";
   $("psk-dest").textContent = s.psk_dest || "—";
@@ -2032,6 +2036,7 @@ $("ft8-save").onclick = async () => {
       hunt_target: $("set-hunt-target").value,
       hunt_min_snr: Math.round(+$("set-hunt-snr").value),
       hunt_minutes: Math.max(0, Math.min(1440, Math.round(+$("set-hunt-min").value) || 0)),   // 0 = never
+      hunt_both: $("set-hunt-both").checked,
       psk_report: $("set-psk").checked,
       psk_antenna: $("set-psk-ant").value.trim(),
       digi_colors: cols,

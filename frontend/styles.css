@@ -2182,12 +2182,10 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 .jttyp #jt-band{font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:3px 6px}
 
 /* LCD: AFU over MHz - lit green inside an amateur band, otherwise an unlit segment */
-.lcd .freq-side{display:inline-flex; flex-direction:column; align-items:flex-start; align-self:flex-end;
-  margin-left:8px; line-height:1}
+.lcd .freq-side{display:inline-flex; flex-direction:column; align-items:flex-start; align-self:stretch;
+  justify-content:space-between; margin-left:8px; line-height:1; padding:6px 0 3px}   /* AFU at the top, MHz at the foot */
 .lcd .freq-side .freq-unit{margin-left:0}
-.lcd .afu{font:800 13px var(--font-ui); letter-spacing:.14em; color:var(--lg); opacity:.10; margin-bottom:6px;
-  transition:opacity .2s, text-shadow .2s}
-.lcd .afu.on{opacity:1; text-shadow:0 0 6px #7fd36a88}
+/* AFU: an indicator like BUSY - green field, dark letters; unlit when outside a band */
 .lcd .afu[hidden]{display:block; visibility:hidden}     /* off: no lamp, the MHz keeps its place */
 .afu-plan-tile{display:flex; align-items:center; justify-content:space-between; gap:10px;
   font:600 10px var(--font-ui); letter-spacing:.16em; color:var(--text-dim)}       /* as the switch tiles */

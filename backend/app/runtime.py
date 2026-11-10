@@ -26,7 +26,7 @@ KEYS = {"my_call", "my_grid", "serial_port", "audio_device",
         "mem_labels",                    # {"4": "FT8 20m"}: memory key names (radio has no CAT tag)
         "mem_extra",                     # {"7": {"split": true, "vfo_b_hz": 29540000}}: not in a radio memory
         # Hunt: {"K1ABC": {"t": 1761480000.0, "dxcc": …, "snr": …, "band": …}}: the no-reply list
-        "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes",
+        "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes", "hunt_both",
         "psk_report", "psk_antenna",
         "qsl",                           # QSL card by e-mail (Settings ▸ QSL; holds the SMTP password)
         "accent_defaults"}               # panel accent colours for every browser (Settings ▸ Appearance)            # PSK Reporter spots (Settings ▸ FT8)

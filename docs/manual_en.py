@@ -102,6 +102,12 @@ EN = [
           "Pi's own address; the CA can be downloaded in Settings ▸ General and on "
           "the power-off plate. Browsers allow the microphone only over HTTPS, so "
           "install the CA once on every device."),
+    ("p", "Optional nightly reboot that spares a running station: deploy/nightly-"
+          "reboot.sh (installed as /usr/local/bin/ft950-nightly-reboot, root crontab "
+          "00 4 * * *) reboots the Pi only while the radio is off — it skips the night "
+          "when the FT-950 answers over CAT or its Shelly relay is on, and reboots "
+          "when the backend does not answer. Each decision goes to the journal "
+          "(journalctl -t nightly-reboot)."),
     ("p", "Then open Settings ▸ General: callsign, locator, CAT port and baud "
           "rate. Station data, logbook credentials and memory names are stored in "
           "backend/runtime.json (mode 0600) and never sent back to the browser."),
@@ -171,7 +177,8 @@ EN = [
           "digits (SWR as 1.5:1), so nothing jumps. "
           "The needle moves like a moving-coil meter: damped, rising in about "
           "0.35 s and falling back a little slower. "
-          "AFU above MHz lights green while VFO A is inside an amateur band of the "
+          "AFU above MHz lights up — green field, dark letters, like BUSY — while "
+          "VFO A is inside an amateur band of the "
           "frequency plan chosen in Settings ▸ Appearance (Germany, IARU Region 1, 2 / "
           "USA or 3); its tooltip names the band and its limits."),
     ("h2", "Tuning"),
@@ -281,7 +288,9 @@ EN = [
         "Frequency on (footer, next to the TX frequency) the TX box (red) moves "
         "too, and Auto Answer and Auto Hunt answer on the partner's frequency — "
         "the TX box follows while their QSO runs. A click in the waterfall sets "
-        "TX by hand and switches Adopt Frequency off, so the next station does "
+        "TX by hand (the click is the middle of the box, so it sits over the "
+        "signal clicked; the TX frequency itself stays its lowest tone, as in "
+        "WSJT-X) and switches Adopt Frequency off, so the next station does "
         "not pull it away; Shift+click moves only the RX window. "
         "double-click answers the station — in Received and in My Messages — and "
         "selects its session in Sessions, so Session Messages shows that QSO. "
@@ -323,6 +332,11 @@ EN = [
         "Hunt and the time left as m:ss (∞: no switch-off). It calls only while a browser shows "
         "the DIGI panel. Whom it calls, the minimum SNR, the switch-off time "
         "(default 180 min, 0 = never) and the no-reply list are in Settings ▸ FT8.",
+        "Hunt and the two periods: after a QSO, Hunt calls from the first period it "
+        "hears — the one opposite to our TX — and so keeps to one parity for long "
+        "runs. Settings ▸ FT8 ▸ \u201cPick only after hearing both periods\u201d "
+        "(default off) makes it listen one period more (about 15 s per QSO) and "
+        "pick the best station of both, even and odd.",
         "Timing: the next message is decided about 0.7 s into the period and goes "
         "on the air at about +1 s (the latest start is +2 s). An early pass at "
         "13.4 s searches the whole band, split over three cores (~0.6 s), while "
@@ -341,6 +355,12 @@ EN = [
         "completed QSO to Wavelog, and Settings ▸ Log can send it to the QRZ.com "
         "logbook as well (its own switch, default off); with neither it is offered "
         "in the log form. A session counts as logged when every target accepted it. "
+        "Answers that differ from the textbook: RR73 or RRR while we still repeat "
+        "our report is answered with 73 (their RR73 says our report arrived), "
+        "\u201cR <locator>\u201d (WSJT-X's contest-style acknowledgement) counts like an "
+        "R-report and is answered with RR73 (RST received stays empty), and a bare "
+        "73 completes the QSO only once the reports went across — sent too early, "
+        "it is ignored, so nothing is logged or carded half-done. "
         "A new QSO the sequencer starts by itself (Auto Hunt, Auto Answer, a caller "
         "to our CQ) is selected in Sessions, so Session Messages follows it; a "
         "session clicked afterwards stays until the next one starts. While a QSO "
@@ -393,7 +413,8 @@ EN = [
     ("h2", "Globe"),
     ("img", "manual/globe.jpg", 174),
     ("p", "Globe, beside the title of Received Messages, opens a popup with the "
-          "stations heard on a slowly turning, see-through hologram globe; your "
+          "stations heard on a slowly turning, see-through hologram globe (land as "
+          "an even dot grid that looks the same from any side, the poles included); your "
           "own station stands out in amber with call and locator. Stations of the "
           "last 30 minutes are points with their call (where they would overlap, "
           "the important ones win): magenta a new DXCC, green new on this band, red "
@@ -417,7 +438,10 @@ EN = [
         "the partner's last message above it (RX ◂ message and SNR) and stays "
         "through the receive periods too, your last message then dimmed.",
         "✕ CLEAR in the table footer empties table and globe; only stations heard "
-        "afterwards come back.",
+        "afterwards come back. GRAY LINE beside it (amber when on, remembered) "
+        "shades the night side from the sun's position now — twilight to −12°, "
+        "the day side faintly lit — with the day/night border as a dashed amber "
+        "line: DX along it often goes well.",
         "A double-click on a row calls the station - through the main page, exactly "
         "as a double-click in Received Messages (RX window, Adopt Frequency, log "
         "form, then the call). Without the main page the popup does not call.",
@@ -425,7 +449,8 @@ EN = [
         "over the decoder's passband (200-3000 Hz from Settings ▸ FT8, the DIGI "
         "waterfall's data) in the hologram colours with the current spectrum over "
         "it, the stations of the last period with their call at their audio "
-        "frequency, the QSO partner in amber and your TX frequency as a red line "
+        "frequency (only while the legend is open — folded, the strip stays "
+        "clean), the QSO partner in amber and your TX frequency as a red line "
         "while a sequence runs. With DECODE off it is empty. Legend and FT8 "
         "spectrum fold with their header line (▾/▸); the browser remembers it.",
         "The popup follows the main page's light or dark theme (☀/☾), also while "
@@ -493,6 +518,12 @@ EN = [
         "STOP and Halt TRX stop at once; a watchdog ends the transmission "
         "at the latest 3 s after its length. While the FT8 sequencer or Auto Hunt "
         "runs, RTTY does not transmit.",
+        "Own transmissions in Text: each appears as a red TX block in the received "
+        "text of the station at the TX frequency, at the point it went out — the "
+        "QSO reads in order and the block stays in place while the text scrolls. "
+        "Sent keeps the list. While we transmit (and 0.6 s after) the RTTY, CW and "
+        "JTTY receivers hear silence: the radio puts our own signal on its audio "
+        "out, and it would come back as an echo of the TX text.",
         "The panel can be hidden and gets its own accent colour in Settings ▸ "
         "Appearance.",
     ]),
@@ -506,7 +537,10 @@ EN = [
     ("p", "Sending uses the radio's own keyer: the text is written to keyer memory "
           "5 and played (KM/KY), in chunks of 50 characters. The radio must be in "
           "CW or CW-R with BK-IN on. Macros (CQ, CALL, 5NN, RR, 73, AGN, QRZ) fill "
-          "the send line; CALL is taken from the selected signal."),
+          "the send line; CALL is taken from the selected signal. Own transmissions "
+          "show as red TX blocks in the received text of the signal on the radio's "
+          "pitch (the one we are zero-beat with), as in RTTY; while we send, the "
+          "skimmer hears silence (no echo)."),
     ("ul", [
         "WPM is a slider (4–60) in the panel head; it sets the keyer speed of the "
         "radio (KS) as soon as you let go, and follows the radio every 10 s. Each "
@@ -563,7 +597,9 @@ EN = [
         "Every message is a row: UTC, audio frequency, SNR, text; one still arriving "
         "is shown in italics with … . A click follows that station: Text shows its "
         "conversation (every message on its frequency), CALL takes its call, TX its "
-        "frequency.",
+        "frequency. Our own transmissions join the list and the conversation as TX "
+        "lines in red (\u201csending …\u201d while on the air); received ones are labelled "
+        "RX. CALL is taken only from what the other station sent.",
         "Sending: the send line or the macros CQ, CALL, 599, TU, AGN, QRZ (kept short, "
         "so JTTY's compact atoms carry them); Enter or SEND transmits at once — no "
         "waiting for a period. The radio must be in DATA-U or USB; the drive is the FT8 "
@@ -653,6 +689,9 @@ EN = [
         "operator's QSL note). For several, one confirmation; stations without an "
         "address, those that want no QSL and QSOs that already got a card are "
         "skipped and named.",
+        "One card per station, band and mode and UTC day: AUTO QSL and several marked "
+        "QSOs skip a station that already got its card today on that band and mode "
+        "(QSL column ⊘); a single card sent by hand still goes, after a warning.",
         "No QSL wanted: a QSL note on QRZ.com such as NO QSL, NO EQSL, NO CARDS, "
         "LOTW ONLY, QRZ ONLY or OQRS ONLY, or eQSL: no. Such stations are skipped "
         "when several QSOs are marked and by AUTO QSL; for a single QSO the "

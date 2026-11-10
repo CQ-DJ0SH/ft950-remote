@@ -123,6 +123,11 @@ class Sequencer:
                                         # dxcc: DXCC never worked | dxcc_band: DXCC new on this band
         self.hunt_min_snr = -24         # weaker CQs are passed over
         self.hunt_minutes = HUNT_MAX_S // 60   # 0: Hunt never switches itself off
+        # Settings ▸ FT8: pick only after hearing both periods (even and odd) -
+        # otherwise Hunt picks from the first period it hears after a QSO, the
+        # one opposite to our TX, and keeps to one parity for long runs
+        self.hunt_both = False
+        self._hunt_pool: list[dict] = []
         self._seen: dict[float, bool] = {}       # period t0 → decodes processed
         # CQ caller queue: call -> {"d": latest decode to me, "t": last heard, "first": first heard}
         self.queue: dict[str, dict] = {}
@@ -394,9 +399,19 @@ class Sequencer:
                 log.info("hunt: %d min over, off", self.hunt_minutes)
                 await self.publish()
             elif getattr(self.manager, "count", 1) and mode == self.digi.current_mode():
-                d = self.hunt_pick(decodes)
+                if self.hunt_both:
+                    # the last two periods' CQs; pick once both parities were heard
+                    period = MODES[mode]["period"]
+                    self._hunt_pool = [x for x in self._hunt_pool if (x.get("t0") or t0) >= t0 - period
+                                       and x.get("mode") in (None, mode)] + list(decodes)
+                    heard = {int(round((x.get("t0") or t0) / period)) % 2 for x in self._hunt_pool}
+                    d = self.hunt_pick(self._hunt_pool) if len(heard) == 2 else None
+                else:
+                    d = self.hunt_pick(decodes)
                 if d:
-                    log.info("hunt: calling %s (%s)%s", d["from"], d["msg"], " - early pass" if early else "")
+                    log.info("hunt: calling %s (%s)%s%s", d["from"], d["msg"], " - early pass" if early else "",
+                             " - both periods heard" if self.hunt_both else "")
+                    self._hunt_pool = []
                     try:
                         await self.answer(d, self._auto_hz(d))
                         self.session["hunt"] = True

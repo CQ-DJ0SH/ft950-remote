@@ -144,7 +144,7 @@
           <span class="tx-read" id="tx-read" title="Set TX power (PC) — lit while the radio transmits">PWR <b id="tx-pwr">—</b> W</span>
           <span class="lf-info"><span hidden><span id="rxtx">RX A · TX A</span> · <span id="memmode">VFO</span> · </span><span id="width-tag">—</span></span>
         </div>
-        <div class="freq-line"><span class="freq" id="freq" title="Mouse wheel or drag on a digit: tune">--.---.---</span><span class="freq-side"><span class="afu" id="afu" title="Lit when VFO A is in an amateur band">AFU</span><span class="freq-unit">MHz</span></span></div>
+        <div class="freq-line"><span class="freq" id="freq" title="Mouse wheel or drag on a digit: tune">--.---.---</span><span class="freq-side"><span class="ind green afu" id="afu" title="Lit when VFO A is in an amateur band">AFU</span><span class="freq-unit">MHz</span></span></div>
         <div class="vfo-b" title="VFO B (OI)"><span class="lbl">VFO-B</span><span class="freq-b" id="freq-b">—</span><span class="freq-unit small">MHz</span><span class="mode-b" id="mode-b"></span></div>
         <div class="dsm" title="S meter (receive), as the needle shows it"><div class="dsm-scale" id="dsm-scale"></div><div class="dsm-bar" id="dsm-bar"></div></div>
         <div class="lf-bottom">
@@ -869,6 +869,7 @@
           <option value="dxcc_band">DXCC entities new on this band</option><option value="dxcc">DXCC entities never worked</option></select></label>
         <label title="Weaker CQs are passed over">Minimum SNR (dB)<input type="number" id="set-hunt-snr" min="-30" max="20" step="1"></label>
         <label title="Hunt switches itself off after this time; 0 = never (it stays on until you switch it off, and still calls only while the DIGI panel is open in a browser)">Switch off after (min, 0 = never)<input type="number" id="set-hunt-min" min="0" max="1440" step="5"></label>
+        <label class="check-label span-2" title="Off: after a QSO Hunt calls from the first period it hears - the one opposite to our TX - and keeps to one parity for long runs. On: it listens to one more period (about 15 s per QSO), hears even and odd, and picks the best station of both (new DXCC first, then new on the band, then the strongest)."><input type="checkbox" id="set-hunt-both"> Pick only after hearing both periods (even and odd) — about 15 s more per QSO</label>
       </div>
       <div class="hunt-blocked-box">
         <span class="hb-head">No reply — not called again: <b id="hunt-blocked-n">0</b></span>

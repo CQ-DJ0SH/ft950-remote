@@ -157,6 +157,7 @@
   .clr{margin-right:10px; padding:2px 8px; border:1px solid var(--edge); border-radius:5px; background:rgba(8,32,56,.6);
     color:var(--dim); font:500 10px var(--font-ui); letter-spacing:.12em; cursor:pointer}
   .clr:hover{color:#e6f7ff; border-color:var(--holo); box-shadow:0 0 10px -3px rgba(70,212,255,.7)}
+  .clr.on{color:#1a0f00; background:var(--home); border-color:var(--home)}      /* GRAY LINE on: amber like the line */
   .foot{padding:8px 14px; border-top:1px solid var(--edge); color:var(--dim); font-size:11px; display:flex;
     justify-content:space-between; align-items:center; gap:10px}
   .foot > span{display:inline-flex; align-items:center; line-height:1.4; white-space:nowrap}   /* one height, one line */
@@ -241,7 +242,7 @@
       </table>
       <div class="empty" id="empty">Waiting for decodes …</div>
     </div>
-    <div class="foot"><span><button class="clr" id="clear" type="button" title="Empty the table and the globe: only stations heard from now on appear">✕ CLEAR</button><span id="count">0 stations</span></span><span>last 30 min · double-click: call</span></div>
+    <div class="foot"><span><button class="clr" id="clear" type="button" title="Empty the table and the globe: only stations heard from now on appear">✕ CLEAR</button><button class="clr" id="gline" type="button" title="Gray line: the night side shaded from the sun's position now, the day/night border as an amber line - DX along it often goes well">GRAY LINE</button><span id="count">0 stations</span></span><span>last 30 min · double-click: call</span></div>
   </aside>
 </div>
 <script>
@@ -422,6 +423,72 @@ function kindOf(s) {
   if (!w.call_band) return "newb";
   return "worked";
 }
+// ---------------------------------------------------------------- gray line
+// The sun's position from UTC (good to about a degree): the night side shaded
+// on a coarse raster (inverse projection per cell, smoothed when scaled up),
+// twilight down to -12°, the day side with a faint warm light, and the
+// terminator itself as a dashed amber line. Switch in the table footer.
+let grayOn = (() => { try { return localStorage.getItem("ft950.globe.grayline") === "1"; } catch { return false; } })();
+function subsolar(ms = Date.now()) {
+  const d = new Date(ms), start = Date.UTC(d.getUTCFullYear(), 0, 0);
+  const n = (ms - start) / 86400000;                                // day of the year (fractional)
+  const g = 2 * Math.PI / 365 * (n - 1);
+  const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g)
+    + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g)
+    - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));    // minutes
+  const utcMin = d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
+  return [dec * 180 / Math.PI, -(utcMin + eqt - 720) / 4];         // lat, lon of the subsolar point
+}
+const nightCv = document.createElement("canvas"), NRES = 140;
+nightCv.width = nightCv.height = NRES;
+const nightCtx = nightCv.getContext("2d"), nightImg = nightCtx.createImageData(NRES, NRES);
+function drawNight(cx, cy) {
+  const [slat, slon] = subsolar(), S = unit(slat, slon);
+  const light = document.documentElement.dataset.theme === "light";
+  const col = light ? [20, 34, 70] : [0, 3, 12], amax = light ? 0.38 : 0.72;
+  const day = light ? [255, 236, 170] : [255, 226, 160], dmax = light ? 0.16 : 0.13;
+  const px = nightImg.data;
+  for (let j = 0; j < NRES; j++) {
+    const v = 1 - 2 * (j + 0.5) / NRES;
+    for (let i = 0; i < NRES; i++) {
+      const u = 2 * (i + 0.5) / NRES - 1, k = 4 * (j * NRES + i), rr = u * u + v * v;
+      if (rr > 1) { px[k + 3] = 0; continue; }
+      const z = Math.sqrt(1 - rr);
+      const sf = cp0 * v + sp0 * z, dl = Math.atan2(u, cp0 * z - sp0 * v);   // inverse of proj()
+      const lat = Math.asin(Math.max(-1, Math.min(1, sf))), lon = rad(view.lon) + dl;
+      const sinEl = Math.sin(lat) * S[2] + Math.cos(lat) * (Math.cos(lon) * S[0] + Math.sin(lon) * S[1]);
+      const el = Math.asin(sinEl) * 180 / Math.PI;                  // sun elevation there
+      if (el >= 0) {                                               // day: light, full above 10°
+        const a = dmax * Math.min(1, el / 10);
+        px[k] = day[0]; px[k + 1] = day[1]; px[k + 2] = day[2]; px[k + 3] = Math.round(a * 255);
+      } else {                                                     // twilight to -12°, then night
+        const a = el <= -12 ? amax : amax * (-el / 12);
+        px[k] = col[0]; px[k + 1] = col[1]; px[k + 2] = col[2]; px[k + 3] = Math.round(a * 255);
+      }
+    }
+  }
+  nightCtx.putImageData(nightImg, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(nightCv, cx - R, cy - R, 2 * R, 2 * R);
+  // the terminator: the great circle 90° from the subsolar point
+  const ax = Math.abs(S[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
+  let U = [S[1] * ax[2] - S[2] * ax[1], S[2] * ax[0] - S[0] * ax[2], S[0] * ax[1] - S[1] * ax[0]];
+  const ul = Math.hypot(...U); U = U.map((x) => x / ul);
+  const V = [S[1] * U[2] - S[2] * U[1], S[2] * U[0] - S[0] * U[2], S[0] * U[1] - S[1] * U[0]];
+  ctx.strokeStyle = `rgba(${P.home},0.75)`; ctx.lineWidth = 1.2; ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  let open = false;
+  for (let t = 0; t <= 360; t += 3) {
+    const c = Math.cos(rad(t)), s = Math.sin(rad(t));
+    const w = [U[0] * c + V[0] * s, U[1] * c + V[1] * s, U[2] * c + V[2] * s];
+    const lat = Math.asin(w[2]), lon = Math.atan2(w[1], w[0]);
+    const p = proj(Math.sin(lat), Math.cos(lat), Math.sin(lon), Math.cos(lon));
+    if (p[2] > 0) { open ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); open = true; } else open = false;
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+}
+
 function draw(now) {
   setView();
   ctx.clearRect(0, 0, W, H);
@@ -473,6 +540,7 @@ function draw(now) {
       }
     }
   }
+  if (grayOn) drawNight(cx, cy);
   // arcs from my station, then the stations, then me on top
   const nowS = Date.now() / 1000;
   shown = [];
@@ -925,7 +993,31 @@ function drawFt8() {
     fctx.strokeStyle = `rgba(${P.tx},.85)`; fctx.setLineDash([3, 3]); fctx.beginPath(); fctx.moveTo(xx, top); fctx.lineTo(xx, bot); fctx.stroke(); fctx.setLineDash([]);
     fctx.fillStyle = `rgba(${P.tx},.95)`; fctx.font = "600 9px 'IBM Plex Mono', monospace"; fctx.fillText("TX", xx + 3, top + 10);
   }
-  // no callsigns here: the globe and the table carry them (the DIGI panel's waterfall shows them)
+  // the stations of the last period at their audio frequency (callsigns without
+  // overlaps) - only while the legend is open: folded, the strip stays clean
+  if ($("legend").classList.contains("folded")) return;
+  const nowS = Date.now() / 1000, taken = [];
+  // (a period's decodes arrive 15-17 s after its start: 35 s = the last complete one)
+  const list = [...stations.values()].filter((s) => s.d && s.d.df != null && nowS - s.t < 35)
+    .sort((a, b) => (qso && b.call === qso.call) - (qso && a.call === qso.call) || b.snr - a.snr);
+  fctx.font = "500 9px 'IBM Plex Mono', monospace";
+  for (const s of list) {
+    const isQso = qso && qso.call === s.call;
+    const rgb = isQso ? P.home : KIND_RGB[kindOf(s)];
+    const xx = Math.round(x(s.d.df + 25)) + 0.5;                     // the middle of an FT8 signal (50 Hz wide)
+    fctx.strokeStyle = `rgba(${rgb},${isQso ? 0.9 : 0.55})`; fctx.lineWidth = isQso ? 1.6 : 1;
+    fctx.beginPath(); fctx.moveTo(xx, bot - 6); fctx.lineTo(xx, bot); fctx.stroke();
+    const tw = fctx.measureText(s.call).width;
+    for (const row of [0, 1, 2, 3]) {                                   // four label rows, the first free one
+      const y = bot - 8 - row * 11, b = [xx - tw / 2 - 2, xx + tw / 2 + 2, row];
+      if (taken.some((t) => t[2] === row && b[0] < t[1] && b[1] > t[0])) continue;
+      taken.push(b);
+      if (P.halo) { fctx.shadowColor = P.halo; fctx.shadowBlur = 3; }
+      fctx.fillStyle = `rgba(${rgb},${isQso ? 1 : 0.9})`; fctx.fillText(s.call, xx - tw / 2, y);
+      fctx.shadowBlur = 0;
+      break;
+    }
+  }
 }
 function specSocket() {
   let delay = 500;
@@ -949,6 +1041,15 @@ function specSocket() {
   setInterval(pollRadio, 1000);
   requestAnimationFrame(frame);
 })();
+
+// ---------------------------------------------------------------- gray line switch
+const glineShow = () => $("gline").classList.toggle("on", grayOn);
+glineShow();
+$("gline").onclick = () => {
+  grayOn = !grayOn;
+  try { localStorage.setItem("ft950.globe.grayline", grayOn ? "1" : "0"); } catch { /* private mode */ }
+  glineShow();
+};
 </script>
 </body>
 </html>

@@ -760,3 +760,34 @@ def test_rr73_at_the_report_step_answers_73():
     s = _f4ers()
     asyncio.run(s.on_decodes([_d("DJ0SH F4ERS RR73", t0=45.0, df=1404)], 45.0, "FT8", False))
     assert s.step == "73" and s._next_message() == "F4ERS DJ0SH 73"
+
+
+def _hunter(both):
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    s.mode, s.kind, s.hunt, s.hunt_both = "FT8", None, True, both
+    s.hunt_until = time.time() + 600
+    called = []
+
+    async def answer(d, hz):
+        called.append(d["from"]); s.session = s._new_session(d)
+    s.answer, s._auto_hz = answer, (lambda d: 1500.0)
+    return s, called
+
+
+def _hunt_cq(call, t0, snr, new_dxcc=False):
+    return _d(f"CQ {call} JO22", snr=snr, t0=t0,
+              worked={"call": False, "call_band": False, "dxcc": not new_dxcc, "dxcc_band": not new_dxcc})
+
+
+def test_hunt_picks_from_the_first_period_by_default():
+    s, called = _hunter(False)
+    asyncio.run(s.on_decodes([_hunt_cq("PD0MNO", 30.0, -5)], 30.0, "FT8", False))
+    assert called == ["PD0MNO"]
+
+
+def test_hunt_both_waits_for_both_periods_and_takes_the_best():
+    s, called = _hunter(True)
+    asyncio.run(s.on_decodes([_hunt_cq("PD0MNO", 30.0, -5)], 30.0, "FT8", False))      # even period only
+    assert called == []
+    asyncio.run(s.on_decodes([_hunt_cq("JA1ABC", 45.0, -18, new_dxcc=True)], 45.0, "FT8", False))   # odd
+    assert called == ["JA1ABC"] and s._hunt_pool == []          # the new DXCC from the other period

@@ -22,7 +22,7 @@ decoding, plus voice operation over WebRTC.
     green dashes, CONTOUR/NOTCH in two rows); mode lamps (LSB USB CW AM FM RTTY PKT REV)
   - seven-segment frequency to 1 Hz, tunable by mouse wheel or drag on a digit;
     VFO-B under it, a digital S meter, clarifier scale; unlit segments shown
-    dimmed as on the real LCD; **AFU** above MHz lit green inside an amateur
+    dimmed as on the real LCD; **AFU** above MHz lit (green, like BUSY) inside an amateur
     band (frequency plan: Germany, IARU Region 1, 2 / USA or 3)
   - PO / SWR / ALC / ID (amps) / **VDD** (supply voltage, also during TX) bars with
     red zones, **peak hold** until the next transmission (VDD keeps the lowest
@@ -64,10 +64,13 @@ decoding, plus voice operation over WebRTC.
   - a WSJT-X style QSO sequencer (CQ, answer, reports, RR73/73) with
     Auto Answer and **Auto Hunt** (calls new stations' CQs one after the
     other; a station that never answers is not called again; switches itself
-    off, default 180 min); **directed CQ** (CQ DX, EU, … POTA, SOTA) and
+    off, default 180 min; optionally picks only after hearing both periods,
+    so it does not keep to one parity); **directed CQ** (CQ DX, EU, … POTA, SOTA) and
     **DX Call** for a station typed in; **SKIP** ends the QSO in progress
-    and lets CQ / Hunt / Auto Answer go on; FT8/FT4 waveform generation for
-    transmit
+    and lets CQ / Hunt / Auto Answer go on; RR73 at the report step is
+    answered with 73, "R <locator>" counts as an R-report, a bare 73 before the
+    reports went across does not complete (nor log) the QSO; FT8/FT4 waveform
+    generation for transmit
   - several callers to one CQ wait in a **queue** (new DXCC first) and are
     answered one after the other; a caller decoded while our CQ is on the air
     cuts it and is answered in the same period; non-standard calls
@@ -79,7 +82,10 @@ decoding, plus voice operation over WebRTC.
     see-through hologram globe - new DXCC / new on band / worked in colour, a
     line out to each new call, dashed lines to stations calling CQ, the QSO in
     progress in amber; a table beside it with TX lamp and HALT TRX; a
-    double-click calls the station through the main page
+    double-click calls the station through the main page; **GRAY LINE**
+    shades the night side from the sun's position; land as an even dot grid
+    (the same from any side, the poles included); the FT8 strip under it shows
+    the calls while the legend is open
   - **PSK Reporter**: spots of the stations heard (every 5 min, each station
     once an hour per band and mode), with an LED in the DIGI strip and map
     links and statistics in Settings ▸ FT8
@@ -91,7 +97,8 @@ decoding, plus voice operation over WebRTC.
   decoded at once (45.45 Bd, 170 Hz, Baudot; matched filters, automatic
   threshold, squelch on clean frames), one row each; transmit as AFSK through
   the DATA input with macros, mark/space following the sideband, REV;
-  DEFAULT puts TX back to 2210 Hz
+  DEFAULT puts TX back to 2210 Hz; own transmissions as red TX blocks in the
+  station's received text, at the point they went out
 - **CW skimmer**: every CW signal in the passband decoded at once (own STFT
   front end, adaptive timing), listed like the FT8 table; select one, zero
   beat, send through the radio's own keyer (`KM` + `KY6…KYA`; keyer on and
@@ -102,13 +109,16 @@ decoding, plus voice operation over WebRTC.
   with one key (NEXT / Enter): QSO or contest style, serial numbers on demand,
   auto CQ with a listening pause, the caller's call taken from the skimmer
   (confirmed by you), double-click a signal to answer it, logging as CW with
-  RST, name, QTH and STX/SRX
+  RST, name, QTH and STX/SRX; own transmissions as red TX blocks in the
+  received text, as in RTTY
 - **JTTY** (WSJT-X 3.2+'s keyboard mode, by K1JT, K9AN, G4KLA and the
   WSJT-X team): typed like RTTY at any time, with FEC — readable to about
   −15 dB. `decoder/jttyd` runs WSJT-X 3.3's streaming receiver over the whole
   passband (~12 % of one core): every message a row, a click follows the
   station (its conversation, CALL, TX frequency); macros, transmit through the
-  DATA input, BAND menu with the JTTY dial frequencies
+  DATA input, BAND menu with the JTTY dial frequencies; RX and TX lines told
+  apart in the list and the conversation. RTTY, CW and JTTY hear silence while
+  we transmit (no echo of the own signal)
 - **HackRF waterfall**: panadapter or wideband sweep from a HackRF One on
   another Pi, relayed from TM-V71 Remote's `/ws/hackrf`; follow shows the
   whole amateur band of VFO A; click tunes VFO A
@@ -130,7 +140,8 @@ decoding, plus voice operation over WebRTC.
     587/465, or relay by address); mail preview, test login and a test card
   - address from QRZ.com; one QSO, several marked ones or automatically after
     every log; stations whose QRZ.com entry says no QSL (NO QSL, LOTW ONLY, …)
-    and QSOs that already got a card are skipped
+    and QSOs that already got a card are skipped; one card per station, band,
+    mode and UTC day
   - the mail account, its password and the pictures stay on the Pi
     (runtime.json, `backend/qsl_images/` — gitignored)
 - **Settings**:
@@ -177,6 +188,12 @@ For production use the systemd unit in `deploy/systemd/`. It serves HTTPS
 on port 8444; the certificate comes from `deploy/gen-server-cert.sh`, signed
 by a private root CA, which the UI offers for download. Browsers allow the
 microphone only over HTTPS.
+
+Optional nightly reboot that spares a running station: `deploy/nightly-reboot.sh`
+(as `/usr/local/bin/ft950-nightly-reboot` in root's crontab, `00 4 * * *`)
+reboots the Pi only while the radio is off - it skips the night when the
+FT-950 answers over CAT or its Shelly relay is on, and logs each decision
+(`journalctl -t nightly-reboot`).
 
 The station settings, logbook credentials and memory names are entered in the
 web UI. They are saved to `backend/runtime.json` (mode 0600, gitignored) and

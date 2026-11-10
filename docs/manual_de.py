@@ -113,6 +113,13 @@ DE = [
           "unter Settings ▸ General und auf dem Ausschalt-Schild herunterladen. "
           "Browser geben das Mikrofon nur über HTTPS frei — installieren Sie die CA "
           "daher einmal auf jedem Gerät."),
+    ("p", "Optionaler nächtlicher Neustart, der eine laufende Station schont: "
+          "deploy/nightly-reboot.sh (installiert als /usr/local/bin/ft950-nightly-"
+          "reboot, root-crontab 00 4 * * *) startet den Pi nur neu, wenn das "
+          "Funkgerät aus ist — er lässt die Nacht aus, wenn der FT-950 über CAT "
+          "antwortet oder sein Shelly-Relais an ist, und startet neu, wenn das Backend "
+          "nicht antwortet. Jede Entscheidung steht im Journal (journalctl -t "
+          "nightly-reboot)."),
     ("p", "Danach Settings ▸ General öffnen: Rufzeichen, Locator, CAT-Port und "
           "Baudrate. Stationsdaten, Logbuch-Zugangsdaten und Speichernamen werden in "
           "backend/runtime.json (Rechte 0600) abgelegt und nie an den Browser "
@@ -187,7 +194,8 @@ DE = [
           "damit nichts springt. Die Nadel bewegt sich wie bei einem "
           "Drehspulinstrument: gedämpft, sie steigt in etwa 0,35 s an und fällt "
           "etwas langsamer zurück. "
-          "AFU über MHz leuchtet grün, solange VFO A in einem Amateurfunkband des "
+          "AFU über MHz leuchtet auf — grünes Feld, dunkle Schrift, wie BUSY —, "
+          "solange VFO A in einem Amateurfunkband des "
           "Frequenzplans liegt, der unter Settings ▸ Appearance gewählt ist "
           "(Deutschland, IARU Region 1, 2 / USA oder 3); der Tooltip nennt Band und "
           "Grenzen."),
@@ -308,7 +316,9 @@ DE = [
         "Adopt Frequency an (Fußzeile, neben der TX-Frequenz), wandert die TX-Box "
         "(rot) mit, und Auto Answer und Auto Hunt antworten auf der Frequenz der "
         "Gegenstation — die TX-Box folgt, solange ihr QSO läuft. Ein Klick in den "
-        "Wasserfall setzt TX von Hand und schaltet Adopt Frequency aus, damit die "
+        "Wasserfall setzt TX von Hand (der Klick ist die Mitte der Box, sie liegt "
+        "also über dem angeklickten Signal; die TX-Frequenz selbst bleibt ihr "
+        "tiefster Ton, wie bei WSJT-X) und schaltet Adopt Frequency aus, damit die "
         "nächste Station es nicht wieder wegzieht; Umschalt+Klick verschiebt nur "
         "das Empfangsfenster. Doppelklick antwortet der Station — in Received und in My "
         "Messages — und wählt ihre Session in Sessions aus, so dass Session "
@@ -353,6 +363,11 @@ DE = [
         "Restzeit als m:ss (∞: keine Abschaltung). Er ruft nur an, solange ein Browser das DIGI-Feld "
         "zeigt. Wen er anruft, das Mindest-SNR, die Abschaltzeit (Standard 180 min, "
         "0 = nie) und die Liste stehen unter Settings ▸ FT8.",
+        "Hunt und die zwei Perioden: Nach einem QSO ruft Hunt aus der ersten "
+        "Periode, die es hört — der Gegenperiode zu unserem TX — und bleibt so oft "
+        "lange bei einer Parität. Settings ▸ FT8 ▸ \u201ePick only after hearing both "
+        "periods\u201c (Standard aus) lässt es eine Periode länger hören (etwa 15 s je "
+        "QSO) und die beste Station aus beiden wählen, gerade und ungerade.",
         "Zeitablauf: Die nächste Nachricht wird etwa 0,7 s nach Periodenbeginn "
         "entschieden und geht bei etwa +1 s hinaus (spätester Start +2 s). Ein "
         "Frühdurchlauf bei 13,4 s durchsucht das ganze Band, auf drei Kerne verteilt "
@@ -372,7 +387,14 @@ DE = [
         "automatisch nach Wavelog geloggt, und unter Settings ▸ Log kann es "
         "zusätzlich ins QRZ.com-Logbuch gehen (eigener Schalter, Standard aus); ist "
         "beides aus, landet es im Logformular. Eine Session gilt als geloggt, wenn "
-        "jedes Ziel sie angenommen hat. Ein neues QSO, das die Ablaufsteuerung selbst "
+        "jedes Ziel sie angenommen hat. Antworten, die vom Lehrbuch abweichen: RR73 "
+        "oder RRR, während wir noch unseren Rapport wiederholen, wird mit 73 "
+        "beantwortet (ihr RR73 sagt, dass unser Rapport ankam); \u201eR <Locator>\u201c "
+        "(die Contest-Bestätigung von WSJT-X) zählt wie ein R-Rapport und wird mit "
+        "RR73 beantwortet (empfangener RST bleibt leer); ein bloßes 73 schließt das "
+        "QSO erst ab, wenn die Rapporte ausgetauscht sind — kommt es zu früh, wird es "
+        "übergangen, so wird nichts halb fertig geloggt oder mit einer Karte "
+        "bestätigt. Ein neues QSO, das die Ablaufsteuerung selbst "
         "beginnt (Auto Hunt, Auto Answer, ein Anrufer auf unseren CQ), wird in "
         "Sessions ausgewählt, so dass Session Messages ihm folgt; eine danach "
         "angeklickte Session bleibt, bis das nächste beginnt. Während eines QSOs "
@@ -432,7 +454,8 @@ DE = [
     ("img", "manual/globe.jpg", 174),
     ("p", "Globe neben dem Titel von Received Messages öffnet ein Popup mit den "
           "gehörten Stationen auf einem sich langsam drehenden, durchscheinenden "
-          "Hologramm-Globus; die eigene Station hebt sich in Bernstein mit Rufzeichen "
+          "Hologramm-Globus (Land als gleichmäßiges Punktraster, das von jeder Seite "
+          "gleich aussieht, auch über den Polen); die eigene Station hebt sich in Bernstein mit Rufzeichen "
           "und Locator ab. Stationen der letzten 30 Minuten sind Punkte mit ihrem "
           "Rufzeichen (wo sie sich überdecken würden, gewinnen die wichtigen): "
           "magenta ein neues DXCC, grün neu auf diesem Band, rot gearbeitet; ein "
@@ -459,7 +482,11 @@ DE = [
         "SNR), und sie bleibt auch in den Empfangsperioden stehen, Ihre letzte "
         "Nachricht dann abgeblendet.",
         "✕ CLEAR in der Fußzeile der Tabelle leert Tabelle und Globus; nur danach "
-        "gehörte Stationen kommen wieder.",
+        "gehörte Stationen kommen wieder. GRAY LINE daneben (bernsteinfarben, wenn "
+        "an, gemerkt) schattiert die Nachtseite nach dem aktuellen Sonnenstand — "
+        "Dämmerung bis −12°, die Tagseite leicht aufgehellt — mit der Tag-Nacht-"
+        "Grenze als gestrichelter bernsteinfarbener Linie: DX entlang dieser Linie "
+        "geht oft gut.",
         "Ein Doppelklick auf eine Zeile ruft die Station - über die Hauptseite, "
         "genau wie ein Doppelklick in Received Messages (RX-Fenster, Adopt "
         "Frequency, Logformular, dann der Ruf). Ohne Hauptseite ruft das Popup nicht.",
@@ -467,7 +494,8 @@ DE = [
         "Wasserfall über den Durchlassbereich des Decoders (200-3000 Hz aus "
         "Settings ▸ FT8, die Daten des DIGI-Wasserfalls) in den Hologramm-Farben "
         "mit dem aktuellen Spektrum darüber, die Stationen der letzten Periode mit "
-        "Rufzeichen an ihrer Audiofrequenz, die Gegenstation des QSOs in Bernstein "
+        "Rufzeichen an ihrer Audiofrequenz (nur bei aufgeklappter Legende — "
+        "eingeklappt bleibt der Streifen frei), die Gegenstation des QSOs in Bernstein "
         "und Ihre TX-Frequenz als rote Linie, solange eine Sequenz läuft. Bei "
         "DECODE aus bleibt es leer. Legende und FT8-Spektrum klappen über ihre "
         "Kopfzeile ein und aus (▾/▸); der Browser merkt es sich.",
@@ -540,6 +568,13 @@ DE = [
         "2295 Hz). STOP und Halt TRX brechen sofort ab; ein Watchdog beendet "
         "die Sendung spätestens 3 s nach ihrer Länge. Solange die FT8-Ablaufsteuerung "
         "oder Auto Hunt läuft, sendet RTTY nicht.",
+        "Eigene Sendungen unter Text: jede erscheint als roter TX-Block im empfangenen "
+        "Text der Station auf der TX-Frequenz, an der Stelle, an der sie hinausging — "
+        "das QSO liest sich der Reihe nach, und der Block bleibt an seinem Platz, "
+        "während der Text weiterläuft. Sent behält die Liste. Während wir senden (und "
+        "0,6 s danach) hören die RTTY-, CW- und JTTY-Empfänger Stille: das Funkgerät "
+        "legt unser eigenes Signal auf seinen Audioausgang, und es käme als Echo des "
+        "TX-Texts zurück.",
         "Das Feld lässt sich unter Settings ▸ Appearance ausblenden und bekommt "
         "dort eine eigene Akzentfarbe.",
     ]),
@@ -554,7 +589,10 @@ DE = [
           "Keyer-Speicher 5 geschrieben und abgespielt (KM/KY), in Stücken zu 50 "
           "Zeichen. Das Funkgerät muss in CW oder CW-R stehen und BK-IN muss "
           "eingeschaltet sein. Makros (CQ, CALL, 5NN, RR, 73, AGN, QRZ) füllen die "
-          "Sendezeile; CALL wird vom ausgewählten Signal übernommen."),
+          "Sendezeile; CALL wird vom ausgewählten Signal übernommen. Eigene Sendungen "
+          "stehen als rote TX-Blöcke im empfangenen Text des Signals auf der Tonhöhe "
+          "des Funkgeräts (auf das wir abgestimmt sind), wie bei RTTY; während wir "
+          "senden, hört der Skimmer Stille (kein Echo)."),
     ("ul", [
         "WPM ist ein Schieberegler (4–60) im Kopf des Felds; er stellt das "
         "Keyer-Tempo des Funkgeräts (KS), sobald man loslässt, und folgt alle 10 s "
@@ -614,7 +652,9 @@ DE = [
         "Jede Meldung ist eine Zeile: UTC, NF-Frequenz, SNR, Text; eine, die noch "
         "hereinkommt, steht kursiv mit … . Ein Klick verfolgt diese Station: Text zeigt "
         "ihr Gespräch (jede Meldung auf ihrer Frequenz), CALL übernimmt ihr Rufzeichen, "
-        "TX ihre Frequenz.",
+        "TX ihre Frequenz. Eigene Sendungen stehen als rote TX-Zeilen in der Liste "
+        "und im Gespräch (\u201esending …\u201c, solange sie hinausgehen); empfangene sind "
+        "mit RX markiert. CALL kommt nur aus dem, was die Gegenstation sendete.",
         "Senden: die Sendezeile oder die Makros CQ, CALL, 599, TU, AGN, QRZ (kurz "
         "gehalten, damit JTTYs kompakte Atome sie tragen); Enter oder SEND sendet "
         "sofort — kein Warten auf einen Durchgang. Das Funkgerät muss in DATA-U oder "
@@ -711,6 +751,10 @@ DE = [
         "Papier und die QSL-Notiz des Operators). Bei mehreren gibt es eine Rückfrage; "
         "Stationen ohne Adresse, solche, die keine QSL wünschen, und QSOs, die schon "
         "eine Karte bekamen, werden übersprungen und genannt.",
+        "Eine Karte pro Station, Band, Betriebsart und UTC-Tag: AUTO QSL und mehrere "
+        "markierte QSOs überspringen eine Station, die heute auf diesem Band und in "
+        "dieser Betriebsart schon ihre Karte bekam (Spalte QSL ⊘); eine einzeln von "
+        "Hand geschickte Karte geht nach einer Warnung trotzdem hinaus.",
         "Keine QSL gewünscht: eine QSL-Notiz auf QRZ.com wie NO QSL, NO EQSL, NO "
         "CARDS, LOTW ONLY, QRZ ONLY oder OQRS ONLY, oder eQSL: nein. Solche "
         "Stationen werden bei mehreren markierten QSOs und von AUTO QSL "

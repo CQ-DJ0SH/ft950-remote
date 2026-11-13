@@ -299,7 +299,8 @@ class Transmitter:
         async with self._lock:
             if self.state["active"]:
                 await self._stop_locked()
-            self._check()
+            # upper sideband only: DATA-L / LSB mirror the 4 tones - nobody decodes that
+            self._check(("DATA-U", "USB"))
             await asyncio.to_thread(self.service.radio.ptt, True)
             await asyncio.sleep(PTT_LEAD_S)
             amp = 0.98 * self.level * 32767           # same drive as FT8 / TUNE

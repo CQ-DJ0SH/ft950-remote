@@ -688,7 +688,11 @@ async def get_settings() -> dict:
             "hunt_target": sequencer.hunt_target, "hunt_min_snr": sequencer.hunt_min_snr,
             "hunt_minutes": sequencer.hunt_minutes, "hunt_both": sequencer.hunt_both,
             "hunt_blocked": sorted(({"call": c, **v} for c, v in sequencer.hunt_blocked.items()),
-                                   key=lambda r: -r.get("t", 0)),         # newest first "digi_colors": _rt.get("digi_colors") or {},
+                                   key=lambda r: -r.get("t", 0)),         # newest first
+            # the message colours (Settings ▸ FT8 ▸ COLOURS): had slipped into the
+            # comment above, so the page never got them back and its next SAVE
+            # wrote them over with nothing
+            "digi_colors": _rt.get("digi_colors") or {},
             "cert": _cert_info(), "ca_available": CA_CERT.is_file(),
             "hackrf_url": _rt.get("hackrf_url") or HACKRF_DEFAULT,
             "shelly_host": power.host, "shelly_channel": power.channel, "shelly_user": power.user,

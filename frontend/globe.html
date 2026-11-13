@@ -242,7 +242,7 @@
       </table>
       <div class="empty" id="empty">Waiting for decodes …</div>
     </div>
-    <div class="foot"><span><button class="clr" id="clear" type="button" title="Empty the table and the globe: only stations heard from now on appear">✕ CLEAR</button><button class="clr" id="gline" type="button" title="Gray line: the night side shaded from the sun's position now, the day/night border as an amber line - DX along it often goes well">GRAY LINE</button><span id="count">0 stations</span></span><span>last 30 min · double-click: call</span></div>
+    <div class="foot"><span><button class="clr" id="clear" type="button" title="Empty the table and the globe: only stations heard from now on appear">✕ CLEAR</button><button class="clr" id="ggrid" type="button" title="Maidenhead grid: the fields (JO, IO, ...) as faint lines with their letters - a test">GRID</button><button class="clr" id="gline" type="button" title="Gray line: the night side shaded from the sun's position now, the day/night border as an amber line - DX along it often goes well">GRAY LINE</button><span id="count">0 stations</span></span><span>last 30 min · double-click: call</span></div>
   </aside>
 </div>
 <script>
@@ -423,6 +423,49 @@ function kindOf(s) {
   if (!w.call_band) return "newb";
   return "worked";
 }
+// ---------------------------------------------------------------- Maidenhead fields
+// The 18 x 18 fields (20° of longitude x 10° of latitude, AA ... RR) as faint
+// lines, the two letters in the middle of each field on the near side.
+// Switch GRID in the table footer (a test, off by default).
+let gridOn = (() => { try { return localStorage.getItem("ft950.globe.grid") === "1"; } catch { return false; } })();
+function drawFields() {
+  ctx.lineWidth = 0.7;
+  const seg = (pts) => {
+    let prev = null;
+    for (const [lat, lon] of pts) {
+      const p = projLL(lat, lon);
+      if (prev && p[2] > 0 && prev[2] > 0) {
+        ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
+      }
+      prev = p;
+    }
+  };
+  ctx.strokeStyle = `rgba(${P.home},0.16)`;
+  for (let lon = -180; lon < 180; lon += 20) {                  // field borders east-west
+    const pts = []; for (let lat = -90; lat <= 90; lat += 2) pts.push([lat, lon]); seg(pts);
+  }
+  for (let lat = -80; lat <= 80; lat += 10) {                   // field borders north-south
+    const pts = []; for (let lon = -180; lon <= 180; lon += 2) pts.push([lat, lon]); seg(pts);
+  }
+  // the letters: bold, with an outline in the background colour so they read
+  // over land dots, lines and stations
+  ctx.font = "700 12px 'IBM Plex Mono', monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.lineJoin = "round"; ctx.lineWidth = 3.5;
+  ctx.strokeStyle = P.halo ? "rgba(255,255,255,.85)" : "rgba(4,12,22,.85)";
+  for (let i = 0; i < 18; i++) {
+    for (let j = 1; j < 17; j++) {                              // not the polar rows: they meet in a knot
+      const p = projLL(-90 + 10 * j + 5, -180 + 20 * i + 10);
+      if (p[2] < 0.25) continue;                                 // near side only, not at the rim
+      const t = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
+      ctx.strokeText(t, p[0], p[1]);
+      ctx.fillStyle = `rgba(${P.home},${0.5 + 0.5 * p[2]})`;
+      ctx.fillText(t, p[0], p[1]);
+    }
+  }
+  ctx.lineJoin = "miter";
+  ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+}
+
 // ---------------------------------------------------------------- gray line
 // The sun's position from UTC (good to about a degree): the night side shaded
 // on a coarse raster (inverse projection per cell, smoothed when scaled up),
@@ -540,6 +583,7 @@ function draw(now) {
       }
     }
   }
+  if (gridOn) drawFields();
   if (grayOn) drawNight(cx, cy);
   // arcs from my station, then the stations, then me on top
   const nowS = Date.now() / 1000;
@@ -1049,6 +1093,15 @@ $("gline").onclick = () => {
   grayOn = !grayOn;
   try { localStorage.setItem("ft950.globe.grayline", grayOn ? "1" : "0"); } catch { /* private mode */ }
   glineShow();
+};
+
+// ---------------------------------------------------------------- Maidenhead grid switch (test)
+const gridShow = () => $("ggrid").classList.toggle("on", gridOn);
+gridShow();
+$("ggrid").onclick = () => {
+  gridOn = !gridOn;
+  try { localStorage.setItem("ft950.globe.grid", gridOn ? "1" : "0"); } catch { /* private mode */ }
+  gridShow();
 };
 </script>
 </body>

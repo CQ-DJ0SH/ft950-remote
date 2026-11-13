@@ -4405,6 +4405,7 @@ let cwLastClick = { id: null, t: 0 };
 function cwRowClick(id) {
   const dbl = cwLastClick.id === id && Date.now() - cwLastClick.t < 400;
   cwLastClick = { id, t: dbl ? 0 : Date.now() };
+  if (id !== cwSel) cwCallTouched = 0;             // another signal: its call into CALL
   cwSel = id;
   renderCw(cwState);
   if (dbl) cwAnswer(id);
@@ -4448,7 +4449,7 @@ function renderCw(s) {
     const c = cwCallFrom(sel.text);
     // don't overwrite a hand-typed call, nor the one of a running QSO
     // (only before a QSO: while calling CQ the caller comes from cwHear)
-    if (c && Date.now() - cwCallTouched > 20000 && cwA.phase === "idle") { $("cw-call").value = c; cwShow(); }
+    if (c && !cwCallTouched && cwA.phase === "idle") { $("cw-call").value = c; cwShow(); }
   }
   cwHear(s.channels || []);
 }
@@ -4566,11 +4567,12 @@ function cwSidetoneStop(all) {
   const now = chimeCtx.currentTime;
   for (const x of cwTone) if (all || x.start > now) { try { x.o.stop(); } catch { /* not started */ } }
 }
-// CW macros: click puts the text into the send line (Enter / SEND transmits)
+// CW macros: click puts the text into the send line (Enter / SEND transmits);
+// every word once - repeat a macro (or type it twice) when the band needs it
 const CW_MACROS = [
-  ["CQ", "CQ CQ DE {MY} {MY} K"], ["CALL", "{CALL} DE {MY} K"],
-  ["5NN", "{CALL} DE {MY} TU UR 5NN 5NN LOC {LOC} K"], ["RR", "R R TU 5NN BK"],
-  ["73", "{CALL} DE {MY} TU 73 SK"], ["AGN", "AGN AGN"], ["QRZ", "QRZ? DE {MY} K"],
+  ["CQ", "CQ DE {MY} K"], ["CALL", "{CALL} DE {MY} K"],
+  ["5NN", "{CALL} DE {MY} TU UR 5NN LOC {LOC} K"], ["RR", "R TU 5NN BK"],
+  ["73", "{CALL} DE {MY} TU 73 SK"], ["AGN", "{CALL} AGN?"], ["QRZ", "QRZ? DE {MY} K"],
 ];
 let cwMy = { call: "", loc: "" };
 api("/api/settings").then((s) => { cwMy = { call: (s.my_call || "").toUpperCase(), loc: (s.my_grid || "").slice(0, 4).toUpperCase() }; }).catch(() => {});
@@ -4591,7 +4593,8 @@ function cwCallFrom(text) {
   return calls.length ? calls[calls.length - 1] : "";
 }
 let cwCallTouched = 0;
-$("cw-call").addEventListener("input", () => { cwCallTouched = Date.now(); });
+// a typed call stays until another signal is clicked (or the field is emptied)
+$("cw-call").addEventListener("input", (e) => { cwCallTouched = e.target.value.trim() ? Date.now() : 0; });
 $("cw-call").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); cwNext(); } });
 
 // ---- CW assistant: one key (NEXT / Enter) moves the QSO on, as the "Enter
@@ -4683,7 +4686,7 @@ async function cwLog() {
     toast(r.ok === false ? `${call}: ${r.message}` : `Logged ${call} (CW${cwSer ? `, NR ${q.stx}` : ""})`, r.ok === false);
   } catch { /* toast */ }
   if (cwSer) { cwNr = Math.min(9999, cwNr + 1); store.set("cwNr", cwNr); $("cw-nr").value = cwNr; }
-  $("cw-call").value = "";
+  $("cw-call").value = ""; cwCallTouched = 0;
   cwNewQso();
 }
 // what the other station sends: RST, serial (cut numbers T=0 N=9 O=0 A=1), name, QTH
@@ -4756,7 +4759,7 @@ $("cw-name").onchange = (e) => { store.set("cwName", e.target.value.trim().toUpp
 $("cw-qth").onchange = (e) => { store.set("cwQth", e.target.value.trim().toUpperCase()); cwShow(); };
 $("cw-acq").onclick = () => cwAcqSet(!cwA.acq);
 $("cw-next").onclick = () => cwNext();
-$("cw-reset").onclick = () => { cwAcqSet(false); cwA.phase = "idle"; $("cw-call").value = ""; cwNewQso(); cwShow(); };
+$("cw-reset").onclick = () => { cwAcqSet(false); cwA.phase = "idle"; $("cw-call").value = ""; cwCallTouched = 0; cwNewQso(); cwShow(); };
 $("cw-call").addEventListener("input", () => { $("cw-call").classList.remove("found"); cwShow(); });
 cwShow();
 $("cw-sent-clear").onclick = () => { $("cw-sent").innerHTML = ""; };
@@ -4923,10 +4926,10 @@ function renderJtty(s) {
   const heard = near.filter((m) => m.dir !== "tx");          // the call comes from what they sent
   if (heard.length) {
     const c = cwCallFrom(heard.map((m) => m.text).join(" ").toUpperCase());
-    if (c && Date.now() - jtCallTouched > 20000) $("jt-call").value = c;
+    if (c && !jtCallTouched) $("jt-call").value = c;      // a typed call stays until a station is clicked
   }
 }
-$("jt-call").addEventListener("input", () => { jtCallTouched = Date.now(); });
+$("jt-call").addEventListener("input", (e) => { jtCallTouched = e.target.value.trim() ? Date.now() : 0; });
 $("jt-txhz").value = store.get("jttyTxHz", 1500);
 $("jt-txhz").onchange = (e) => store.set("jttyTxHz", Math.max(300, Math.min(2600, Math.round(+e.target.value) || 1500)));
 $("jt-txhz-def").onclick = () => { $("jt-txhz").value = 1500; store.set("jttyTxHz", 1500); };
@@ -4966,10 +4969,12 @@ $("jt-send").onclick = async () => {
 $("jt-msg").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("jt-send").click(); } });
 $("jt-stop").onclick = () => api("/api/jtty/stop", {}).then(() => toast("JTTY stopped")).catch(() => {});
 $("jt-sent-clear").onclick = () => { $("jt-sent").innerHTML = ""; };
-// JTTY macros: short, so JTTY's compact atoms (calls, 599, grids) carry them
+// JTTY macros: WSJT-X's F-key forms - every call once, no RTTY doubling: JTTY's
+// FEC needs no repetition, and its compact atoms carry each of these in 1-3
+// frames ("CQ DJ0SH CQ" = 1 frame, 1.9 s; "CQ CQ DJ0SH DJ0SH JO62" was 5)
 const JT_MACROS = [
-  ["CQ", "CQ CQ {MY} {MY} {LOC}"], ["CALL", "{CALL} {MY} {MY}"], ["599", "{CALL} 599 {LOC}"],
-  ["TU", "{CALL} TU 73 {MY}"], ["AGN", "AGN?"], ["QRZ", "QRZ? {MY}"],
+  ["CQ", "CQ {MY} CQ"], ["CALL", "{CALL} {MY}"], ["MY", "{MY}"], ["599", "{CALL} 599 {LOC}"],
+  ["TU CQ", "{CALL} TU CQ {MY} CQ"], ["73", "{CALL} TU 73 {MY}"], ["AGN", "{CALL} AGN?"], ["QRZ", "QRZ? {MY}"],
 ];
 $("jt-macro-btns").innerHTML = JT_MACROS.map(([n]) => `<button class="btn sm jt-mac" data-n="${n}">${n}</button>`).join("");
 for (const b of document.querySelectorAll(".jt-mac")) {

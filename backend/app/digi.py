@@ -38,6 +38,61 @@ from .state import ConnectionManager
 
 log = logging.getLogger("ft950.digi")
 
+# Free-frequency search (Hunt's own CQ): signal widths and the search range
+SIG_BW = {"FT8": 50, "FT4": 83}
+FREE_LO, FREE_HI, FREE_BIN = 600, 2400, 10
+FREE_KEEP = 4                    # periods measured (both parities while listening)
+
+
+def band_power(x48: np.ndarray) -> np.ndarray:
+    """Mean power per FREE_BIN Hz from 0 to 3000 Hz over the slice (Welch,
+    0.1 s frames): the energy view of the band - signals nobody decoded too."""
+    n = RATE // FREE_BIN                                 # 0.1 s -> 10 Hz bins
+    k = len(x48) // n
+    if k < 2:
+        return np.zeros(3000 // FREE_BIN)
+    f = x48[:k * n].astype(np.float32).reshape(k, n) * np.hanning(n).astype(np.float32)
+    p = (np.abs(np.fft.rfft(f, axis=1)) ** 2).mean(axis=0)
+    return p[:3000 // FREE_BIN]
+
+
+def free_frequency(periods: list[tuple[np.ndarray, list[int]]], mode: str,
+                   lo: int = FREE_LO, hi: int = FREE_HI) -> Optional[int]:
+    """Lowest-tone offset for a CQ in the widest free gap between lo and hi.
+    periods: (band_power, decoded offsets) of the last periods. Occupied: every
+    decoded signal (+-guard) and every bin more than 6 dB over the noise floor
+    in any period. None without a measurement."""
+    if not periods:
+        return None
+    bw, guard = SIG_BW.get(mode, 50), 20
+    nb = 3000 // FREE_BIN
+    busy = np.zeros(nb, dtype=bool)
+    for p, dfs in periods:
+        floor = float(np.median(p[200 // FREE_BIN:2800 // FREE_BIN])) or 1e-12
+        busy |= p > 4 * floor
+        for df in dfs:
+            busy[max(0, (df - guard) // FREE_BIN):min(nb, (df + bw + guard) // FREE_BIN + 1)] = True
+    a, b = lo // FREE_BIN, hi // FREE_BIN
+    best, run0 = (0, None), None
+    for i in range(a, b + 1):
+        if i < b and not busy[i]:
+            run0 = i if run0 is None else run0
+        elif run0 is not None:
+            if i - run0 > best[0]:
+                best = (i - run0, run0)
+            run0 = None
+    width, start = best
+    need = (bw + 2 * guard) // FREE_BIN
+    if start is None or width < need:
+        # nothing really free: the window with the least energy
+        tot = sum(p for p, _ in periods)
+        w = bw // FREE_BIN + 1
+        sums = [float(tot[i:i + w].sum()) for i in range(a, b - w + 1)]
+        return int((a + int(np.argmin(sums))) * FREE_BIN)
+    mid = (start + width / 2) * FREE_BIN                 # centre of the gap
+    return int(round((mid - bw / 2) / 10) * 10)
+
+
 MODES = {
     "FT8": {"period": 15.0, "flag": "-8", "tr": "15"},
     "FT4": {"period": 7.5, "flag": "-5", "tr": "7"},
@@ -305,6 +360,8 @@ class DigiService:
         self.data = Path(data_dir) if data_dir else self.work
         self.keep_slices = keep_slices
         self._last_df: dict[str, list[int]] = {}   # previous period's offsets: where to split
+        # mode -> the last periods' (band power, decoded offsets): free_hz()
+        self._occupancy: dict[str, deque] = {}
         self.dxcc = Dxcc()
         # (call, dial_hz, entity) -> worked-before flags; set by main.py once
         # the logbook exists
@@ -341,6 +398,19 @@ class DigiService:
         self._stop.set()
         if self._task:
             await asyncio.gather(self._task, return_exceptions=True)
+
+    def free_hz(self, mode: str, lo: int = FREE_LO, hi: int = FREE_HI) -> Optional[int]:
+        """A free CQ frequency from the last periods (same dial) - None
+        before two periods were measured."""
+        q = list(self._occupancy.get(mode) or [])
+        if q:
+            dial = q[-1][1]
+            q = [e for e in q if e[1] == dial]
+        if len(q) < 2:
+            return None
+        hz = free_frequency([(e[2], e[3]) for e in q], mode, lo, hi)
+        log.info("free frequency %s: %s Hz (measured over %d periods)", mode, hz, len(q))
+        return hz
 
     def current_mode(self) -> str:
         if self.config["mode"] in MODES:
@@ -459,6 +529,14 @@ class DigiService:
                 self._adapt(mode, stat["decode_ms"] / 1000)
             decodes = self._enrich(dedupe(parse_jt9(text)), mode, t0, vfo.get("freq_hz"))
             self._last_df[mode] = [d["df"] for d in decodes]
+            try:
+                pw = await asyncio.to_thread(band_power, x)
+                q = self._occupancy.setdefault(mode, deque(maxlen=FREE_KEEP))
+                if q and q[-1][0] < t0 - FREE_KEEP * period - 1:
+                    q.clear()                             # old measurement: band / mode changed since
+                q.append((t0, vfo.get("freq_hz"), pw, [int(d["df"]) for d in decodes]))
+            except Exception as exc:  # noqa: BLE001
+                log.debug("band power: %s", exc)
             self._record(stat, decodes)
             self._prune(mode)
             if self.on_decodes:

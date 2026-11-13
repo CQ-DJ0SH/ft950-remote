@@ -869,6 +869,7 @@
           <option value="dxcc_band">DXCC entities new on this band</option><option value="dxcc">DXCC entities never worked</option></select></label>
         <label title="Weaker CQs are passed over">Minimum SNR (dB)<input type="number" id="set-hunt-snr" min="-30" max="20" step="1"></label>
         <label title="Hunt switches itself off after this time; 0 = never (it stays on until you switch it off, and still calls only while the DIGI panel is open in a browser)">Switch off after (min, 0 = never)<input type="number" id="set-hunt-min" min="0" max="1440" step="5"></label>
+        <label title="When Hunt hears no new station for this many periods, it calls CQ itself, on the widest free gap between 600 and 2400 Hz measured over those quiet periods (decoded signals and any energy over the noise) - a caller is worked as usual, and the next new station's CQ ends Hunt's CQ and gets called. 0 = Hunt only listens.">CQ after quiet periods (0 = never)<input type="number" id="set-hunt-cq" min="0" max="40" step="1"></label>
         <label class="check-label span-2" title="Off: after a QSO Hunt calls from the first period it hears - the one opposite to our TX - and keeps to one parity for long runs. On: it listens to one more period (about 15 s per QSO), hears even and odd, and picks the best station of both (new DXCC first, then new on the band, then the strongest)."><input type="checkbox" id="set-hunt-both"> Pick only after hearing both periods (even and odd) — about 15 s more per QSO</label>
       </div>
       <div class="hunt-blocked-box">

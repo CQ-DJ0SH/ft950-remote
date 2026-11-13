@@ -1242,7 +1242,7 @@ function huntLabel(on = seqState?.hunt) {
   }
   const ico = '<svg class="hunt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">'
     + '<circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>';
-  const html = on ? `Hunt<small class="hunt-left">${t}</small>${ico}` : "Auto Hunt" + ico;
+  const html = on ? `Hunt${seqState?.hunt_cq ? " · CQ" : ""}<small class="hunt-left">${t}</small>${ico}` : "Auto Hunt" + ico;   // · CQ: nothing new heard, Hunt calls CQ itself
   if ($("seq-hunt").innerHTML !== html) $("seq-hunt").innerHTML = html;
 }
 setInterval(() => { if (seqState?.hunt) huntLabel(true); }, 1000);
@@ -2008,6 +2008,7 @@ async function loadFt8() {
   $("set-hunt-target").value = s.hunt_target || "band";
   $("set-hunt-snr").value = s.hunt_min_snr ?? -24;
   $("set-hunt-min").value = s.hunt_minutes ?? 180;
+  $("set-hunt-cq").value = s.hunt_cq_after ?? 4;
   $("set-hunt-both").checked = !!s.hunt_both;
   $("set-psk").checked = !!s.psk_report;
   $("set-psk-ant").value = s.psk_antenna || "";
@@ -2036,6 +2037,7 @@ $("ft8-save").onclick = async () => {
       hunt_target: $("set-hunt-target").value,
       hunt_min_snr: Math.round(+$("set-hunt-snr").value),
       hunt_minutes: Math.max(0, Math.min(1440, Math.round(+$("set-hunt-min").value) || 0)),   // 0 = never
+      hunt_cq_after: Math.max(0, Math.min(40, Math.round(+$("set-hunt-cq").value) || 0)),     // 0 = never
       hunt_both: $("set-hunt-both").checked,
       psk_report: $("set-psk").checked,
       psk_antenna: $("set-psk-ant").value.trim(),

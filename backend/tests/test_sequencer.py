@@ -791,3 +791,93 @@ def test_hunt_both_waits_for_both_periods_and_takes_the_best():
     assert called == []
     asyncio.run(s.on_decodes([_hunt_cq("JA1ABC", 45.0, -18, new_dxcc=True)], 45.0, "FT8", False))   # odd
     assert called == ["JA1ABC"] and s._hunt_pool == []          # the new DXCC from the other period
+
+# ---- Hunt calls CQ itself when no new station turns up, on a measured free spot
+import numpy as np  # noqa: E402
+
+from app import digi  # noqa: E402
+
+
+class _FreeDigi(_Digi):
+    def free_hz(self, mode):
+        return 1730
+
+
+def _cq_hunter(after=4):
+    s = Sequencer(_FreeDigi(), _Tx(), _Log(), _Mgr(), _Set())
+    s.mode, s.kind, s.hunt, s.hunt_cq_after = "FT8", None, True, after
+    s.hunt_until = time.time() + 600
+    s._run = lambda: None                       # no TX loop in the test
+
+    async def stop():
+        pass
+    s.tx.stop = stop
+    called = []
+
+    async def answer(d, hz):
+        await s.halt(stop_tx=False)
+        called.append(d["from"]); s.kind = "answer"; s.session = s._new_session(d)
+    s.answer, s._auto_hz = answer, (lambda d: 1500.0)
+    return s, called
+
+
+def _old_cq(call, t0):                           # a CQ from a station already worked
+    return _d(f"CQ {call} JO22", t0=t0, worked={"call": True, "call_band": True, "dxcc": True, "dxcc_band": True})
+
+
+def _new_cq(call, t0):
+    return _d(f"CQ {call} JO22", t0=t0, worked={"call": False, "call_band": False, "dxcc": True, "dxcc_band": True})
+
+
+def _hpass(s, decodes, t0, early=False):
+    asyncio.run(s.on_decodes(decodes, t0, "FT8", early))
+
+
+def test_quiet_periods_start_a_cq_on_the_free_spot():
+    s, called = _cq_hunter(4)
+    for i in range(3):
+        _hpass(s, [_old_cq("PA1AAA", 15.0 * i)], 15.0 * i)
+        _hpass(s, [], 15.0 * i + 13.4, early=True)            # early passes do not count
+    assert s.kind is None
+    _hpass(s, [_old_cq("PA1AAA", 45.0)], 45.0)
+    assert s.kind == "cq" and s._hunt_cq and s.tx_hz == 1730 and called == []
+
+
+def test_a_new_station_ends_the_hunt_cq_and_is_called():
+    s, called = _cq_hunter(1)
+    _hpass(s, [], 0.0)
+    assert s._hunt_cq_idle()
+    _hpass(s, [_new_cq("JA1ABC", 15.0)], 15.0)
+    assert called == ["JA1ABC"] and s.kind == "answer" and not s._hunt_cq
+
+
+def test_a_caller_to_our_cq_comes_first():
+    s, called = _cq_hunter(1)
+    _hpass(s, [], 0.0)
+    _hpass(s, [_new_cq("JA1ABC", 15.0), _d("DJ0SH OK1XYZ JO70", t0=15.0)], 15.0)
+    assert called == [] and s.kind == "cq"
+
+
+def test_hunt_off_stops_its_cq_and_zero_never_calls():
+    s, _ = _cq_hunter(1)
+    _hpass(s, [], 0.0)
+    asyncio.run(s.set_hunt(False))
+    assert s.kind is None and not s._hunt_cq
+    s, _ = _cq_hunter(0)
+    for i in range(10):
+        _hpass(s, [], 15.0 * i)
+    assert s.kind is None
+
+
+def test_free_frequency_avoids_signals_and_energy():
+    nb = 3000 // digi.FREE_BIN
+    p = np.ones(nb)
+    p[1500 // 10:1560 // 10] = 50                     # an undecoded signal at 1500
+    dfs = list(range(600, 1400, 60)) + list(range(1700, 2400, 60))   # crowded, free 1400-1700 minus 1500
+    hz = digi.free_frequency([(p, dfs), (p, dfs)], "FT8")
+    assert hz is not None
+    sig = (hz, hz + 50)
+    assert all(not (a < sig[1] + 10 and sig[0] < a + 60) for a in dfs + [1500])
+    # nothing at all heard: the middle of the range
+    hz = digi.free_frequency([(np.ones(nb), [])], "FT8")
+    assert 1400 <= hz <= 1550

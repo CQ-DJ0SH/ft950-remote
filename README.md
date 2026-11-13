@@ -65,7 +65,9 @@ decoding, plus voice operation over WebRTC.
     Auto Answer and **Auto Hunt** (calls new stations' CQs one after the
     other; a station that never answers is not called again; switches itself
     off, default 180 min; optionally picks only after hearing both periods,
-    so it does not keep to one parity); **directed CQ** (CQ DX, EU, … POTA, SOTA) and
+    so it does not keep to one parity; when no new station turns up for 4
+    periods it **calls CQ itself** on a free spot it measured between 600 and
+    2400 Hz, until the next new station's CQ); **directed CQ** (CQ DX, EU, … POTA, SOTA) and
     **DX Call** for a station typed in; **SKIP** ends the QSO in progress
     and lets CQ / Hunt / Auto Answer go on; RR73 at the report step is
     answered with 73, "R <locator>" counts as an R-report, a bare 73 before the
@@ -115,8 +117,9 @@ decoding, plus voice operation over WebRTC.
   WSJT-X team): typed like RTTY at any time, with FEC — readable to about
   −15 dB. `decoder/jttyd` runs WSJT-X 3.3's streaming receiver over the whole
   passband (~12 % of one core): every message a row, a click follows the
-  station (its conversation, CALL, TX frequency); macros, transmit through the
-  DATA input, BAND menu with the JTTY dial frequencies; RX and TX lines told
+  station (its conversation, CALL, TX frequency); macros in WSJT-X's F-key
+  forms (every call once: CQ = 1 frame), transmit through the DATA input
+  (DATA-U / USB only), BAND menu with the JTTY dial frequencies; RX and TX lines told
   apart in the list and the conversation. RTTY, CW and JTTY hear silence while
   we transmit (no echo of the own signal)
 - **HackRF waterfall**: panadapter or wideband sweep from a HackRF One on

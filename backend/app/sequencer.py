@@ -128,6 +128,12 @@ class Sequencer:
         # one opposite to our TX, and keeps to one parity for long runs
         self.hunt_both = False
         self._hunt_pool: list[dict] = []
+        # Settings ▸ FT8: no new station for this many periods (full passes) -
+        # Hunt calls CQ itself (on a free spot it measured) until a new station's CQ
+        # turns up, then calls that one; 0 = Hunt only listens
+        self.hunt_cq_after = 4
+        self._hunt_quiet: set[float] = set()     # periods Hunt found nobody in
+        self._hunt_cq = False                    # the CQ running was started by Hunt
         self._seen: dict[float, bool] = {}       # period t0 → decodes processed
         # CQ caller queue: call -> {"d": latest decode to me, "t": last heard, "first": first heard}
         self.queue: dict[str, dict] = {}
@@ -231,6 +237,7 @@ class Sequencer:
         if self.session and self.session["state"] in ("running",):
             self.session["state"] = "aborted"
         self.kind, self.step = None, None
+        self._hunt_cq = False
         self.queue.clear(); self.queue_first = None
         if stop_tx:
             await self.tx.stop()
@@ -322,8 +329,22 @@ class Sequencer:
         elif not on:
             self.hunt_until = 0.0
         self.hunt = on
+        self._hunt_quiet.clear()
         self._set_common(tx_hz, adopt)
+        if not on:
+            await self._hunt_cq_end()
         return await self.publish()
+
+    def _hunt_cq_idle(self) -> bool:
+        """Hunt's own CQ is running with no QSO: a new station may cut in."""
+        return self._hunt_cq and self.kind == "cq" and not self.session and self.step == "cq"
+
+    async def _hunt_cq_end(self) -> None:
+        """Hunt off: its CQ stops at once; a QSO a caller started runs to its
+        end (_finish_round then does not go back to CQ)."""
+        if self._hunt_cq_idle():
+            log.info("hunt off: its CQ stops")
+            await self.halt()
 
     async def clear_hunt_blocked(self) -> dict:
         self.hunt_blocked.clear()
@@ -393,10 +414,13 @@ class Sequencer:
                 except RuntimeError as exc:
                     log.warning("auto answer %s: %s", d["from"], exc)
                 return
-        if not self.kind and self.hunt and not partner and t0 not in self.digi.tx_periods:
+        if self.kind and not self._hunt_cq_idle():
+            self._hunt_quiet.clear()                 # a QSO / own CQ: the quiet count starts again after it
+        if (not self.kind or self._hunt_cq_idle()) and self.hunt and not partner and t0 not in self.digi.tx_periods:
             if time.time() > self.hunt_until:
                 self.hunt = False
                 log.info("hunt: %d min over, off", self.hunt_minutes)
+                await self._hunt_cq_end()
                 await self.publish()
             elif getattr(self.manager, "count", 1) and mode == self.digi.current_mode():
                 if self.hunt_both:
@@ -408,6 +432,8 @@ class Sequencer:
                     d = self.hunt_pick(self._hunt_pool) if len(heard) == 2 else None
                 else:
                     d = self.hunt_pick(decodes)
+                if d and self._hunt_cq_idle() and any((x.get("to") or "").upper() == self.me for x in decodes):
+                    d = None                     # someone answers our CQ: that QSO first
                 if d:
                     log.info("hunt: calling %s (%s)%s%s", d["from"], d["msg"], " - early pass" if early else "",
                              " - both periods heard" if self.hunt_both else "")
@@ -418,7 +444,24 @@ class Sequencer:
                         await self.publish()
                     except RuntimeError as exc:
                         log.warning("hunt %s: %s", d["from"], exc)
+                    self._hunt_quiet.clear()
                     return
+                if not early and not self.kind and self.hunt_cq_after:
+                    # a full pass with no new station: quiet long enough - CQ
+                    self._hunt_quiet = {x for x in self._hunt_quiet if x > t0 - 600} | {t0}
+                    if len(self._hunt_quiet) >= self.hunt_cq_after:
+                        log.info("hunt: no new station for %d periods - calling CQ until one appears",
+                                 len(self._hunt_quiet))
+                        self._hunt_quiet.clear()
+                        try:
+                            # a free spot between 600 and 2400 Hz, measured over
+                            # the quiet periods just heard; the TX box without one
+                            free = getattr(self.digi, "free_hz", lambda m: None)(mode)
+                            await self.start_cq(free or self.auto_tx_hz)
+                            self._hunt_cq = True
+                            await self.publish()
+                        except RuntimeError as exc:
+                            log.warning("hunt CQ: %s", exc)
         if not self.kind or mode != self.mode or t0 in self.digi.tx_periods:
             return
         mine = [d for d in decodes if (d.get("to") or "").upper() == self.me]
@@ -731,7 +774,9 @@ class Sequencer:
             if self.session["state"] == "running":
                 self.session["state"] = "done" if self.session.get("logged") is not None else "ended"
             self.session = None
-        if self.kind == "cq":
+        if self.kind == "cq" and self._hunt_cq and not self.hunt:
+            self.kind, self._hunt_cq = None, False      # Hunt went off during the QSO: no more CQ
+        elif self.kind == "cq":
             self.step, self.tries = "cq", 0
             self._take_queued()               # a waiting caller instead of the next CQ
         else:
@@ -887,6 +932,7 @@ class Sequencer:
                 "sessions": [view(s) for s in list(self.sessions)[:20]],
                 "auto_log": self.logbook.auto_log, "auto_answer": self.auto_answer,
                 "hunt": self.hunt, "adopt_freq": self.adopt_freq,
+                "hunt_cq": self._hunt_cq and self.kind == "cq",      # the CQ is Hunt's own
                 "hunt_left_s": (None if math.isinf(self.hunt_until) else max(0, round(self.hunt_until - time.time())))
                 if self.hunt else 0,                       # None: no switch-off
                 "hunt_blocked": sorted(self.hunt_blocked),

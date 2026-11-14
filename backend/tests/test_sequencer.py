@@ -881,3 +881,14 @@ def test_free_frequency_avoids_signals_and_energy():
     # nothing at all heard: the middle of the range
     hz = digi.free_frequency([(np.ones(nb), [])], "FT8")
     assert 1400 <= hz <= 1550
+
+
+# ---- distance from the own locator (Received Messages km column)
+def test_grid_distance():
+    me = digi.grid_ll("JO62qk")
+    assert abs(me[0] - 52.44) < 0.05 and abs(me[1] - 13.375) < 0.05      # Berlin
+    assert digi.grid_ll("RR73") is not None and digi.grid_ll("599") is None and digi.grid_ll("") is None
+    km = digi.distance_km(me, digi.grid_ll("IO83"))                        # northern England
+    assert 1000 < km < 1200
+    km = digi.distance_km(me, digi.grid_ll("PM95"))                        # Tokyo
+    assert 8800 < km < 9200

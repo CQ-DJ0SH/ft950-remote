@@ -965,6 +965,10 @@ let rxFilter = "all";
 const MAX_ROWS = 1500;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmtT = (u) => (u || "").slice(0, 8);
+// distance from the own locator; "~" = only the DXCC entity's centre known
+const fmtKm = (d) => (d.km == null ? "" : (d.km_src === "dxcc" ? "~" : "") + d.km.toLocaleString("de-DE"));
+// local time of a period (browser's time zone), for the column next to UTC
+const fmtLocal = (t0) => (t0 == null ? "" : new Date(t0 * 1000).toLocaleTimeString("de-DE", { hour12: false }));
 const isMine = (d) => !!myCall && (d.to === myCall || d.from === myCall);
 const newDx = (d) => (d.worked && d.dxcc && !d.worked.dxcc ? '<span class="newdx" title="DXCC entity never worked">NEW</span>' : "");
 
@@ -991,6 +995,12 @@ function passes(d) {
   }
 }
 let lastCycleShown = null;
+// five small bars next to the SNR: lit from -20 / -15 / -10 / -3 / +5 dB up
+const SNR_STEPS = [-20, -15, -10, -3, 5];
+function snrBars(snr) {
+  const n = SNR_STEPS.filter((t) => snr >= t).length;
+  return `<span class="snr-bars" aria-hidden="true">${SNR_STEPS.map((_, i) => `<i${i < n ? ' class="on"' : ""}></i>`).join("")}</span>`;
+}
 function appendRx(d) {
   if (!passes(d)) return;
   const tr = document.createElement("tr");
@@ -998,9 +1008,12 @@ function appendRx(d) {
   lastCycleShown = d.period_utc;
   tr.className = [...rowClass(d), first ? "cycle-start" : ""].join(" ").trim();
   if (d.from && !isMine(d)) tr.dataset.from = d.from.toUpperCase();    // Hunt marks it later
-  tr.innerHTML = `<td>${first ? fmtT(d.period_utc) : ""}</td><td class="n">${d.snr}</td>` +
+  // time on every row (only on the first, a busy pass scrolled it out of view); repeats dimmed
+  const rep = first ? "" : " t-rep";
+  tr.innerHTML = `<td class="${rep.trim()}">${fmtT(d.period_utc)}</td><td class="loc${rep}">${fmtLocal(d.t0)}</td><td class="sig">${snrBars(d.snr)}</td><td class="n">${d.snr}</td>` +
     `<td class="n">${d.dt >= 0 ? "+" : ""}${d.dt.toFixed(1)}</td><td class="n">${d.df}</td>` +
-    `<td class="msg">${esc(d.msg)}</td><td class="dx">${esc(d.dxcc || "")}${newDx(d)}</td>`;
+    `<td class="msg">${esc(d.msg)}</td><td class="dx">${esc(d.dxcc || "")}${newDx(d)}</td>` +
+    `<td class="n km${d.km_src === "dxcc" ? " rough" : ""}" title="${d.km == null ? "" : d.km_src === "dxcc" ? "to the centre of the DXCC entity (no locator heard)" : "locator to locator"}">${fmtKm(d)}</td>`;
   tr.onclick = () => {
     for (const r of $("rx-body").querySelectorAll(".sel")) r.classList.remove("sel");
     tr.classList.add("sel");

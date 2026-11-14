@@ -93,6 +93,25 @@ def free_frequency(periods: list[tuple[np.ndarray, list[int]]], mode: str,
     return int(round((mid - bw / 2) / 10) * 10)
 
 
+def grid_ll(grid: str) -> Optional[tuple[float, float]]:
+    """Centre (lat, lon) of a Maidenhead locator, 4 or 6 characters."""
+    g = (grid or "").strip().upper()
+    if len(g) < 4 or not ("A" <= g[0] <= "R" and "A" <= g[1] <= "R" and g[2:4].isdigit()):
+        return None
+    lon = (ord(g[0]) - 65) * 20 - 180 + int(g[2]) * 2
+    lat = (ord(g[1]) - 65) * 10 - 90 + int(g[3])
+    if len(g) >= 6 and "A" <= g[4] <= "X" and "A" <= g[5] <= "X":
+        return lat + (ord(g[5]) - 65) / 24 + 1 / 48, lon + (ord(g[4]) - 65) / 12 + 1 / 24
+    return lat + 0.5, lon + 1.0
+
+
+def distance_km(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """Great-circle distance (haversine, mean earth radius)."""
+    la1, lo1, la2, lo2 = map(math.radians, (*a, *b))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 2 * 6371.0 * math.asin(min(1.0, math.sqrt(h)))
+
+
 MODES = {
     "FT8": {"period": 15.0, "flag": "-8", "tr": "15"},
     "FT4": {"period": 7.5, "flag": "-5", "tr": "7"},
@@ -360,6 +379,7 @@ class DigiService:
         self.data = Path(data_dir) if data_dir else self.work
         self.keep_slices = keep_slices
         self._last_df: dict[str, list[int]] = {}   # previous period's offsets: where to split
+        self._grids: dict[str, str] = {}            # call -> last grid heard (distance)
         # mode -> the last periods' (band power, decoded offsets): free_hz()
         self._occupancy: dict[str, deque] = {}
         self.dxcc = Dxcc()
@@ -558,7 +578,26 @@ class DigiService:
                      dxcc=self.dxcc.lookup(info["from"]) if info.get("from") else None)
             if self.worked_lookup and d.get("from"):
                 d["worked"] = self.worked_lookup(d["from"], dial, d["dxcc"])
+            self._distance(d)
         return decodes
+
+    def _distance(self, d: dict) -> None:
+        """km from the own locator: the station's grid (from this message or
+        an earlier one), else its DXCC entity's centre (km_src "dxcc": rough)."""
+        call = (d.get("from") or "").upper()
+        me = grid_ll(self.config.get("my_grid") or "")
+        if not call or call.startswith("<") or not me:
+            return
+        if d.get("grid") and d["grid"] != "RR73":
+            self._grids[call] = d["grid"]
+            if len(self._grids) > 5000:                    # oldest out
+                del self._grids[next(iter(self._grids))]
+        ll, src = grid_ll(self._grids.get(call, "")), "grid"
+        if ll is None:
+            pos = self.dxcc.position(call) if self.dxcc else None
+            ll, src = (pos[1], pos[2]) if pos else None, "dxcc"
+        if ll is not None:
+            d["km"], d["km_src"] = round(distance_km(me, ll)), src
 
     async def _early(self, mode: str, t0: float, rng: tuple[int, int]) -> None:
         """Depth-1 decode of the period so far (rest zero-padded), only for

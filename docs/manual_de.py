@@ -297,8 +297,12 @@ DE = [
           "Fußzeile: D2 (Standard) bringt die Dekodierungen auf dem Pi 5 etwa 1,5–2 s "
           "nach Periodenende, D3 findet ein paar schwache Signale mehr und braucht "
           "etwa 3 s, AUTO richtet die Tiefe nach der gemessenen Laufzeit. "
-          "Empfangene Meldungen zeigen SNR, Zeitversatz, Frequenz, Text und DXCC, "
-          "farblich nach Worked-before markiert."),
+          "Empfangene Meldungen zeigen UTC und Ortszeit (die Zeit in jeder Zeile, "
+          "nach der ersten eines Durchgangs gedimmt), eine Level-Spalte (fünf Balken, "
+          "ab -20 / -15 / -10 / -3 / +5 dB), SNR, Zeitversatz, Frequenz, Text, DXCC "
+          "farblich nach Worked-before und die Entfernung in km vom eigenen Locator — "
+          "vom Locator der Station (aus dieser oder einer früheren Meldung), sonst mit ~ "
+          "markiert und zur Mitte ihres DXCC-Gebiets gemessen."),
     ("p", "Titelzeile: DECODE, CQ mit Ziel, Auto Answer, Auto Hunt, das "
           "WSJT-X-Schild, die nächste Sendung, Halt TRX und die TX-Lampe. Leiste "
           "unter den Tabellen: Betriebsart (AUTO · FT8, FT8, FT4), der "

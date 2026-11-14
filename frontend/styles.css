@@ -311,6 +311,16 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .pane-head h3{margin:0 auto 0 0; font:600 16px var(--font-disp); letter-spacing:.03em}
 .chk{font-size:12px; color:var(--text-dim); display:flex; gap:4px; align-items:center}
 .tbl{overflow:auto; height:430px; position:relative}
+.msgs td.t-rep{opacity:.4}             /* same pass as the row above */
+.msgs td.loc{color:var(--text-dim)}
+.msgs td.km{color:var(--text-dim)} .msgs td.km.rough{opacity:.6}   /* distance; ~ rough (DXCC centre) */                             /* local time next to UTC */
+.msgs td.sig,.msgs th.sig{width:1%; padding-right:14px}            /* level column before SNR (not .lvl: that is the level meter, display:flex) */
+.snr-bars{display:inline-flex; align-items:flex-end; gap:2px; height:14px; vertical-align:-2px}
+.snr-bars i{width:3px; background:var(--text-dim); opacity:.2; border-radius:1px}
+.snr-bars i:nth-child(1){height:4px} .snr-bars i:nth-child(2){height:6.5px} .snr-bars i:nth-child(3){height:9px}
+.snr-bars i:nth-child(4){height:11.5px} .snr-bars i:nth-child(5){height:14px}
+/* lit bars in the panel's accent (theme / Settings ▸ Appearance), muted */
+.snr-bars i.on{background:var(--accent, var(--ok)); opacity:.7}
 .tbl.short{height:132px}
 .msgs{width:100%; border-collapse:collapse; font:13px/1.25 var(--font-mono)}
 .msgs th{position:sticky; top:0; background:var(--panel); text-align:left; font:600 12px var(--font-ui);

@@ -577,6 +577,8 @@ class DigiService:
                      even=int(t0 // MODES[mode]["period"]) % 2 == 0,
                      rf_hz=dial + d["df"] if dial else None,
                      dxcc=self.dxcc.lookup(info["from"]) if info.get("from") else None)
+            if d["dxcc"]:
+                d["dxcc_pfx"] = self.dxcc.pfx.get(d["dxcc"], "")
             if self.worked_lookup and d.get("from"):
                 d["worked"] = self.worked_lookup(d["from"], dial, d["dxcc"])
             self._distance(d)

@@ -9,10 +9,47 @@ const pwaMq = window.matchMedia("(display-mode: standalone)");
 const markPwa = () => document.documentElement.classList.toggle("pwa", pwaMq.matches || navigator.standalone === true);
 markPwa(); pwaMq.addEventListener?.("change", markPwa);
 
+// View settings also kept on the Pi (palette, theme, panels …): localStorage
+// alone lost them with every cache clear. Changes go to the Pi (batched);
+// a browser without its own value takes the Pi's before the page is built.
+const PI_PREFS = new Set(["theme", "panelsOff", "accents", "cmapDefault", "wfCallsAll", "rxBox",
+  "wf-contrast", "wf-bright", "peakHold", "spec.peak", "afuPlan", "afuOn", "af", "cqTo", "cwStyle",
+  "cwName", "cwQth", "cwSerial", "cwMon", "cwNr", "hrf.level", "hrf.peak", "rttyTxHz", "jttyTxHz"]);
+let prefsOut = {}, prefsTimer = null;
 const store = {
   get(k, d) { try { const v = localStorage.getItem("ft950." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem("ft950." + k, JSON.stringify(v)); } catch { /* private mode */ } },
+  set(k, v) {
+    try { localStorage.setItem("ft950." + k, JSON.stringify(v)); } catch { /* private mode */ }
+    if (!PI_PREFS.has(k)) return;
+    prefsOut[k] = v;
+    clearTimeout(prefsTimer);
+    prefsTimer = setTimeout(() => {
+      const prefs = prefsOut; prefsOut = {};
+      fetch("/api/ui/prefs", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prefs }) }).catch(() => {});
+    }, 800);
+  },
 };
+(() => {
+  // synchronous on purpose: the values must be there before the code below reads them
+  try {
+    const x = new XMLHttpRequest();
+    x.open("GET", "/api/ui/prefs", false);
+    x.send();
+    if (x.status !== 200) return;
+    const prefs = JSON.parse(x.responseText).prefs || {};
+    if (!Object.keys(prefs).length) {
+      // nothing kept on the Pi yet: this browser's own settings become the station's
+      const mine = {};
+      for (const k of PI_PREFS) { const v = localStorage.getItem("ft950." + k); if (v !== null) mine[k] = JSON.parse(v); }
+      if (Object.keys(mine).length) fetch("/api/ui/prefs", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prefs: mine }) }).catch(() => {});
+    }
+    for (const [k, v] of Object.entries(prefs)) {
+      if (PI_PREFS.has(k) && localStorage.getItem("ft950." + k) === null) localStorage.setItem("ft950." + k, JSON.stringify(v));
+    }
+  } catch { /* Pi not reachable or private mode: browser defaults */ }
+})();
 
 // ---------------------------------------------------------------- helpers
 let toastTimer = null;
@@ -1027,7 +1064,7 @@ function appendRx(d) {
   const rep = first ? "" : " t-rep";
   tr.innerHTML = `<td class="${rep.trim()}">${fmtUtcDate(d.t0)}${fmtT(d.period_utc)}</td><td class="loc" title="${d.utc_off == null ? "" : `local time of the station: ${stationTime(d)}`}">${fmtOff(d)}</td><td class="sig">${snrBars(d.snr)}</td><td class="n">${d.snr}</td>` +
     `<td class="n">${d.dt >= 0 ? "+" : ""}${d.dt.toFixed(1)}</td><td class="n">${d.df}</td>` +
-    `<td class="msg">${esc(d.msg)}</td><td class="dx" title="${esc(d.dxcc || "")}">${esc(d.dxcc || "")}${newDx(d)}</td>` +
+    `<td class="msg">${esc(d.msg)}</td><td class="dx" title="${esc(d.dxcc || "")}">${d.dxcc_pfx ? `<span class="pfx">${esc(d.dxcc_pfx)}</span>` : ""}${esc(d.dxcc || "")}${newDx(d)}</td>` +
     `<td class="n km${d.km_src === "dxcc" ? " rough" : ""}" title="${d.km == null ? "" : d.km_src === "dxcc" ? "to the centre of the DXCC entity (no locator heard)" : "locator to locator"}">${fmtKm(d)}</td>`;
   tr.onclick = () => {
     for (const r of $("rx-body").querySelectorAll(".sel")) r.classList.remove("sel");

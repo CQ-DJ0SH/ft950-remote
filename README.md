@@ -55,7 +55,8 @@ decoding, plus voice operation over WebRTC.
     `docs/FT8-DECODING.md` §13); the decoder is
     chosen in Settings ▸ FT8 — see [FT8 decoder performance](#ft8-decoder-performance-pi-5)
   - received / my messages / sessions tables with DXCC and worked-before flags;
-    received messages with UTC date/time, the station's local time as its UTC
+    received messages with UTC date/time, DXCC with its main prefix, the
+    station's local time as its UTC
     offset (country, locator or call district, summer time), a signal-level
     column (fixed column widths: the header does not jump) and the
     distance in km (locator to locator, ~ = to the DXCC entity's centre)
@@ -87,7 +88,8 @@ decoding, plus voice operation over WebRTC.
   - **Globe** (popup from Received Messages): the stations heard on a turning,
     see-through hologram globe - new DXCC / new on band / worked in colour, a
     line out to each new call, dashed lines to stations calling CQ, the QSO in
-    progress in amber; a table beside it with TX lamp and HALT TRX; a
+    progress in amber; a table beside it (level bars before SNR) with TX lamp
+    and HALT TRX; a
     double-click calls the station through the main page; **GRAY LINE**
     shades the night side from the sun's position; land as an even dot grid
     (the same from any side, the poles included); the FT8 strip under it shows

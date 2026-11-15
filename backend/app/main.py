@@ -39,7 +39,7 @@ from .config import APP_VERSION, settings
 from .digi import DECODERS as DIGI_DECODERS, MODES as DIGI_MODES, DigiService, decoder_available, decoder_config, decoder_tag
 from .ft950 import (AGC_SET, ATT, BANDS, MODES, PREAMP, ROOF_SET, WIDTHS,
                     FT950Error, width_column)
-from .models import (AccentDefaultsReq, JttySendReq, QslConfigReq, QslPreviewReq, QslSendReq, RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
+from .models import (AccentDefaultsReq, UiPrefsReq, JttySendReq, QslConfigReq, QslPreviewReq, QslSendReq, RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
                      ClarReq, ContourReq, IfShiftReq, LevelReq, NotchReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
@@ -1286,6 +1286,20 @@ async def log_qso(req: QsoReq) -> dict:
 
 
 # -- panel accent colours: the station's defaults (Settings ▸ Appearance) ----------
+@app.get("/api/ui/prefs")
+async def ui_prefs() -> dict:
+    """The view settings kept on the Pi: a browser without its own (new, or
+    its cache cleared) starts with them."""
+    return {"prefs": runtime.load().get("ui_prefs") or {}}
+
+
+@app.post("/api/ui/prefs")
+async def ui_prefs_save(req: UiPrefsReq) -> dict:
+    prefs = {**(runtime.load().get("ui_prefs") or {}), **req.prefs}
+    runtime.save({"ui_prefs": prefs})
+    return {"prefs": prefs}
+
+
 @app.get("/api/ui/accents")
 async def ui_accents() -> dict:
     """Colours every browser starts with; a browser's own choice wins."""

@@ -280,7 +280,8 @@ EN = [
           "station's clock), a level column (five neutral bars, the stronger the brighter, "
           "lit from -20 / -15 / -10 / -3 / +5 dB), SNR, time offset, "
           "frequency, message (dotted underline: the station was worked before, on any "
-          "band), DXCC with worked-before colouring and the distance in "
+          "band), DXCC with its main prefix in front (DL, G, UA9 …) and worked-before "
+          "colouring, and the distance in "
           "km from your locator — from the station's locator (this message or an "
           "earlier one), else marked ~ and measured to the centre of its DXCC entity."),
     ("p", "Title bar: DECODE, CQ with its target, Auto Answer, Auto Hunt, the "
@@ -447,7 +448,8 @@ EN = [
         "The table beside it has your call as its title, the frequency with band "
         "and mode, a TX lamp (red and glowing while transmitting, with the message "
         "that goes out) and HALT TRX, as on the main page. Columns: UTC, call (with "
-        "a CQ tag while it calls), locator, km, bearing, SNR, DXCC.",
+        "a CQ tag while it calls), locator, km, bearing, level (the bars of Received "
+        "Messages), SNR, DXCC (full name on hover).",
         "A click on a row (or a point) turns the globe to the station and stops it "
         "there; RESUME, bottom left, turns it on again - also after turning it by "
         "hand with the mouse. The wheel zooms. A station clicked on the globe is "
@@ -764,6 +766,10 @@ EN = [
         "QSL: card picture and layout, mail server, e-mail text, test card, "
         "automatic sending (chapter 15).",
         "Memories: the 32 memory keys with CTCSS, split and VFO B.",
+        "View settings that are \u201cper browser\u201d (palette, callsign strip, RX window, "
+        "contrast / brightness, theme, hidden panels and accent colours, AFU lamp, CW name / "
+        "QTH, RTTY / JTTY TX frequency …) are also kept on the Pi: a browser without its "
+        "own - new, or its cache cleared - starts with the ones changed last.",
         "Appearance (per browser): hide the DIGI, RTTY, JTTY, CW, HackRF and Log panels "
         "(VFO, PTT and Audio always stay; hiding the HackRF stops its sweep), an accent "
         "colour per panel with Reset, peak hold of the LCD meters (PO · SWR · ALC · "

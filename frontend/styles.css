@@ -337,7 +337,8 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 #rx-wrap .msgs th:nth-child(4){width:40px}   /* SNR -24 */
 #rx-wrap .msgs th:nth-child(5){width:48px}   /* Δ +0.1 */
 #rx-wrap .msgs th:nth-child(6){width:48px}   /* Freq 2345 */
-#rx-wrap .msgs th:nth-child(8){width:120px}  /* DXCC (long names: …, full name on hover) */
+#rx-wrap .msgs th:nth-child(8){width:150px}  /* DXCC: prefix + name (long names: …, full name on hover) */
+.msgs td.dx .pfx{display:inline-block; min-width:4ch; margin-right:6px; font:500 12px var(--font-mono); color:var(--text)}   /* DL, UA9 …: names line up */
 #rx-wrap .msgs th:nth-child(9){width:72px}   /* km ~12.345 */
 .msgs th{position:sticky; top:0; background:var(--panel); text-align:left; font:600 12px var(--font-ui);
   color:var(--text-dim); padding:4px 8px; border-bottom:1px solid var(--edge); z-index:1}

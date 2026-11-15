@@ -307,7 +307,8 @@ DE = [
           "eine Level-Spalte (fünf neutrale Balken, je stärker desto heller, ab -20 / "
           "-15 / -10 / -3 / +5 dB), SNR, Zeitversatz, Frequenz, Text (gepunktet "
           "unterstrichen: Station schon einmal gearbeitet, auf irgendeinem Band), DXCC "
-          "farblich nach Worked-before und die Entfernung in km vom eigenen Locator — "
+          "mit dem Hauptpräfix davor (DL, G, UA9 …) und farblich nach Worked-before, und "
+          "die Entfernung in km vom eigenen Locator — "
           "vom Locator der Station (aus dieser oder einer früheren Meldung), sonst mit ~ "
           "markiert und zur Mitte ihres DXCC-Gebiets gemessen."),
     ("p", "Titelzeile: DECODE, CQ mit Ziel, Auto Answer, Auto Hunt, das "
@@ -491,7 +492,7 @@ DE = [
         "und Betriebsart, eine TX-Lampe (rot leuchtend beim Senden, mit der "
         "gesendeten Nachricht) und HALT TRX wie auf der Hauptseite. Spalten: UTC, "
         "Rufzeichen (mit CQ-Markierung, solange es ruft), Locator, km, Richtung, "
-        "SNR, DXCC.",
+        "Level (die Balken von Received Messages), SNR, DXCC (voller Name mit der Maus).",
         "Ein Klick auf eine Zeile (oder einen Punkt) dreht den Globus zur Station "
         "und hält ihn dort an; RESUME unten links dreht ihn wieder - auch nachdem "
         "er von Hand mit der Maus gedreht wurde. Das Mausrad zoomt. Eine auf dem "
@@ -833,6 +834,11 @@ DE = [
         "QSL: Kartenbild und Anordnung, Mailserver, E-Mail-Text, Testkarte, "
         "automatischer Versand (Kapitel 15).",
         "Memories: die 32 Speichertasten mit CTCSS, Split und VFO B.",
+        "Ansichtseinstellungen \u201epro Browser\u201c (Farbschema, Rufzeichenstreifen, "
+        "Empfangsfenster, Kontrast / Helligkeit, Theme, ausgeblendete Felder und Akzentfarben, "
+        "AFU-Lampe, CW-Name / -QTH, RTTY- / JTTY-Sendefrequenz …) liegen zusätzlich auf dem "
+        "Pi: ein Browser ohne eigene - neu oder Cache geleert - startet mit den zuletzt "
+        "geänderten.",
         "Appearance (pro Browser): die Felder DIGI, RTTY, JTTY, CW, HackRF und Log "
         "ausblenden (VFO, PTT und Audio bleiben immer; ein ausgeblendetes HackRF stoppt "
         "den Sweep), eine Akzentfarbe pro Feld mit Reset, Peak Hold der LCD-Anzeigen "

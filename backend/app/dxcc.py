@@ -25,6 +25,7 @@ class Dxcc:
         self.prefix: dict[str, str] = {}
         self.pos: dict[str, tuple[float, float]] = {}    # entity → (lat, lon east+)
         self.zone: dict[str, tuple[str, float]] = {}     # entity → (continent, UTC offset h east+, standard time)
+        self.pfx: dict[str, str] = {}                    # entity → its main prefix (DL, G, UA …)
         p = next((Path(x) for x in ([path] if path else CTY_PATHS)
                   if x and Path(x).is_file()), None)
         if p:
@@ -41,6 +42,7 @@ class Dxcc:
                 self.pos.setdefault(name, (float(fields[4]), -float(fields[5])))
             except ValueError:
                 pass
+            self.pfx.setdefault(name, fields[7].strip().lstrip("*"))
             try:                 # and the UTC offset positive to the west too
                 self.zone.setdefault(name, (fields[3].strip(), -float(fields[6])))
             except ValueError:

@@ -129,10 +129,22 @@
   td.call.newdx{color:var(--newdx); text-shadow:0 0 8px rgba(255,91,216,.6)}
   td.call.newb{color:var(--newb); text-shadow:0 0 8px rgba(109,255,158,.5)}
   .tbl{flex:1 1 auto; overflow-y:auto; overflow-x:hidden; min-height:0}   /* never sideways */
-  /* fixed columns: the table is never wider than the panel; the call takes the rest */
+  /* fixed columns: the table is never wider than the panel; DXCC takes the rest */
   table{width:100%; border-collapse:collapse; font:12px var(--font-mono); table-layout:fixed}
-  th:nth-child(1){width:72px} th:nth-child(3){width:64px} th:nth-child(4){width:54px}
-  th:nth-child(5){width:38px} th:nth-child(6){width:42px} th:nth-child(7){width:92px}
+  th:nth-child(1){width:72px} th:nth-child(2){width:110px} th:nth-child(3){width:64px} th:nth-child(4){width:54px}
+  th:nth-child(5){width:38px}
+  th:nth-child(6){width:50px}   /* level bars before SNR */
+  th:nth-child(7){width:36px}
+  table th.lv, table td.lv{text-align:right; padding-right:2px}   /* bars right next to the SNR */
+  table td.sn{padding-left:2px}
+  .snr-bars{display:inline-flex; align-items:flex-end; gap:2px; height:12px; vertical-align:-1px}
+  .snr-bars i{width:3px; background:var(--dim); opacity:.15; border-radius:1px}
+  .snr-bars i:nth-child(1){height:3px} .snr-bars i:nth-child(2){height:5.5px} .snr-bars i:nth-child(3){height:8px}
+  .snr-bars i:nth-child(4){height:10px} .snr-bars i:nth-child(5){height:12px}
+  /* lit: neutral, the stronger the brighter - as in Received Messages */
+  .snr-bars i.on{background:var(--text)}
+  .snr-bars i.on:nth-child(1){opacity:.35} .snr-bars i.on:nth-child(2){opacity:.5}
+  .snr-bars i.on:nth-child(3){opacity:.65} .snr-bars i.on:nth-child(4){opacity:.82} .snr-bars i.on:nth-child(5){opacity:1}
   td{overflow:hidden; text-overflow:ellipsis}
   table th, table td{padding-left:6px; padding-right:6px}   /* beats the td padding below */
   th{position:sticky; top:0; background:rgba(8,32,56,.92); color:var(--dim); font:500 10px var(--font-ui);
@@ -237,7 +249,7 @@
     </div>
     <div class="tbl">
       <table>
-        <thead><tr><th>UTC</th><th>Call</th><th>Loc</th><th class="n">km</th><th class="n">°</th><th class="n">SNR</th><th>DXCC</th></tr></thead>
+        <thead><tr><th>UTC</th><th>Call</th><th>Loc</th><th class="n">km</th><th class="n">°</th><th class="lv" title="Signal level: bars lit from -20 / -15 / -10 / -3 / +5 dB SNR">Level</th><th class="n">SNR</th><th>DXCC</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="empty" id="empty">Waiting for decodes …</div>
@@ -309,6 +321,9 @@ addEventListener("storage", (e) => { if (e.key === "ft950.theme") applyTheme(); 
 
 // ---------------------------------------------------------------- state
 let me = { call: "", grid: "", pos: null };
+// five bars, lit from -20 / -15 / -10 / -3 / +5 dB SNR (as in Received Messages)
+const SNR_STEPS = [-20, -15, -10, -3, 5];
+const snrBars = (snr) => `<span class="snr-bars" aria-hidden="true">${SNR_STEPS.map((t) => `<i${snr >= t ? ' class="on"' : ""}></i>`).join("")}</span>`;
 const stations = new Map();                       // call -> {call, grid, pos, approx, snr, t, dxcc, mode, msg}
 const located = new Map();                         // call -> [lat, lon] | null  (DXCC centre, asked once)
 let selected = null, hovered = null;
@@ -831,7 +846,7 @@ function render() {
       `<td>${utc}</td><td class="call ${kindOf(s) === "worked" ? "" : kindOf(s)}" title="${{ newdx: "new DXCC", newb: "new on this band", worked: "worked" }[kindOf(s)]}${callingCq(s, nowS) ? " · calling CQ" : ""}${qso && qso.call === s.call ? " · QSO in progress" : ""}: ${esc(s.call)}">${esc(s.call)}${callingCq(s, nowS) ? '<span class="cqtag" title="Calling CQ now (last 45 s)">CQ</span>' : ""}</td>` +
       `<td class="${s.approx ? "approx" : ""}">${esc(s.grid || (s.approx ? "≈ DXCC" : "—"))}</td>` +
       `<td class="n">${db ? Math.round(db.km) : ""}</td><td class="n">${db ? Math.round(db.brg) : ""}</td>` +
-      `<td class="n">${s.snr > 0 ? "+" : ""}${s.snr}</td><td class="dx" title="${esc(s.dxcc || "")}">${esc(s.dxcc || "")}</td></tr>`;
+      `<td class="lv">${snrBars(s.snr)}</td><td class="n sn">${s.snr > 0 ? "+" : ""}${s.snr}</td><td class="dx" title="${esc(s.dxcc || "")}">${esc(s.dxcc || "")}</td></tr>`;
   }).join("");
   $("empty").style.display = list.length ? "none" : "block";
   $("count").textContent = `${list.length} station${list.length === 1 ? "" : "s"}` +

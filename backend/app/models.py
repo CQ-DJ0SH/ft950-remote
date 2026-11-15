@@ -1,6 +1,8 @@
 """Pydantic request bodies for the REST API."""
 from __future__ import annotations
 
+import json
+
 from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, BeforeValidator, Field, field_validator
@@ -321,6 +323,31 @@ class DigiConfigReq(BaseModel):
 
 class CwSpeedReq(BaseModel):
     wpm: int = Field(ge=4, le=60)
+
+
+# The browser's view settings the Pi keeps (localStorage alone was lost with
+# every cache clear): only these keys, small values
+UI_PREF_KEYS = {"theme", "panelsOff", "accents", "cmapDefault", "wfCallsAll", "rxBox", "wf-contrast",
+                "wf-bright", "peakHold", "spec.peak", "afuPlan", "afuOn", "af", "cqTo", "cwStyle",
+                "cwName", "cwQth", "cwSerial", "cwMon", "cwNr", "hrf.level", "hrf.peak",
+                "rttyTxHz", "jttyTxHz"}
+
+
+class UiPrefsReq(BaseModel):
+    """Changed view settings, merged into the kept ones (unknown keys dropped)."""
+    prefs: dict[str, object] = Field(default_factory=dict, max_length=40)
+
+    @field_validator("prefs")
+    @classmethod
+    def _small(cls, v: dict) -> dict:
+        out = {}
+        for k, x in v.items():
+            if k not in UI_PREF_KEYS:
+                continue
+            if len(json.dumps(x)) > 2000:
+                raise ValueError(f"{k}: value too large")
+            out[k] = x
+        return out
 
 
 class AccentDefaultsReq(BaseModel):

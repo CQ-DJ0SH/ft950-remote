@@ -892,3 +892,25 @@ def test_grid_distance():
     assert 1000 < km < 1200
     km = digi.distance_km(me, digi.grid_ll("PM95"))                        # Tokyo
     assert 8800 < km < 9200
+
+
+# ---- the station's local time (Received Messages Local column)
+def test_station_utc_offset():
+    import datetime as dt
+    from app import tzguess
+    from app.dxcc import Dxcc
+    x = Dxcc()
+    if not x.zone:
+        return                                             # no cty.dat on this machine
+    nov = dt.datetime(2026, 11, 15, 12, tzinfo=dt.timezone.utc).timestamp()
+    jul = dt.datetime(2026, 7, 1, 12, tzinfo=dt.timezone.utc).timestamp()
+    off = lambda ent, lon, t: tzguess.utc_offset(ent, x.zone.get(ent), lon, t)
+    assert off("Canada", -79.4, nov) == (-5, False) and off("Canada", -79.4, jul) == (-4, False)
+    assert off("Canada", -123.1, nov) == (-8, False)                     # Vancouver
+    assert off("Canada", -52.7, nov) == (-3.5, False)                    # St. John's
+    assert off("Canada", None, nov)[1] is True                           # no longitude: rough
+    assert off("Fed. Rep. of Germany", None, nov) == (1, False)
+    assert off("Fed. Rep. of Germany", None, jul) == (2, False)
+    assert off("Japan", None, jul) == (9, False)
+    assert off("Australia", 151.2, nov) == (11, False)                   # Sydney, summer there
+    assert tzguess.district_lon("Canada", "VE7ABC") == -123 and tzguess.district_lon("United States", "W6A") is None

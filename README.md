@@ -55,8 +55,9 @@ decoding, plus voice operation over WebRTC.
     `docs/FT8-DECODING.md` §13); the decoder is
     chosen in Settings ▸ FT8 — see [FT8 decoder performance](#ft8-decoder-performance-pi-5)
   - received / my messages / sessions tables with DXCC and worked-before flags;
-    received messages with UTC and local date/time (the local date in bold when
-    it is another day than in UTC), a signal-level column and the
+    received messages with UTC date/time, the station's local time as its UTC
+    offset (country, locator or call district, summer time), a signal-level
+    column (fixed column widths: the header does not jump) and the
     distance in km (locator to locator, ~ = to the DXCC entity's centre)
   - waterfall with TX (red) and RX (green) markers; **Adopt Frequency** moves TX
     onto the station clicked, a TX frequency set by hand switches it off;

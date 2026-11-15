@@ -34,6 +34,7 @@ import numpy as np
 from .audio import RATE, AudioCapture, apply_gain, to_12k
 from . import dec_history
 from .dxcc import Dxcc
+from .tzguess import district_lon, utc_offset
 from .state import ConnectionManager
 
 log = logging.getLogger("ft950.digi")
@@ -586,7 +587,7 @@ class DigiService:
         an earlier one), else its DXCC entity's centre (km_src "dxcc": rough)."""
         call = (d.get("from") or "").upper()
         me = grid_ll(self.config.get("my_grid") or "")
-        if not call or call.startswith("<") or not me:
+        if not call or call.startswith("<"):
             return
         if d.get("grid") and d["grid"] != "RR73":
             self._grids[call] = d["grid"]
@@ -596,8 +597,17 @@ class DigiService:
         if ll is None:
             pos = self.dxcc.position(call) if self.dxcc else None
             ll, src = (pos[1], pos[2]) if pos else None, "dxcc"
-        if ll is not None:
+        if ll is not None and me:
             d["km"], d["km_src"] = round(distance_km(me, ll)), src
+        # the station's local time (offset from UTC): its locator's longitude for wide entities
+        if self.dxcc:
+            ent = d.get("dxcc") or self.dxcc.lookup(call)
+            lon = ll[1] if ll is not None and src == "grid" else district_lon(ent, call)
+            centre = self.dxcc.pos.get(ent) if ent else None
+            off = utc_offset(ent, self.dxcc.zone.get(ent) if ent else None, lon, d.get("t0") or time.time(),
+                             centre[1] if centre else None)
+            if off is not None:
+                d["utc_off"], d["utc_off_rough"] = off
 
     async def _early(self, mode: str, t0: float, rng: tuple[int, int]) -> None:
         """Depth-1 decode of the period so far (rest zero-padded), only for

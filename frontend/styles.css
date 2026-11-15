@@ -312,8 +312,7 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .chk{font-size:12px; color:var(--text-dim); display:flex; gap:4px; align-items:center}
 .tbl{overflow:auto; height:430px; position:relative}
 .msgs td.t-rep{opacity:.4}             /* same pass as the row above */
-.msgs td.loc{color:var(--text-dim)}
-.msgs td.loc .day-diff{color:var(--text); font-weight:700}   /* local day ≠ UTC day */
+.msgs td.loc,.msgs th.loc{text-align:right; width:1%; padding-left:4px; padding-right:18px} .msgs td.loc{font-weight:500}                                   /* station local time: as clear as the message */
 .msgs td.km{color:var(--text-dim)} .msgs td.km.rough{opacity:.6}   /* distance; ~ rough (DXCC centre) */                             /* local time next to UTC */
 .msgs td.sig,.msgs th.sig{width:1%; padding-right:14px}            /* level column before SNR (not .lvl: that is the level meter, display:flex) */
 .snr-bars{display:inline-flex; align-items:flex-end; gap:2px; height:14px; vertical-align:-2px}
@@ -327,6 +326,19 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .snr-bars i.on:nth-child(5){opacity:1}
 .tbl.short{height:132px}
 .msgs{width:100%; border-collapse:collapse; font:13px/1.25 var(--font-mono)}
+/* Received Messages: fixed layout - the header row sets the widths, so the
+   columns do not jump when the first rows arrive; Message takes the rest */
+#rx-wrap .msgs{table-layout:fixed}
+#rx-wrap .msgs td{overflow:hidden; text-overflow:ellipsis}
+/* px, measured with the row font (the header's own font is narrower, so ch misleads) */
+#rx-wrap .msgs th:nth-child(1){width:128px}  /* UTC 14/11 09:06:00 */
+#rx-wrap .msgs th:nth-child(2){width:78px}   /* Local ≈−3.5 h */
+#rx-wrap .msgs th:nth-child(3){width:52px}   /* Level bars */
+#rx-wrap .msgs th:nth-child(4){width:40px}   /* SNR -24 */
+#rx-wrap .msgs th:nth-child(5){width:48px}   /* Δ +0.1 */
+#rx-wrap .msgs th:nth-child(6){width:48px}   /* Freq 2345 */
+#rx-wrap .msgs th:nth-child(8){width:120px}  /* DXCC (long names: …, full name on hover) */
+#rx-wrap .msgs th:nth-child(9){width:72px}   /* km ~12.345 */
 .msgs th{position:sticky; top:0; background:var(--panel); text-align:left; font:600 12px var(--font-ui);
   color:var(--text-dim); padding:4px 8px; border-bottom:1px solid var(--edge); z-index:1}
 .msgs td{padding:1px 8px; white-space:nowrap}

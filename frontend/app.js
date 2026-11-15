@@ -973,14 +973,16 @@ const fmtUtcDate = (t0) => {
   const t = new Date(t0 * 1000), p = (n) => String(n).padStart(2, "0");
   return `${p(t.getUTCDate())}/${p(t.getUTCMonth() + 1)} `;
 };
-// local date and time of a period (browser's time zone), for the column next to UTC: "14/11 10:06"
-const fmtLocal = (t0) => {
-  if (t0 == null) return "";
-  const t = new Date(t0 * 1000), p = (n) => String(n).padStart(2, "0");
-  const day = `${p(t.getDate())}/${p(t.getMonth() + 1)}`;
-  // another day than in UTC (around midnight): the date stands out
-  const other = t.getDate() !== t.getUTCDate();
-  return `${other ? `<b class="day-diff" title="local date differs from the UTC date">${day}</b>` : day} ${p(t.getHours())}:${p(t.getMinutes())}`;
+// the STATION's local time as its offset from UTC (backend: tzguess.py - country,
+// locator longitude, summer time); "≈": a wide country and no locator heard yet
+const stationTime = (d) => {
+  const t = new Date((d.t0 + d.utc_off * 3600) * 1000), p = (n) => String(n).padStart(2, "0");
+  return `${p(t.getUTCHours())}:${p(t.getUTCMinutes())}`;
+};
+const fmtOff = (d) => {
+  if (d.utc_off == null) return "";
+  const h = d.utc_off, a = Math.abs(h);
+  return `${d.utc_off_rough ? "≈" : ""}${h > 0 ? "+" : h < 0 ? "−" : "±"}${Number.isInteger(a) ? a : a.toFixed(1)} h`;
 };
 const isMine = (d) => !!myCall && (d.to === myCall || d.from === myCall);
 const newDx = (d) => (d.worked && d.dxcc && !d.worked.dxcc ? '<span class="newdx" title="DXCC entity never worked">NEW</span>' : "");
@@ -1023,9 +1025,9 @@ function appendRx(d) {
   if (d.from && !isMine(d)) tr.dataset.from = d.from.toUpperCase();    // Hunt marks it later
   // time on every row (only on the first, a busy pass scrolled it out of view); repeats dimmed
   const rep = first ? "" : " t-rep";
-  tr.innerHTML = `<td class="${rep.trim()}">${fmtUtcDate(d.t0)}${fmtT(d.period_utc)}</td><td class="loc${rep}">${fmtLocal(d.t0)}</td><td class="sig">${snrBars(d.snr)}</td><td class="n">${d.snr}</td>` +
+  tr.innerHTML = `<td class="${rep.trim()}">${fmtUtcDate(d.t0)}${fmtT(d.period_utc)}</td><td class="loc" title="${d.utc_off == null ? "" : `local time of the station: ${stationTime(d)}`}">${fmtOff(d)}</td><td class="sig">${snrBars(d.snr)}</td><td class="n">${d.snr}</td>` +
     `<td class="n">${d.dt >= 0 ? "+" : ""}${d.dt.toFixed(1)}</td><td class="n">${d.df}</td>` +
-    `<td class="msg">${esc(d.msg)}</td><td class="dx">${esc(d.dxcc || "")}${newDx(d)}</td>` +
+    `<td class="msg">${esc(d.msg)}</td><td class="dx" title="${esc(d.dxcc || "")}">${esc(d.dxcc || "")}${newDx(d)}</td>` +
     `<td class="n km${d.km_src === "dxcc" ? " rough" : ""}" title="${d.km == null ? "" : d.km_src === "dxcc" ? "to the centre of the DXCC entity (no locator heard)" : "locator to locator"}">${fmtKm(d)}</td>`;
   tr.onclick = () => {
     for (const r of $("rx-body").querySelectorAll(".sel")) r.classList.remove("sel");

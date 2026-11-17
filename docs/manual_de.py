@@ -37,6 +37,8 @@ DE = [
         "KW-Ausbreitung unter dem Wasserfall, mit echtem VOACAP für den eigenen "
         "Locator berechnet: 80-40, 30-20, 17-15, 12-10 und 6m in Grün / Gelb / Rot, "
         "mit Sonne/Mond-Schalter für Tag und Nacht.",
+        "DIGIMODES: CW, RTTY, JTTY und MFSK32 in einem Feld mit Umschalter; der "
+        "Decoder jeder Betriebsart läuft weiter, während eine andere gezeigt wird.",
         "RTTY-Skimmer: alle RTTY-Signale im Durchlassbereich werden gleichzeitig "
         "dekodiert (45,45 Bd, 170 Hz); Senden als AFSK über den DATA-Eingang, mit "
         "Makros.",
@@ -48,6 +50,9 @@ DE = [
         "JTTY, die Tastaturbetriebsart von WSJT-X 3.2+: getippt wie RTTY, jederzeit, "
         "mit Fehlerkorrektur (lesbar bis etwa −15 dB); jede Meldung im Durchlassbereich, "
         "Gespräch pro Station, Makros, Senden über den DATA-Eingang.",
+        "MFSK32 wie fldigi (16 Töne, Fehlerkorrektur, etwa 120 WPM, lesbar bis etwa "
+        "−11 dB): alle MFSK32-Signale im Durchlassbereich gleichzeitig dekodiert; "
+        "Senden über den DATA-Eingang, Groß- und Kleinschreibung, mit Makros.",
         "HackRF-Wasserfall, weitergereicht von TM-V71 Remote, der dem Amateurfunkband "
         "von VFO A folgt.",
         "Logbuch in Wavelog und QRZ.com, Auto-Log in der LOG-Titelzeile schaltbar; "
@@ -132,7 +137,7 @@ DE = [
           "Typenschild, die Lampen CAT und USB AUDIO, die UTC-Uhr, den "
           "Design-Umschalter, Settings und — sobald ein Shelly eingerichtet ist — den "
           "Netzschalter."),
-    ("p", "Darunter folgen die Felder VFO, PTT · MEMORY und AUDIO, DIGI, RTTY, CW, HackRF "
+    ("p", "Darunter folgen die Felder VFO, PTT · MEMORY und AUDIO, DIGI, DIGIMODES, HackRF "
           "und LOG. Die meisten lassen sich mit ▲ einklappen; PTT und AUDIO bleiben "
           "immer offen. Die Felder werden mit 90 % Zoom dargestellt, damit die ganze "
           "Station auf einen Bildschirm passt."),
@@ -557,9 +562,17 @@ DE = [
         "Leiste nicht.",
     ]),
 
-    ("h1", "10  RTTY-Skimmer"),
+    ("h1", "10  Digimodes · RTTY"),
+    ("p", "Das Feld DIGIMODES unter DIGI enthält die Tastaturbetriebsarten CW, RTTY, JTTY "
+          "und MFSK32, umgeschaltet über die Reiter in seiner Kopfzeile (wie bei TM-V71 "
+          "Remote). DECODE, gleich hinter dem Titel, schaltet den Decoder der gezeigten "
+          "Betriebsart; jeder Decoder läuft weiter, während ein anderer Reiter gezeigt "
+          "wird, ein grüner Punkt auf dem Reiter zeigt, welche an sind. Das Feld nimmt die "
+          "Farbe der gezeigten Betriebsart an (CW Türkis, RTTY Rosé, JTTY Blau, MFSK32 "
+          "Violett); der Reiter wird gemerkt. Die Kapitel 10 bis 12 beschreiben die "
+          "Betriebsarten."),
     ("img", "manual/rtty.png", 174),
-    ("p", "Das RTTY-Feld unter DIGI dekodiert jedes RTTY-Signal im Durchlassbereich "
+    ("p", "Der Reiter RTTY dekodiert jedes RTTY-Signal im Durchlassbereich "
           "gleichzeitig — Standard-Amateurfunk-RTTY: 45,45 Baud, 170 Hz Shift, "
           "Baudot mit US-Ziffern, 1,5 Stoppbits. DECODE schaltet es ein (es läuft "
           "auf dem Pi nur, solange es an ist). Jedes Signal bekommt eine Zeile: Ton "
@@ -602,7 +615,7 @@ DE = [
         "dort eine eigene Akzentfarbe.",
     ]),
 
-    ("h1", "11  CW-Skimmer"),
+    ("h1", "11  Digimodes · CW"),
     ("img", "manual/cw.png", 174),
     ("p", "DECODE startet den Skimmer. Jeder CW-Träger im Durchlassbereich bekommt "
           "einen eigenen Decoder; die Tabelle zeigt Tonhöhe, HF-Frequenz, Tempo, SNR "
@@ -661,7 +674,8 @@ DE = [
         "Name, QTH, Beginn und Ende nach Wavelog und QRZ.com, mit SERIAL auch STX/SRX.",
     ]),
 
-    ("h1", "12  JTTY"),
+    ("h1", "12  Digimodes · JTTY und MFSK32"),
+    ("h2", "JTTY"),
     ("img", "manual/jtty.png", 174),
     ("p", "JTTY ist die Tastaturbetriebsart von WSJT-X ab 3.2, von Joe Taylor K1JT, "
           "Steve Franke K9AN, Rob Sherwood G4KLA und dem WSJT-X-Team (GPL v3). Sie wird "
@@ -695,6 +709,33 @@ DE = [
         "Der Decoder von WSJT-X hört auf der Empfangsfrequenz und 1200–1800 Hz; jttyd "
         "setzt seine Toleranz auf den ganzen Durchlassbereich, so wird jedes "
         "JTTY-Signal gefunden — gemessen ohne Verlust an Empfindlichkeit.",
+    ]),
+    ("h2", "MFSK32"),
+    ("img", "manual/mfsk.png", 174),
+    ("p", "MFSK32 ist die MFSK-Betriebsart, wie fldigi sie sendet (nach IZ8BLY und "
+          "ZL1BPU): 16 Töne im Abstand von 31,25 Hz, 469 Hz breit, 31,25 Baud, "
+          "Fehlerkorrektur (ein Faltungscode K=7 mit Viterbi-Dekodierung und ein "
+          "Interleaver) und der MFSK-Varicode - etwa 120 WPM, lesbar bis etwa −11 dB, "
+          "Groß- und Kleinschreibung. Die Kodierung ist aus dem Quelltext von fldigi "
+          "übernommen (GPL v3), daher arbeitet sie mit fldigi-Stationen zusammen. Sie "
+          "läuft auf dem Pi in Python, etwa 2 % eines Kerns je Signal."),
+    ("ul", [
+        "DECODE: jedes MFSK32-Signal im Durchlassbereich bekommt eine Zeile - Mitte, "
+        "Frequenz auf dem Band, SNR und Q (die Güte des Decoders, fldigis Metrik "
+        "0-100) und der laufende Text. Ein Signal wird an seinem Kamm aus 16 Tönen "
+        "erkannt; RTTY, Träger und Rauschen werden nicht dafür gehalten. Ein neues "
+        "Signal wird aus den letzten 8 s Audio dekodiert, so geht der Anfang einer "
+        "Aussendung nicht verloren; Text erscheint nur, solange Q über der Rauschsperre "
+        "liegt, und das Nachlaufen nach der Endmarke (EOT) wird ausgelassen.",
+        "Ein Klick folgt einem Signal: Text zeigt sein Gespräch mit unseren eigenen "
+        "Sendungen als rote TX-Blöcke, CALL übernimmt sein Rufzeichen, TX seine Mitte.",
+        "Senden: die Sendezeile (wie getippt, Groß- und Kleinschreibung) oder die "
+        "Makros CQ, CALL, RST, TU, AGN, QRZ; Enter oder SEND sendet über den "
+        "DATA-Eingang mit dem Rahmen von fldigi (Vorspann, CR STX CR … CR EOT CR, "
+        "Nachlauf). DATA-U oder USB; in DATA-L oder LSB wird die Tonfolge für Empfang "
+        "und Senden gespiegelt, so ist das Signal auf dem Band dasselbe (angezeigt als "
+        "REV (LSB)). DEFAULT setzt TX auf 1500 Hz (Töne 1266-1734 Hz). STOP und Halt "
+        "TRX beenden es; solange die FT8-Ablaufsteuerung läuft, sendet MFSK32 nicht.",
     ]),
 
     ("h1", "13  HackRF-Wasserfall"),
@@ -839,7 +880,7 @@ DE = [
         "AFU-Lampe, CW-Name / -QTH, RTTY- / JTTY-Sendefrequenz …) liegen zusätzlich auf dem "
         "Pi: ein Browser ohne eigene - neu oder Cache geleert - startet mit den zuletzt "
         "geänderten.",
-        "Appearance (pro Browser): die Felder DIGI, RTTY, JTTY, CW, HackRF und Log "
+        "Appearance (pro Browser): die Felder DIGI, Digimodes, HackRF und Log "
         "ausblenden (VFO, PTT und Audio bleiben immer; ein ausgeblendetes HackRF stoppt "
         "den Sweep), eine Akzentfarbe pro Feld mit Reset, Peak Hold der LCD-Anzeigen "
         "(PO · SWR · ALC · ID · VDD) ein/aus und die AFU-Lampe ein/aus mit ihrem "
@@ -909,7 +950,8 @@ DE = [
         "voice.py: WebRTC-Hub, PTT-Freigabe, Vorlauf (Pre-Roll), AGC, Kompressor, "
         "Höhenanhebung.",
         "cw.py: der CW-Skimmer; rtty.py: RTTY-Skimmer und AFSK; jtty.py mit "
-        "decoder/jttyd: JTTY Empfang und Senden; dec_history.py: "
+        "decoder/jttyd: JTTY Empfang und Senden; mfsk.py: MFSK32-Skimmer und Senden "
+        "(aus fldigi übernommen); dec_history.py: "
         "die Decoder-Werte; hackrf_proxy.py; shelly.py; recorder.py.",
         "propagation.py: VOACAP-Bandbedingungen — der Ring aus 36 Pfaden, ein Lauf "
         "pro UTC-Tag, die Tag- und Nachthälfte; GET /api/propagation.",

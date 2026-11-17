@@ -14,7 +14,8 @@ markPwa(); pwaMq.addEventListener?.("change", markPwa);
 // a browser without its own value takes the Pi's before the page is built.
 const PI_PREFS = new Set(["theme", "panelsOff", "accents", "cmapDefault", "wfCallsAll", "rxBox",
   "wf-contrast", "wf-bright", "peakHold", "spec.peak", "afuPlan", "afuOn", "af", "cqTo", "cwStyle",
-  "cwName", "cwQth", "cwSerial", "cwMon", "cwNr", "hrf.level", "hrf.peak", "rttyTxHz", "jttyTxHz"]);
+  "cwName", "cwQth", "cwSerial", "cwMon", "cwNr", "hrf.level", "hrf.peak", "rttyTxHz", "jttyTxHz",
+  "mfskTxHz", "dmMode"]);
 let prefsOut = {}, prefsTimer = null;
 const store = {
   get(k, d) { try { const v = localStorage.getItem("ft950." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -5055,6 +5056,128 @@ for (const b of document.querySelectorAll(".jt-mac")) {
   };
 }
 
+// ---------------------------------------------------------------- MFSK32
+// The skimmer as RTTY (every MFSK32 signal in the passband a row, a click
+// follows it); fldigi-compatible, upper and lower case as typed.
+let mfState = { channels: [] }, mfSel = null, mfCallTouched = 0;
+const MF_TX_MODES = ["DATA-U", "USB", "DATA-L"];
+function renderMfsk(s) {
+  mfState = s;
+  $("mf-on").classList.toggle("on", !!s.enabled);
+  $("mf-side").textContent = s.reverse ? "REV (LSB)" : "USB";
+  const txOk = MF_TX_MODES.includes(s.mode);
+  $("mf-stat").textContent = s.sending ? "SENDING" : (txOk ? "" : `TX needs DATA-U / USB (radio: ${s.mode || "—"})`);
+  $("mf-stat").classList.toggle("rt-sending", !!s.sending);
+  $("mf-send").disabled = !!s.sending;
+  $("mf-count").textContent = s.enabled ? `${s.channels.length} signal${s.channels.length === 1 ? "" : "s"}` : "";
+  const body = $("mf-body");
+  if (!s.enabled || !s.channels.length) {
+    body.innerHTML = `<tr class="empty"><td colspan="5">${s.enabled ? "Listening … no MFSK32 signal in the passband yet." : "Switch DECODE on — every MFSK32 signal in the passband gets a row. Click one to follow it."}</td></tr>`;
+  } else {
+    body.innerHTML = s.channels.map((c) => {
+      const rf = rtRf(c.hz);
+      return `<tr data-id="${c.id}" class="${c.id === mfSel ? "sel" : ""}"><td class="n">${Math.round(c.hz)}</td>` +
+        `<td class="n">${rf ? (rf / 1000).toFixed(2) : "—"}</td><td class="n">${c.snr}</td><td class="n">${c.q}</td>` +
+        `<td class="msg cw-tail"><span>${esc(c.text.replace(/\n+/g, " ").slice(-120))}</span></td></tr>`;
+    }).join("");
+    for (const tr of body.querySelectorAll("tr[data-id]")) tr.onclick = () => {
+      mfSel = +tr.dataset.id;
+      mfCallTouched = 0;
+      const c = mfState.channels.find((x) => x.id === mfSel);
+      if (c) { $("mf-txhz").value = Math.round(c.hz); store.set("mfskTxHz", Math.round(c.hz)); }   // answer on its frequency
+      renderMfsk(mfState);
+    };
+  }
+  const sel = s.channels.find((c) => c.id === mfSel);
+  $("mf-sel-lbl").textContent = sel ? `${Math.round(sel.hz)} Hz · ${(rtRf(sel.hz) / 1000).toFixed(2)} kHz · Q ${sel.q}` : "no signal selected";
+  if (sel) {
+    const t = $("mf-text");
+    const atEnd = t.scrollTop + t.clientHeight >= t.scrollHeight - 8;
+    t.innerHTML = streamHtml(sel);
+    if (atEnd) t.scrollTop = t.scrollHeight;
+    const c = cwCallFrom(sel.text.toUpperCase());
+    if (c && !mfCallTouched) $("mf-call").value = c;
+  }
+}
+$("mf-call").addEventListener("input", (e) => { mfCallTouched = e.target.value.trim() ? Date.now() : 0; });
+$("mf-txhz").value = store.get("mfskTxHz", 1500);
+$("mf-txhz").onchange = (e) => store.set("mfskTxHz", Math.max(400, Math.min(2400, +e.target.value || 1500)));
+$("mf-txhz-def").onclick = () => { $("mf-txhz").value = 1500; store.set("mfskTxHz", 1500); };
+async function loadMfsk() { try { renderMfsk(await api("/api/mfsk")); } catch { /* backend down */ } }
+ws("/ws/mfsk", (m) => { if (m.t === "mfsk") renderMfsk(m); });
+loadMfsk();
+setInterval(loadMfsk, 10000);
+$("mf-on").onclick = async () => { try { renderMfsk(await api("/api/mfsk/enable", { on: !mfState.enabled })); } catch { /* toast */ } };
+$("mf-clear").onclick = async () => { try { renderMfsk(await api("/api/mfsk/clear", {})); $("mf-text").textContent = ""; } catch { /* toast */ } };
+$("mf-send").onclick = async () => {
+  const text = $("mf-msg").value.trim();
+  if (!text) return;
+  const hz = Math.max(400, Math.min(2400, +$("mf-txhz").value || 1500));
+  try {
+    const r = await api("/api/mfsk/send", { text, hz });
+    toast(`Sending MFSK32 at ${hz} Hz (${r.seconds} s)`);
+    $("mf-msg").value = "";
+    const row = document.createElement("div");
+    row.innerHTML = `<span class="t">${new Date().toISOString().slice(11, 19)}</span>${esc(text)}`;
+    $("mf-sent").appendChild(row);
+    $("mf-sent").scrollTop = $("mf-sent").scrollHeight;
+  } catch { /* toast */ }
+};
+$("mf-msg").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("mf-send").click(); } });
+$("mf-stop").onclick = () => api("/api/mfsk/stop", {}).then(() => toast("MFSK32 stopped")).catch(() => {});
+$("mf-sent-clear").onclick = () => { $("mf-sent").innerHTML = ""; };
+// MFSK32 macros (fldigi style; case as written)
+const MF_MACROS = [
+  ["CQ", "CQ CQ CQ de {MY} {MY} {MY} pse k"], ["CALL", "{CALL} de {MY} {MY} pse k"],
+  ["RST", "{CALL} de {MY} - ur RST 599 599 - loc {LOC} - {CALL} de {MY} k"],
+  ["TU", "{CALL} de {MY} - tnx for the QSO, 73 - {CALL} de {MY} sk"],
+  ["AGN", "{CALL} pse agn - {MY} k"], ["QRZ", "QRZ? de {MY} k"],
+];
+$("mf-macro-btns").innerHTML = MF_MACROS.map(([n]) => `<button class="btn sm mf-mac" data-n="${n}">${n}</button>`).join("");
+for (const b of document.querySelectorAll(".mf-mac")) {
+  const tpl = MF_MACROS.find(([n]) => n === b.dataset.n)[1];
+  b.title = tpl;
+  b.onclick = () => {
+    const call = $("mf-call").value.trim().toUpperCase();
+    if (tpl.includes("{CALL}") && !call) { toast("No callsign — select a signal or type one into CALL", true); $("mf-call").focus(); return; }
+    $("mf-msg").value = tpl.replaceAll("{MY}", cwMy.call).replaceAll("{LOC}", cwMy.loc).replaceAll("{CALL}", call);
+    $("mf-msg").focus();
+  };
+}
+
+// ---------------------------------------------------------------- DIGIMODES tabs
+// CW · RTTY · JTTY · MFSK32 in one panel (as TM-V71 Remote): the tab shows a
+// mode, its decoder keeps running while another one is shown - a dot on the
+// tab tells which decoders are on.
+const DM_ON = { cw: "cw-on", rtty: "rt-on", jtty: "jt-on", mfsk: "mf-on" };
+function dmShow(mode) {
+  if (!DM_ON[mode]) mode = "cw";
+  for (const p of document.querySelectorAll("#digimodes .dm-pane")) p.hidden = p.dataset.dm !== mode;
+  for (const b of $("dm-tabs").children) {
+    b.classList.toggle("on", b.dataset.dm === mode);
+    b.setAttribute("aria-selected", String(b.dataset.dm === mode));
+  }
+  $("digimodes").dataset.mode = mode;
+  if (typeof dmLive === "function" && $("dm-decode")) dmLive();
+}
+// one DECODE in the head (after the title) for the mode shown; the modes'
+// own DECODE buttons stay in the page, hidden, and do the work
+function dmLive() {
+  for (const b of $("dm-tabs").children) b.classList.toggle("live", !!$(DM_ON[b.dataset.dm])?.classList.contains("on"));
+  const own = $(DM_ON[$("digimodes").dataset.mode]);
+  $("dm-decode").classList.toggle("on", !!own?.classList.contains("on"));
+  $("dm-decode").title = own?.title || "";
+}
+for (const id of Object.values(DM_ON)) {
+  $(id).hidden = true;
+  new MutationObserver(dmLive).observe($(id), { attributes: true, attributeFilter: ["class"] });
+}
+$("dm-decode").onclick = () => $(DM_ON[$("digimodes").dataset.mode]).click();
+for (const b of $("dm-tabs").children) b.onclick = () => { store.set("dmMode", b.dataset.dm); dmShow(b.dataset.dm); };
+dmShow(store.get("dmMode", "cw"));
+setInterval(dmLive, 1000);
+dmLive();
+
 // ---------------------------------------------------------------- Settings ▸ Appearance
 // Panels on/off and their accent colours, per browser (as TM-V71 Remote's Panels tab).
 // VFO, PTT and Audio always stay (`fixed`: no tile, only an accent colour) - the radio
@@ -5064,9 +5187,7 @@ const PANELS = [
   { key: "ptt", sel: "#pttp", name: "PTT · Memory", fixed: true },
   { key: "audio", sel: "#audiop", name: "Audio · WebRTC", fixed: true },
   { key: "digi", sel: "#digi", name: "DIGI · FT8/FT4" },
-  { key: "rtty", sel: "#rttyp", name: "RTTY" },
-  { key: "jtty", sel: "#jttyp", name: "JTTY" },
-  { key: "cw", sel: "#cwp", name: "CW" },
+  { key: "digimodes", sel: "#digimodes", name: "Digimodes · CW · RTTY · JTTY · MFSK32" },
   { key: "hackrf", sel: "#hackrf", name: "HackRF waterfall" },
   { key: "log", sel: "#log", name: "Log · Wavelog" },
 ];

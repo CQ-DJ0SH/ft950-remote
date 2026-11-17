@@ -487,113 +487,20 @@
     </div>
   </section>
 
-  <!-- ===================== HACKRF (ported from TM-V71 Remote) ===================== -->
-  <!-- CW: skimmer (every carrier in the passband decoded at once, like the FT8 list) + the radio's keyer -->
-  <!-- RTTY skimmer: every RTTY signal in the passband, AFSK transmit (as FT8, DATA input) -->
-  <section class="panel cwp rttyp" id="rttyp">
+  <!-- DIGIMODES: CW, RTTY, JTTY and MFSK32 in one panel with a mode switch (as TM-V71 Remote).
+       Each mode keeps its own decoder: DECODE runs on while another tab is shown. -->
+  <section class="panel cwp rttyp digim" id="digimodes">
     <div class="panel-head">
-      <h2>RTTY · SKIMMER</h2>
-      <button class="btn sm toggle" id="rt-on" title="Decode every RTTY signal in the receive passband (45.45 Bd, 170 Hz shift; runs on the Pi while switched on)">DECODE</button>
-      <span class="panel-stat" id="rt-stat"></span>
+      <h2>DIGIMODES</h2>
+      <button class="btn sm toggle" id="dm-decode" title="Decode the mode shown (each mode's decoder runs on while another tab is shown; the dot on a tab tells which are on)">DECODE</button>
+      <div class="seg dm-tabs" id="dm-tabs" role="tablist" aria-label="Mode">
+        <button class="sg" data-dm="cw" role="tab" title="CW skimmer and the radio's keyer">CW</button><button class="sg" data-dm="rtty" role="tab" title="RTTY skimmer, AFSK transmit">RTTY</button><button class="sg" data-dm="jtty" role="tab" title="JTTY, WSJT-X 3.2+'s keyboard mode">JTTY</button><button class="sg" data-dm="mfsk" role="tab" title="MFSK32 skimmer and transmit (as fldigi)">MFSK32</button>
+      </div>
       <span class="spacer"></span>
-      <span class="cw-ro" title="Standard amateur RTTY: 45.45 baud, 170 Hz shift, Baudot">45.45 Bd · 170 Hz</span>
-      <span class="cw-ro" id="rt-side" title="Which audio tone is the mark: in LSB / DATA-L the lower, in USB / DATA-U the higher (on the air the mark is always the higher frequency)">MARK —</span>
-      <button class="btn sm toggle" id="rt-rev" title="Reverse: swap mark and space (receive and transmit)">REV</button>
-      <button class="btn sm" id="rt-clear" title="Clear the decoded text">CLEAR</button>
       <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
     </div>
-    <div class="cw-body">
-      <div class="cw-grid">
-        <div class="pane cw-sig-pane">
-          <div class="pane-head"><h3>Signals</h3><span class="chk" id="rt-count"></span></div>
-          <div class="tbl cw-tbl">
-            <table class="msgs">
-              <colgroup><col style="width:58px"><col style="width:84px"><col style="width:46px"><col style="width:46px"><col></colgroup>
-              <thead><tr><th class="n">Tone</th><th class="n">Freq</th><th class="n">SNR</th><th class="n">Q</th><th>Text</th></tr></thead>
-              <tbody id="rt-body"><tr class="empty"><td colspan="5">Switch DECODE on — every RTTY signal in the passband gets a row. Click one to follow it.</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="side">
-          <div class="pane">
-            <div class="pane-head"><h3>Text</h3><span class="chk" id="rt-sel-lbl">no signal selected</span></div>
-            <div class="cw-text rt-text" id="rt-text" aria-live="polite"></div>
-          </div>
-          <div class="pane">
-            <div class="pane-head"><h3>Sent</h3><span class="spacer"></span><button class="btn sm" id="rt-sent-clear" title="Clear list">✕</button></div>
-            <div class="cw-sent" id="rt-sent"></div>
-          </div>
-        </div>
-      </div>
-    <div class="cw-macros">
-      <label class="cw-call" title="Callsign for the macros — taken from the selected signal, editable">CALL <input type="text" id="rt-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
-      <span id="rt-macro-btns"></span>
-      <span class="spacer"></span>
-      <label class="cw-call" title="TX frequency: the centre between mark and space, in Hz of audio (clicking a signal sets it to that station)">TX <input type="number" id="rt-txhz" min="300" max="2600" step="5"> Hz</label>
-      <button class="btn sm" id="rt-txhz-def" title="Back to the default TX frequency: 2210 Hz (mark 2125 / space 2295 Hz)">DEFAULT</button>
-    </div>
-    <div class="cw-tx">
-      <input type="text" id="rt-msg" placeholder="text to send in RTTY (AFSK on the DATA input: radio in DATA-L or DATA-U)…" autocomplete="off" autocapitalize="characters" spellcheck="false">
-      <button class="btn rt-send" id="rt-send">SEND</button>
-      <button class="btn halt" id="rt-stop" title="Stop transmitting at once">STOP</button>
-    </div>
-    </div>
-  </section>
-
-  <!-- JTTY: the keyboard mode of WSJT-X 3.2+ (K1JT, K9AN, G4KLA and the WSJT-X team) -->
-  <section class="panel cwp rttyp jttyp" id="jttyp">
-    <div class="panel-head">
-      <h2>JTTY</h2>
-      <button class="btn sm toggle" id="jt-on" title="Decode JTTY over the whole passband (jttyd with WSJT-X 3.3's decoder, runs on the Pi while switched on; the first start takes ~25 s)">DECODE</button>
-      <span class="panel-stat" id="jt-stat"></span>
-      <span class="spacer"></span>
-      <span class="cw-ro" title="JTTY: 4-GFSK, 31.25 baud, 127 Hz wide, FEC - typed like RTTY, any time, no periods; readable to about -15 dB">31.25 Bd · 127 Hz</span>
-      <label class="cw-call" title="JTTY dial frequencies of WSJT-X 3.3 (preliminary) - sets VFO A and DATA-U">BAND
-        <select id="jt-band"><option value="">—</option></select></label>
-      <button class="btn sm" id="jt-clear" title="Clear the received messages">CLEAR</button>
-      <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
-    </div>
-    <div class="cw-body">
-      <div class="cw-grid">
-        <div class="pane cw-sig-pane">
-          <div class="pane-head"><h3>Messages</h3><span class="chk" id="jt-count"></span></div>
-          <div class="tbl cw-tbl">
-            <table class="msgs">
-              <colgroup><col style="width:70px"><col style="width:58px"><col style="width:46px"><col></colgroup>
-              <thead><tr><th>UTC</th><th class="n">Freq</th><th class="n">SNR</th><th>Text</th></tr></thead>
-              <tbody id="jt-body"><tr class="empty"><td colspan="4">Switch DECODE on — every JTTY message in the passband gets a row. Click one to follow that station.</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="side">
-          <div class="pane">
-            <div class="pane-head"><h3>Text</h3><span class="chk" id="jt-sel-lbl">no station selected</span></div>
-            <div class="cw-text rt-text" id="jt-text" aria-live="polite"></div>
-          </div>
-          <div class="pane">
-            <div class="pane-head"><h3>Sent</h3><span class="spacer"></span><button class="btn sm" id="jt-sent-clear" title="Clear list">✕</button></div>
-            <div class="cw-sent" id="jt-sent"></div>
-          </div>
-        </div>
-      </div>
-    <div class="cw-macros">
-      <label class="cw-call" title="Callsign for the macros — taken from the selected station, editable">CALL <input type="text" id="jt-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
-      <span id="jt-macro-btns"></span>
-      <span class="spacer"></span>
-      <label class="cw-call" title="TX frequency in Hz of audio (clicking a message sets it to that station)">TX <input type="number" id="jt-txhz" min="300" max="2600" step="1"> Hz</label>
-      <button class="btn sm" id="jt-txhz-def" title="Back to 1500 Hz, the middle of JTTY's calling range (1200-1800 Hz)">DEFAULT</button>
-    </div>
-    <div class="cw-tx">
-      <input type="text" id="jt-msg" placeholder="text to send in JTTY (on the DATA input: radio in DATA-U / USB) — any time, no periods…" autocomplete="off" autocapitalize="characters" spellcheck="false">
-      <button class="btn rt-send" id="jt-send">SEND</button>
-      <button class="btn halt" id="jt-stop" title="Stop transmitting at once">STOP</button>
-    </div>
-    </div>
-  </section>
-
-  <section class="panel cwp" id="cwp">
-    <div class="panel-head">
-      <h2>CW · SKIMMER</h2>
+    <div class="dm-pane" data-dm="cw" hidden>
+    <div class="dm-bar">
       <button class="btn sm toggle" id="cw-on" title="Decode every CW signal in the receive passband (runs on the Pi while switched on)">DECODE</button>
       <span class="panel-stat" id="cw-stat"></span>
       <span class="spacer"></span>
@@ -602,9 +509,7 @@
       <button class="btn sm toggle" id="cw-mon" title="Monitor: hear your own CW here in the browser while the radio sends it (the radio's own sidetone does not reach the Pi)">MON</button>
       <button class="btn sm toggle" id="cw-bk" title="Break-in (BI) — the radio's keyer only transmits with break-in on">BK-IN</button>
       <button class="btn sm" id="cw-clear" title="Clear the decoded text">CLEAR</button>
-      <button class="panel-toggle" type="button" aria-expanded="true" title="Expand/collapse panel">▲</button>
-    </div>
-    <div class="cw-body">
+    </div>    <div class="cw-body">
       <div class="cw-grid">
         <div class="pane cw-sig-pane">
           <div class="pane-head"><h3>Signals</h3><span class="chk" id="cw-count"></span></div>
@@ -652,8 +557,148 @@
       <button class="btn halt" id="cw-stop" title="Drop the rest of the message (the radio finishes the current chunk)">STOP</button>
     </div>
     </div>
+      </div>
+    <div class="dm-pane" data-dm="rtty" hidden>
+    <div class="dm-bar">
+      <button class="btn sm toggle" id="rt-on" title="Decode every RTTY signal in the receive passband (45.45 Bd, 170 Hz shift; runs on the Pi while switched on)">DECODE</button>
+      <span class="panel-stat" id="rt-stat"></span>
+      <span class="spacer"></span>
+      <span class="cw-ro" title="Standard amateur RTTY: 45.45 baud, 170 Hz shift, Baudot">45.45 Bd · 170 Hz</span>
+      <span class="cw-ro" id="rt-side" title="Which audio tone is the mark: in LSB / DATA-L the lower, in USB / DATA-U the higher (on the air the mark is always the higher frequency)">MARK —</span>
+      <button class="btn sm toggle" id="rt-rev" title="Reverse: swap mark and space (receive and transmit)">REV</button>
+      <button class="btn sm" id="rt-clear" title="Clear the decoded text">CLEAR</button>
+    </div>    <div class="cw-body">
+      <div class="cw-grid">
+        <div class="pane cw-sig-pane">
+          <div class="pane-head"><h3>Signals</h3><span class="chk" id="rt-count"></span></div>
+          <div class="tbl cw-tbl">
+            <table class="msgs">
+              <colgroup><col style="width:58px"><col style="width:84px"><col style="width:46px"><col style="width:46px"><col></colgroup>
+              <thead><tr><th class="n">Tone</th><th class="n">Freq</th><th class="n">SNR</th><th class="n">Q</th><th>Text</th></tr></thead>
+              <tbody id="rt-body"><tr class="empty"><td colspan="5">Switch DECODE on — every RTTY signal in the passband gets a row. Click one to follow it.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="side">
+          <div class="pane">
+            <div class="pane-head"><h3>Text</h3><span class="chk" id="rt-sel-lbl">no signal selected</span></div>
+            <div class="cw-text rt-text" id="rt-text" aria-live="polite"></div>
+          </div>
+          <div class="pane">
+            <div class="pane-head"><h3>Sent</h3><span class="spacer"></span><button class="btn sm" id="rt-sent-clear" title="Clear list">✕</button></div>
+            <div class="cw-sent" id="rt-sent"></div>
+          </div>
+        </div>
+      </div>
+    <div class="cw-macros">
+      <label class="cw-call" title="Callsign for the macros — taken from the selected signal, editable">CALL <input type="text" id="rt-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <span id="rt-macro-btns"></span>
+      <span class="spacer"></span>
+      <label class="cw-call" title="TX frequency: the centre between mark and space, in Hz of audio (clicking a signal sets it to that station)">TX <input type="number" id="rt-txhz" min="300" max="2600" step="5"> Hz</label>
+      <button class="btn sm" id="rt-txhz-def" title="Back to the default TX frequency: 2210 Hz (mark 2125 / space 2295 Hz)">DEFAULT</button>
+    </div>
+    <div class="cw-tx">
+      <input type="text" id="rt-msg" placeholder="text to send in RTTY (AFSK on the DATA input: radio in DATA-L or DATA-U)…" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button class="btn rt-send" id="rt-send">SEND</button>
+      <button class="btn halt" id="rt-stop" title="Stop transmitting at once">STOP</button>
+    </div>
+    </div>
+      </div>
+    <div class="dm-pane" data-dm="jtty" hidden>
+    <div class="dm-bar">
+      <button class="btn sm toggle" id="jt-on" title="Decode JTTY over the whole passband (jttyd with WSJT-X 3.3's decoder, runs on the Pi while switched on; the first start takes ~25 s)">DECODE</button>
+      <span class="panel-stat" id="jt-stat"></span>
+      <span class="spacer"></span>
+      <span class="cw-ro" title="JTTY: 4-GFSK, 31.25 baud, 127 Hz wide, FEC - typed like RTTY, any time, no periods; readable to about -15 dB">31.25 Bd · 127 Hz</span>
+      <label class="cw-call" title="JTTY dial frequencies of WSJT-X 3.3 (preliminary) - sets VFO A and DATA-U">BAND
+        <select id="jt-band"><option value="">—</option></select></label>
+      <button class="btn sm" id="jt-clear" title="Clear the received messages">CLEAR</button>
+    </div>    <div class="cw-body">
+      <div class="cw-grid">
+        <div class="pane cw-sig-pane">
+          <div class="pane-head"><h3>Messages</h3><span class="chk" id="jt-count"></span></div>
+          <div class="tbl cw-tbl">
+            <table class="msgs">
+              <colgroup><col style="width:70px"><col style="width:58px"><col style="width:46px"><col></colgroup>
+              <thead><tr><th>UTC</th><th class="n">Freq</th><th class="n">SNR</th><th>Text</th></tr></thead>
+              <tbody id="jt-body"><tr class="empty"><td colspan="4">Switch DECODE on — every JTTY message in the passband gets a row. Click one to follow that station.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="side">
+          <div class="pane">
+            <div class="pane-head"><h3>Text</h3><span class="chk" id="jt-sel-lbl">no station selected</span></div>
+            <div class="cw-text rt-text" id="jt-text" aria-live="polite"></div>
+          </div>
+          <div class="pane">
+            <div class="pane-head"><h3>Sent</h3><span class="spacer"></span><button class="btn sm" id="jt-sent-clear" title="Clear list">✕</button></div>
+            <div class="cw-sent" id="jt-sent"></div>
+          </div>
+        </div>
+      </div>
+    <div class="cw-macros">
+      <label class="cw-call" title="Callsign for the macros — taken from the selected station, editable">CALL <input type="text" id="jt-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <span id="jt-macro-btns"></span>
+      <span class="spacer"></span>
+      <label class="cw-call" title="TX frequency in Hz of audio (clicking a message sets it to that station)">TX <input type="number" id="jt-txhz" min="300" max="2600" step="1"> Hz</label>
+      <button class="btn sm" id="jt-txhz-def" title="Back to 1500 Hz, the middle of JTTY's calling range (1200-1800 Hz)">DEFAULT</button>
+    </div>
+    <div class="cw-tx">
+      <input type="text" id="jt-msg" placeholder="text to send in JTTY (on the DATA input: radio in DATA-U / USB) — any time, no periods…" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button class="btn rt-send" id="jt-send">SEND</button>
+      <button class="btn halt" id="jt-stop" title="Stop transmitting at once">STOP</button>
+    </div>
+    </div>
+      </div>
+    <div class="dm-pane" data-dm="mfsk" hidden>
+    <div class="dm-bar">
+      <button class="btn sm toggle" id="mf-on" title="Decode every MFSK32 signal in the receive passband (16 tones, 469 Hz wide; runs on the Pi while switched on)">DECODE</button>
+      <span class="panel-stat" id="mf-stat"></span>
+      <span class="spacer"></span>
+      <span class="cw-ro" title="MFSK32 as fldigi: 16 tones 31.25 Hz apart (469 Hz), 31.25 baud, FEC (K=7 Viterbi + interleaver), varicode - about 120 WPM, readable to about -11 dB">31.25 Bd · 16 tones · 469 Hz</span>
+      <span class="cw-ro" id="mf-side" title="In LSB / DATA-L the audio is mirrored: the tone order is reversed for receive and transmit, so the signal on the air is the same">USB</span>
+      <button class="btn sm" id="mf-clear" title="Clear the decoded text">CLEAR</button>
+    </div>
+    <div class="cw-body">
+      <div class="cw-grid">
+        <div class="pane cw-sig-pane">
+          <div class="pane-head"><h3>Signals</h3><span class="chk" id="mf-count"></span></div>
+          <div class="tbl cw-tbl">
+            <table class="msgs">
+              <colgroup><col style="width:58px"><col style="width:84px"><col style="width:46px"><col style="width:46px"><col></colgroup>
+              <thead><tr><th class="n">Centre</th><th class="n">Freq</th><th class="n">SNR</th><th class="n" title="Decoder quality (fldigi's metric, 0-100)">Q</th><th>Text</th></tr></thead>
+              <tbody id="mf-body"><tr class="empty"><td colspan="5">Switch DECODE on — every MFSK32 signal in the passband gets a row. Click one to follow it.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="side">
+          <div class="pane">
+            <div class="pane-head"><h3>Text</h3><span class="chk" id="mf-sel-lbl">no signal selected</span></div>
+            <div class="cw-text rt-text" id="mf-text" aria-live="polite"></div>
+          </div>
+          <div class="pane">
+            <div class="pane-head"><h3>Sent</h3><span class="spacer"></span><button class="btn sm" id="mf-sent-clear" title="Clear list">✕</button></div>
+            <div class="cw-sent" id="mf-sent"></div>
+          </div>
+        </div>
+      </div>
+    <div class="cw-macros">
+      <label class="cw-call" title="Callsign for the macros — taken from the selected signal, editable">CALL <input type="text" id="mf-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <span id="mf-macro-btns"></span>
+      <span class="spacer"></span>
+      <label class="cw-call" title="TX frequency: the centre of the 16 tones, in Hz of audio (clicking a signal sets it to that station)">TX <input type="number" id="mf-txhz" min="400" max="2400" step="5"> Hz</label>
+      <button class="btn sm" id="mf-txhz-def" title="Back to the default TX frequency: 1500 Hz (tones 1266-1734 Hz)">DEFAULT</button>
+    </div>
+    <div class="cw-tx">
+      <input type="text" id="mf-msg" placeholder="text to send in MFSK32 (on the DATA input: radio in DATA-U / USB) — upper and lower case…" autocomplete="off" spellcheck="false">
+      <button class="btn rt-send" id="mf-send">SEND</button>
+      <button class="btn halt" id="mf-stop" title="Stop transmitting at once">STOP</button>
+    </div>
+    </div>
+    </div>
   </section>
 
+  <!-- ===================== HACKRF (ported from TM-V71 Remote) ===================== -->
   <section class="panel hackrf hrf-off" id="hackrf">
     <div class="panel-head">
       <h2>HACKRF · WATERFALL</h2>

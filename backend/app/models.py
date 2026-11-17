@@ -376,6 +376,12 @@ class RttySendReq(BaseModel):
     hz: float = Field(ge=300, le=2600)                 # centre between mark and space
 
 
+class MfskSendReq(BaseModel):
+    # MFSK varicode carries all 8-bit characters; printable text and new lines here
+    text: str = Field(min_length=1, max_length=1000, pattern=r"^[\x20-\x7e\xa0-\xff\n]+$")
+    hz: float = Field(ge=400, le=2400)                 # centre of the 16 tones (469 Hz wide)
+
+
 class CwSendReq(BaseModel):
     text: str = Field(min_length=1, max_length=500, pattern=r"^[A-Za-z0-9 .,?/=+\-@]+$")
 

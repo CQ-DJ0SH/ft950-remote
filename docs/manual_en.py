@@ -36,6 +36,8 @@ EN = [
         "HF band conditions under the waterfall from real VOACAP for your locator: "
         "80-40, 30-20, 17-15, 12-10 and 6m in green / yellow / red, with a sun/moon "
         "switch for day and night.",
+        "DIGIMODES: CW, RTTY, JTTY and MFSK32 in one panel with a mode switch; each "
+        "mode's decoder runs on while another is shown.",
         "RTTY skimmer: every RTTY signal in the passband decoded at once (45.45 Bd, "
         "170 Hz); transmit as AFSK through the DATA input, with macros.",
         "CW skimmer: every CW signal in the passband decoded at once; send through "
@@ -45,6 +47,9 @@ EN = [
         "JTTY, WSJT-X 3.2+'s keyboard mode: typed like RTTY at any time, with FEC "
         "(readable to about -15 dB); every message in the passband, conversation per "
         "station, macros, transmit through the DATA input.",
+        "MFSK32 as fldigi (16 tones, FEC, about 120 WPM, readable to about -11 dB): "
+        "every MFSK32 signal in the passband decoded at once; transmit through the "
+        "DATA input, upper and lower case, with macros.",
         "HackRF waterfall relayed from TM-V71 Remote, following the amateur band of VFO A.",
         "Logging to Wavelog and QRZ.com, auto-log switchable in the LOG title; "
         "worked-before index from Wavelog.",
@@ -118,7 +123,7 @@ EN = [
           "the repository), your callsign (shown with a slashed zero), the "
           "nameplate, the CAT and USB AUDIO lamps, the UTC clock, the theme switch, "
           "Settings and — once a Shelly is set up — the power switch."),
-    ("p", "Below follow the panels VFO, PTT · MEMORY and AUDIO, DIGI, RTTY, CW, HackRF "
+    ("p", "Below follow the panels VFO, PTT · MEMORY and AUDIO, DIGI, DIGIMODES, HackRF "
           "and LOG. Most can be collapsed with ▲; PTT and AUDIO always stay open. "
           "The panels are shown at 90 % zoom so the whole station fits on one screen."),
 
@@ -508,9 +513,16 @@ EN = [
         "not shown.",
     ]),
 
-    ("h1", "10  RTTY skimmer"),
+    ("h1", "10  Digimodes · RTTY"),
+    ("p", "The DIGIMODES panel below DIGI holds the keyboard modes CW, RTTY, JTTY and "
+          "MFSK32, switched by the tabs in its head (as in TM-V71 Remote). DECODE, right "
+          "after the title, switches the decoder of the mode shown; each decoder keeps "
+          "running while another tab is shown, and a green dot on a tab tells which are "
+          "on. The panel takes the colour of the mode shown (CW teal, RTTY rose, JTTY "
+          "blue, MFSK32 violet); the tab is remembered. Chapters 10 to 12 describe the "
+          "modes."),
     ("img", "manual/rtty.png", 174),
-    ("p", "The RTTY panel below DIGI decodes every RTTY signal in the passband at "
+    ("p", "The RTTY tab decodes every RTTY signal in the passband at "
           "once — standard amateur RTTY: 45.45 baud, 170 Hz shift, Baudot with US "
           "figures, 1.5 stop bits. DECODE switches it on (it runs on the Pi only "
           "while on). Each signal gets a row: tone (the audio centre between mark "
@@ -550,7 +562,7 @@ EN = [
         "Appearance.",
     ]),
 
-    ("h1", "11  CW skimmer"),
+    ("h1", "11  Digimodes · CW"),
     ("img", "manual/cw.png", 174),
     ("p", "DECODE starts the skimmer. Every CW carrier in the passband gets its "
           "own decoder; the table shows pitch, RF frequency, speed, SNR and the "
@@ -606,7 +618,8 @@ EN = [
         "received, name, QTH, start and end time, with SERIAL also STX/SRX.",
     ]),
 
-    ("h1", "12  JTTY"),
+    ("h1", "12  Digimodes · JTTY and MFSK32"),
+    ("h2", "JTTY"),
     ("img", "manual/jtty.png", 174),
     ("p", "JTTY is the keyboard mode of WSJT-X 3.2 and later, by Joe Taylor K1JT, "
           "Steve Franke K9AN, Rob Sherwood G4KLA and the WSJT-X team (GPL v3). It is "
@@ -638,6 +651,31 @@ EN = [
         "WSJT-X's decoder listens on the receive frequency and 1200–1800 Hz; jttyd "
         "sets its tolerance to the whole passband, so every JTTY signal is found — "
         "measured without loss of sensitivity.",
+    ]),
+    ("h2", "MFSK32"),
+    ("img", "manual/mfsk.png", 174),
+    ("p", "MFSK32 is the MFSK mode as fldigi sends it (after IZ8BLY and ZL1BPU): 16 tones "
+          "31.25 Hz apart, 469 Hz wide, 31.25 baud, forward error correction (a K=7 "
+          "convolutional code with Viterbi decoding and an interleaver) and the MFSK "
+          "varicode - about 120 WPM, readable to about -11 dB, upper and lower case. The "
+          "coding is ported from fldigi's source (GPL v3), so it works with fldigi "
+          "stations. It runs on the Pi in Python, about 2 % of one core per signal."),
+    ("ul", [
+        "DECODE: every MFSK32 signal in the passband gets a row - centre, frequency on "
+        "the air, SNR and Q (the decoder's quality, fldigi's metric 0-100) and the "
+        "running text. A signal is found by its comb of 16 tones; RTTY, carriers and "
+        "noise are not taken for one. A new signal is decoded from the last 8 s of "
+        "audio, so the start of a transmission is not lost; text appears only while "
+        "Q is above the squelch, and the flush after the end mark (EOT) is left out.",
+        "A click follows a signal: Text shows its conversation with our own "
+        "transmissions as red TX blocks, CALL takes its call, TX its centre.",
+        "Sending: the send line (as typed, upper and lower case) or the macros CQ, "
+        "CALL, RST, TU, AGN, QRZ; Enter or SEND transmits through the DATA input with "
+        "fldigi's framing (preamble, CR STX CR … CR EOT CR, flush). DATA-U or USB; in "
+        "DATA-L or LSB the tone order is mirrored for receive and transmit, so the "
+        "signal on the air is the same (shown as REV (LSB)). DEFAULT puts TX on "
+        "1500 Hz (tones 1266-1734 Hz). STOP and Halt TRX end it; while the FT8 "
+        "sequencer runs, MFSK32 does not transmit.",
     ]),
 
     ("h1", "13  HackRF waterfall"),
@@ -770,7 +808,7 @@ EN = [
         "contrast / brightness, theme, hidden panels and accent colours, AFU lamp, CW name / "
         "QTH, RTTY / JTTY TX frequency …) are also kept on the Pi: a browser without its "
         "own - new, or its cache cleared - starts with the ones changed last.",
-        "Appearance (per browser): hide the DIGI, RTTY, JTTY, CW, HackRF and Log panels "
+        "Appearance (per browser): hide the DIGI, Digimodes, HackRF and Log panels "
         "(VFO, PTT and Audio always stay; hiding the HackRF stops its sweep), an accent "
         "colour per panel with Reset, peak hold of the LCD meters (PO · SWR · ALC · "
         "ID · VDD) on/off, and the AFU lamp on/off with its frequency plan. "
@@ -831,7 +869,8 @@ EN = [
         "early and partner passes; sequencer.py: the QSO state machine.",
         "voice.py: WebRTC hub, PTT lease, pre-roll, AGC, compressor, pre-emphasis.",
         "cw.py: the CW skimmer; rtty.py: the RTTY skimmer and AFSK; jtty.py with "
-        "decoder/jttyd: JTTY receive and transmit; dec_history.py: "
+        "decoder/jttyd: JTTY receive and transmit; mfsk.py: the MFSK32 skimmer and "
+        "transmit (ported from fldigi); dec_history.py: "
         "the decoder figures; hackrf_proxy.py; shelly.py; recorder.py.",
         "propagation.py: VOACAP band conditions — the ring of 36 paths, one run per "
         "UTC day, the day/night halves; GET /api/propagation.",

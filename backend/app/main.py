@@ -26,6 +26,7 @@ from .pskreporter import PskReporter
 from .recorder import Recorder
 from .cw import CWSkimmer, cw_duration_s
 from .rtty import RTTYSkimmer, duration_s as rtty_duration_s
+from .mfsk import MFSKSkimmer, duration_s as mfsk_duration_s
 from .jtty import JttyReceiver
 from .shelly import ShellyError, ShellySwitch
 from .propagation import Propagation
@@ -39,7 +40,7 @@ from .config import APP_VERSION, settings
 from .digi import DECODERS as DIGI_DECODERS, MODES as DIGI_MODES, DigiService, decoder_available, decoder_config, decoder_tag
 from .ft950 import (AGC_SET, ATT, BANDS, MODES, PREAMP, ROOF_SET, WIDTHS,
                     FT950Error, width_column)
-from .models import (AccentDefaultsReq, UiPrefsReq, JttySendReq, QslConfigReq, QslPreviewReq, QslSendReq, RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
+from .models import (AccentDefaultsReq, UiPrefsReq, MfskSendReq, JttySendReq, QslConfigReq, QslPreviewReq, QslSendReq, RttySendReq, zero_call, CwSendReq, CwSpeedReq, CtcssReq, SeqAutoReq, PowerSwitchReq, HackRFConfig, RxLevelReq, MemoryWriteReq, AntennaReq, TunerReq, BandReq, DeviceReq, DigiConfigReq, FrequencyReq,
                      ClarReq, ContourReq, IfShiftReq, LevelReq, NotchReq, LogConfigReq, MemoryReq, MenuResetReq,
                      MenuSetReq, ModeReq,
                      NameReq, OnOffReq, PercentReq, PowerReq, PttReq, QsoReq,
@@ -105,6 +106,9 @@ rtty_manager = ConnectionManager()
 jtty_rx = JttyReceiver()
 capture.subscribe(_rx_only(jtty_rx.feed))
 jtty_manager = ConnectionManager()
+mfsk_skimmer = MFSKSkimmer()
+capture.subscribe(_rx_only(mfsk_skimmer.feed))
+mfsk_manager = ConnectionManager()
 digi = DigiService(capture, digi_manager, lambda: service.status,
                    settings.digi_work_dir, settings.digi_keep_slices,
                    settings.digi_data_dir)
@@ -215,6 +219,7 @@ async def lifespan(app: FastAPI):
     cwloop = asyncio.create_task(_cw_broadcast_loop())
     rttyloop = asyncio.create_task(_rtty_broadcast_loop())
     jttyloop = asyncio.create_task(_jtty_broadcast_loop())
+    mfskloop = asyncio.create_task(_mfsk_broadcast_loop())
     psk.start()
     opus_mono.install()                     # before the first peer builds an encoder
     if _rt.get("codec_playback") is not None:
@@ -233,6 +238,7 @@ async def lifespan(app: FastAPI):
     cwloop.cancel()
     rttyloop.cancel()
     jttyloop.cancel()
+    mfskloop.cancel()
     jtty_rx.set_enabled(False)              # jttyd ends with the service
     await psk.flush()                       # what was heard since the last upload
     await psk.stop()
@@ -1718,6 +1724,90 @@ async def rtty_stop() -> dict:
 @app.websocket("/ws/rtty")
 async def ws_rtty(ws: WebSocket) -> None:
     await _stream(ws, rtty_manager)
+
+
+# -- MFSK32: skimmer (every MFSK32 signal in the passband) + transmit (mfsk.py) --
+def _mfsk_reverse() -> bool:
+    """LSB / DATA-L mirror the audio: the 16 tones come in reversed order."""
+    return (service.status.get("vfo") or {}).get("mode") in LOWER_SIDEBAND
+
+
+async def _mfsk_broadcast_loop() -> None:
+    last = -1
+    while True:
+        await asyncio.sleep(0.25)
+        mfsk_skimmer.reverse = _mfsk_reverse()
+        if mfsk_manager.count and mfsk_skimmer.version != last:
+            last = mfsk_skimmer.version
+            await mfsk_manager.broadcast({"t": "mfsk", **_mfsk_view()})
+
+
+_mfsk_job: asyncio.Task | None = None
+
+
+def _mfsk_view() -> dict:
+    return {**mfsk_skimmer.snapshot(), "sending": bool(_mfsk_job and not _mfsk_job.done()),
+            "mode": (service.status.get("vfo") or {}).get("mode")}
+
+
+async def _mfsk_send(text: str, hz: float, reverse: bool) -> None:
+    try:
+        await tx.send_mfsk(text, hz, reverse)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("MFSK32 TX failed: %s", exc)
+    finally:
+        mfsk_skimmer.version += 1
+
+
+@app.get("/api/mfsk")
+async def mfsk_status() -> dict:
+    return _mfsk_view()
+
+
+@app.post("/api/mfsk/enable")
+async def mfsk_enable(req: OnOffReq) -> dict:
+    mfsk_skimmer.set_enabled(req.on)
+    return _mfsk_view()
+
+
+@app.post("/api/mfsk/clear")
+async def mfsk_clear() -> dict:
+    mfsk_skimmer.clear()
+    return _mfsk_view()
+
+
+@app.post("/api/mfsk/send")
+async def mfsk_send(req: MfskSendReq) -> dict:
+    """Send text in MFSK32 on the DATA input (DATA-U / USB; in DATA-L / LSB
+    the tone order is mirrored so the signal on the air is the same)."""
+    global _mfsk_job
+    if sequencer.kind or sequencer.hunt:
+        raise HTTPException(409, "The FT8 sequencer is running — stop it first (Halt TRX)")
+    if _mfsk_job and not _mfsk_job.done():
+        raise HTTPException(409, "still sending")
+    try:
+        tx._check()
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    _mfsk_job = asyncio.create_task(_mfsk_send(req.text, req.hz, _mfsk_reverse()))
+    mfsk_skimmer.mark_tx(req.hz, req.text)
+    mfsk_skimmer.version += 1
+    return {"ok": True, "seconds": round(mfsk_duration_s(req.text), 1)}
+
+
+@app.post("/api/mfsk/stop")
+async def mfsk_stop() -> dict:
+    if tx.state.get("active") == "mfsk":
+        await tx.stop()
+    if _mfsk_job and not _mfsk_job.done():
+        _mfsk_job.cancel()
+    mfsk_skimmer.version += 1
+    return {"ok": True}
+
+
+@app.websocket("/ws/mfsk")
+async def ws_mfsk(ws: WebSocket) -> None:
+    await _stream(ws, mfsk_manager)
 
 
 # -- JTTY: keyboard mode of WSJT-X 3.2+, any time, FEC (jtty.py, decoder/jttyd) --

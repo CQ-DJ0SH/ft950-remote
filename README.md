@@ -101,7 +101,10 @@ decoding, plus voice operation over WebRTC.
     80-40 · 30-20 · 17-15 · 12-10 · 6m in green / yellow / red, computed by
     real **VOACAP** for your own locator; the sun/moon shows day or night at
     the station and switches the view to the other half of the day
-- **RTTY skimmer** (panel below DIGI): every RTTY signal in the passband
+- **DIGIMODES** (panel below DIGI): CW, RTTY, JTTY and MFSK32 in one panel
+  with a mode switch (as TM-V71 Remote); DECODE after the title switches the
+  mode shown, each decoder runs on on another tab (a dot on the tab)
+- **RTTY skimmer**: every RTTY signal in the passband
   decoded at once (45.45 Bd, 170 Hz, Baudot; matched filters, automatic
   threshold, squelch on clean frames), one row each; transmit as AFSK through
   the DATA input with macros, mark/space following the sideband, REV;
@@ -126,8 +129,14 @@ decoding, plus voice operation over WebRTC.
   station (its conversation, CALL, TX frequency); macros in WSJT-X's F-key
   forms (every call once: CQ = 1 frame), transmit through the DATA input
   (DATA-U / USB only), BAND menu with the JTTY dial frequencies; RX and TX lines told
-  apart in the list and the conversation. RTTY, CW and JTTY hear silence while
-  we transmit (no echo of the own signal)
+  apart in the list and the conversation
+- **MFSK32** as fldigi (16 tones, 31.25 Bd, K=7 Viterbi FEC, interleaver,
+  varicode; the coding ported from fldigi's source, GPL-3): a skimmer for
+  every MFSK32 signal in the passband (found by its 16-tone comb, decoded
+  from the last 8 s so the start is not lost, squelch on fldigi's metric);
+  transmit through the DATA input, upper and lower case, macros, the tone
+  order mirrored in DATA-L / LSB. RTTY, CW, JTTY and MFSK32 hear silence
+  while we transmit (no echo of the own signal)
 - **HackRF waterfall**: panadapter or wideband sweep from a HackRF One on
   another Pi, relayed from TM-V71 Remote's `/ws/hackrf`; follow shows the
   whole amateur band of VFO A; click tunes VFO A

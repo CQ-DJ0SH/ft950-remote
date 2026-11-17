@@ -2206,7 +2206,7 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 :root[data-theme="light"] .rttyp.jttyp{--accent:#24439a; --accent-glow:#345ece}
 /* JTTY: a message still arriving */
 #jt-body tr.jt-growing td.msg{color:var(--text-dim); font-style:italic}
-.jttyp #jt-band{font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:3px 6px}
+.jttyp #jt-band, .digim #jt-band{font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:3px 6px}
 
 /* LCD: AFU over MHz - lit green inside an amateur band, otherwise an unlit segment */
 .lcd .freq-side{display:inline-flex; flex-direction:column; align-items:flex-start; align-self:stretch;
@@ -2232,3 +2232,26 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 .cw-text .stx{display:block; margin:4px 0; color:var(--tx); font-weight:600; white-space:pre-wrap}
 .cw-text .stx b{font-size:.75em; font-weight:700; letter-spacing:.08em; padding:0 5px; margin-right:8px;
   border:1px solid currentColor; border-radius:3px}
+
+/* DIGIMODES: CW · RTTY · JTTY · MFSK32 in one panel with a mode switch (as
+   TM-V71 Remote). The accent follows the mode shown (each keeps its colour);
+   an accent set in Settings ▸ Appearance (inline) wins over all of them. */
+.panel.digim[data-mode="cw"]{--accent:#2ec4c9; --accent-glow:#1fb3b8}
+.panel.digim[data-mode="rtty"]{--accent:#d65b98; --accent-glow:#d65b98}
+.panel.digim[data-mode="jtty"]{--accent:#345ece; --accent-glow:#4a74e0}
+.panel.digim[data-mode="mfsk"]{--accent:#9b6bdc; --accent-glow:#a97ee6}
+:root[data-theme="light"] .panel.digim[data-mode="cw"]{--accent:#0b8389; --accent-glow:#12a2a8}
+:root[data-theme="light"] .panel.digim[data-mode="rtty"]{--accent:#9c2f66; --accent-glow:#b8477f}
+:root[data-theme="light"] .panel.digim[data-mode="jtty"]{--accent:#24439a; --accent-glow:#345ece}
+:root[data-theme="light"] .panel.digim[data-mode="mfsk"]{--accent:#6a3cae; --accent-glow:#8455c8}
+.digim .dm-tabs .sg{font:700 11px var(--font-ui); letter-spacing:.12em; padding:5px 12px; position:relative}
+/* a dot: that mode's decoder is on (it keeps running on another tab) */
+.digim .dm-tabs .sg.live::after{content:""; display:inline-block; width:6px; height:6px; margin-left:7px; border-radius:50%;
+  background:var(--ok); box-shadow:0 0 6px var(--ok); vertical-align:1px}
+.digim .dm-tabs .sg.on.live::after{background:#06222a; box-shadow:none}
+.digim .dm-bar{display:flex; align-items:center; gap:12px; flex-wrap:wrap; row-gap:6px; margin-bottom:12px}
+.digim .dm-pane[hidden]{display:none}
+.digim.collapsed .dm-pane{display:none}
+#mf-txhz{width:70px}
+/* MFSK32 sends exactly what is typed: upper and lower case shown as they are */
+.cw-tx input#mf-msg{text-transform:none}

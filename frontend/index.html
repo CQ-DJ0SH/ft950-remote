@@ -504,6 +504,14 @@
       <button class="btn sm toggle" id="cw-on" title="Decode every CW signal in the receive passband (runs on the Pi while switched on)">DECODE</button>
       <span class="panel-stat" id="cw-stat"></span>
       <span class="spacer"></span>
+      <span class="cw-auto cw-auto-set" id="cw-auto">
+        <label class="cw-call cw-qso-only" title="Your name for the QSO exchange (stored in this browser)">NAME <input type="text" id="cw-name" maxlength="12" autocomplete="off" spellcheck="false"></label>
+        <label class="cw-call cw-qso-only" title="Your QTH for the QSO exchange (stored in this browser)">QTH <input type="text" id="cw-qth" maxlength="16" autocomplete="off" spellcheck="false"></label>
+        <button class="btn sm toggle" id="cw-ser" title="Send a serial number in the report (contest); counts up after each logged QSO">SERIAL</button>
+        <input type="number" id="cw-nr" min="1" max="9999" step="1" title="Next serial number to send — editable">
+      </span>
+      <div class="seg cw-style" id="cw-style" title="QSO: normal exchange with RST, name and QTH · CONTEST: short 5NN exchange">
+        <button class="sg" data-v="qso">QSO</button><button class="sg" data-v="contest">CONTEST</button></div>
       <label class="cw-ctl" title="Keyer speed of the radio (KS), 4 … 60 WPM">WPM <input type="range" id="cw-wpm" min="4" max="60" step="1" aria-label="Keyer speed (WPM)"><b id="cw-wpm-val">—</b></label>
       <span class="cw-ro" id="cw-pitch" title="CW pitch of the radio (KP, set on the radio)">— Hz</span>
       <button class="btn sm toggle" id="cw-mon" title="Monitor: hear your own CW here in the browser while the radio sends it (the radio's own sidetone does not reach the Pi)">MON</button>
@@ -536,17 +544,11 @@
     <div class="cw-macros">
       <label class="cw-call" title="Callsign for the macros — taken from the selected signal, editable">CALL <input type="text" id="cw-call" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
       <span id="cw-macro-btns"></span>
-    </div>
-    <div class="cw-auto" id="cw-auto">
-      <div class="seg cw-style" id="cw-style" title="QSO: normal exchange with RST, name and QTH · CONTEST: short 5NN exchange">
-        <button class="sg" data-v="qso">QSO</button><button class="sg" data-v="contest">CONTEST</button></div>
-      <label class="cw-call cw-qso-only" title="Your name for the QSO exchange (stored in this browser)">NAME <input type="text" id="cw-name" maxlength="12" autocomplete="off" spellcheck="false"></label>
-      <label class="cw-call cw-qso-only" title="Your QTH for the QSO exchange (stored in this browser)">QTH <input type="text" id="cw-qth" maxlength="16" autocomplete="off" spellcheck="false"></label>
-      <button class="btn sm toggle" id="cw-ser" title="Send a serial number in the report (contest); counts up after each logged QSO">SERIAL</button>
-      <input type="number" id="cw-nr" min="1" max="9999" step="1" title="Next serial number to send — editable">
-      <button class="btn sm toggle" id="cw-acq" title="Auto CQ: repeat CQ with a listening pause until a station answers (its call comes into CALL for you to confirm), STOP or 30 calls">AUTO CQ</button>
-      <label class="cw-call" title="Listening pause between two CQs">PAUSE <input type="number" id="cw-acq-s" min="2" max="30" step="1"> s</label>
-      <span class="cw-heard" id="cw-heard" title="Taken from the other station's text: RST, serial, name, QTH — goes into the log"></span>
+      <span class="cw-auto cw-auto-run">
+        <button class="btn sm toggle" id="cw-acq" title="Auto CQ: repeat CQ with a listening pause until a station answers (its call comes into CALL for you to confirm), STOP or 30 calls">AUTO CQ</button>
+        <label class="cw-call" title="Listening pause between two CQs">PAUSE <input type="number" id="cw-acq-s" min="2" max="30" step="1"> s</label>
+        <span class="cw-heard" id="cw-heard" title="Taken from the other station's text: RST, serial, name, QTH — goes into the log"></span>
+      </span>
       <span class="spacer"></span>
       <button class="btn cw-next" id="cw-next" title="Send the next step of the QSO (Enter in an empty send line or in CALL)">NEXT ▸ CQ</button>
       <button class="btn sm" id="cw-reset" title="Start over: back to CQ, CALL and received data cleared">RESET</button>

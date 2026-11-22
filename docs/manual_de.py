@@ -140,7 +140,9 @@ DE = [
     ("p", "Darunter folgen die Felder VFO, PTT · MEMORY und AUDIO, DIGI, DIGIMODES, HackRF "
           "und LOG. Die meisten lassen sich mit ▲ einklappen; PTT und AUDIO bleiben "
           "immer offen. Die Felder werden mit 90 % Zoom dargestellt, damit die ganze "
-          "Station auf einen Bildschirm passt."),
+          "Station auf einen Bildschirm passt. Ein Index am rechten Rand (VFO, PTT, AUDIO, "
+          "DIGI, MODES, HRF, LOG, jeweils in der Akzentfarbe seines Felds; ausgeblendete "
+          "Felder fehlen) springt zum Anfang eines Felds und hebt das gerade sichtbare hervor."),
 
     ("h1", "6  VFO-Feld"),
     ("img", "manual/vfo.png", 174),
@@ -488,17 +490,21 @@ DE = [
           "gleitend), 1024 Spalten (eine je Frequenzstufe); ohne WebGL übernimmt eine "
           "einfachere Zeichnung."),
     ("ul", [
-        "Der Raum: dünne Linien auf dem Boden alle 250 Hz und in Zeitschritten, an der "
-        "Rückwand und an den Seiten. Eine bernsteinfarbene Linie entlang des Geländes "
-        "markiert jeden Periodenbeginn (gerade / ungerade) und wandert mit nach hinten. "
-        "TX-Fenster (rot) und RX-Fenster (grün) liegen in derselben Perspektive auf dem "
-        "Boden und an der Rückwand.",
+        "Der Raum: Linien auf dem Boden alle 250 Hz und in Zeitschritten, an der Rückwand "
+        "und an den Seiten; an der schrägen rechten Kante eine feste Zeitskala (Sekunden "
+        "zurück). Jeder Periodenbeginn ist eine flache Linie über den Boden, gerade Türkis "
+        "und ungerade Violett wie der EVEN/ODD-Chip, die mit den Daten nach hinten wandert. "
+        "TX-Fenster (rot) und RX-Fenster (grün) stehen als durchscheinende Scheiben "
+        "aufrecht im Raum, so steht ein Signal im Fenster - auch der Grat der eigenen "
+        "Aussendung - zwischen ihren Wänden.",
         "Oben links die Legende (Farben mit ihrem dB-Bereich, die Linien, die Tiefe), oben "
         "rechts die letzte Periode: Dekodierungen, bestes SNR, CQs, wie belegt das Band ist "
         "(Anteil über dem Rauschen) und der Rauschpegel.",
-        "Eigene Aussendungen und 2 s danach gehen als leere Zeilen ein (der Empfänger hört "
-        "das Sendesignal und das Umschalten), ebenso jedes Bild, das über das halbe Band "
-        "stark ist - die Ansicht läuft weiter, eine Aussendung ist eine flache Lücke.",
+        "Beim Senden läuft die Ansicht weiter und zeigt, was der Empfänger misst, aber nur "
+        "im TX-Fenster (±25 Hz) - links und rechts davon das Empfangsrauschen, so ist das "
+        "eigene Signal ein Grat. Das Umschalten Senden/Empfang (je 0,8 s) und jedes Bild, "
+        "das über das halbe Band stark ist, werden durch das Empfangsrauschen ersetzt: "
+        "keine Linie mit Vollausschlag.",
         "Einstellungen: Depth (15 s bis 2 min), Height der Spitzen, Colours (Yaesu Blau "
         "bis Rot oder das Farbschema des Wasserfalls). Markierungen, Skala, "
         "Rufzeichenstreifen und Klicks beziehen sich auf die Vorderkante; der flache "

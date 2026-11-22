@@ -125,7 +125,10 @@ EN = [
           "Settings and — once a Shelly is set up — the power switch."),
     ("p", "Below follow the panels VFO, PTT · MEMORY and AUDIO, DIGI, DIGIMODES, HackRF "
           "and LOG. Most can be collapsed with ▲; PTT and AUDIO always stay open. "
-          "The panels are shown at 90 % zoom so the whole station fits on one screen."),
+          "The panels are shown at 90 % zoom so the whole station fits on one screen. An "
+          "index on the right edge (VFO, PTT, AUDIO, DIGI, MODES, HRF, LOG, each in its "
+          "panel's accent colour; hidden panels left out) jumps to the top of a panel and "
+          "lights the one in view."),
 
     ("h1", "6  VFO panel"),
     ("img", "manual/vfo.png", 174),
@@ -445,16 +448,19 @@ EN = [
           "Drawn with WebGL at the screen's own resolution and frame rate (sharp, gliding), "
           "1024 columns (one per frequency bin); without WebGL a simpler drawing takes over."),
     ("ul", [
-        "The room: thin lines on the floor every 250 Hz and at time steps, on the back "
-        "wall and at the sides. An amber line along the terrain marks each period start "
-        "(even / odd) and moves back with it. The TX (red) and RX (green) windows lie on "
-        "the floor and up the back wall in the same perspective.",
+        "The room: lines on the floor every 250 Hz and at time steps, on the back wall "
+        "and at the sides; on the slanted right edge a fixed time scale (seconds back). "
+        "Each period start is a flat line across the floor, even cyan and odd violet as "
+        "the EVEN / ODD chip, moving back with the data. The TX (red) and RX (green) "
+        "windows stand upright in the room as translucent slabs, so a signal in the "
+        "window - the own transmission's ridge too - stands between their walls.",
         "Top left the legend (colours with their dB range, the lines, the depth), top "
         "right the last period: decodes, best SNR, CQs, how busy the band is (share above "
         "the noise) and the noise level.",
-        "Own transmissions and 2 s after them go in as empty lines (the receiver hears "
-        "the TX audio and the switching), as does any frame strong over half the band - "
-        "the view keeps moving, a transmission is a flat gap.",
+        "While transmitting the view keeps moving and shows what the receiver measures, "
+        "but only in the TX window (+-25 Hz) - left and right of it the receive noise, so "
+        "the own signal is one ridge. The T/R switching (0.8 s each way) and any frame "
+        "strong over half the band are replaced by the receive noise: no full-scale line.",
         "Settings: Depth (15 s to 2 min), Height of the peaks, Colours (Yaesu blue to red, "
         "or the waterfall's palette). Markers, scale, the callsign strip and clicks refer "
         "to the front edge; the flat waterfall keeps running underneath, switching is "

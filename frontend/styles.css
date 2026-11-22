@@ -2310,3 +2310,19 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 .w3-right b{text-align:right}
 .w3-left{line-height:1.35; white-space:nowrap} .w3-sub{padding-left:2.2ch; color:#8d9bc0}
 .wf-wrap.v3d.v3d-gl .wf-box{visibility:hidden}   /* 3D: the windows are drawn in the room's perspective (WebGL) */
+
+/* panel index on the right edge: a click jumps to the panel's top */
+.pidx{position:fixed; right:6px; top:50%; transform:translateY(-50%); z-index:12; display:flex; flex-direction:column; gap:4px;
+  padding:6px 4px; border-radius:10px; background:color-mix(in srgb, var(--panel) 82%, transparent);
+  border:1px solid var(--edge); box-shadow:0 6px 18px -8px #0008}
+.pidx button{font:700 9px var(--font-ui); letter-spacing:.1em; color:var(--pc, var(--text-dim)); opacity:.75; background:none; border:1px solid transparent;
+  border-radius:6px; padding:5px 4px; min-width:44px; cursor:pointer; text-align:center}
+@media (hover:hover){.pidx button:hover{opacity:1; border-color:var(--pc, var(--edge))}}
+.pidx button.on{opacity:1; color:var(--pc, var(--text)); border-color:var(--pc, var(--amber)); box-shadow:inset 3px 0 0 var(--pc, var(--amber)), 0 0 10px -4px var(--pc, transparent)}
+@media (max-width:900px){.pidx{right:2px; padding:4px 2px} .pidx button{min-width:36px; padding:4px 2px; font-size:8px}}
+.w3-even{color:#2aa6c4 !important} .w3-odd{color:#8b78e6 !important}   /* the 3D period dividers, as the EVEN / ODD chip */
+/* 3D: the second of each period start beside its divider */
+.wf-wrap .w3-secs{position:absolute; inset:0; pointer-events:none; display:none; z-index:2}
+.wf-wrap.v3d.v3d-gl .w3-secs{display:block}
+.w3-secs span{position:absolute; transform:translate(0, -50%); font:600 9px var(--font-mono); padding:0 3px; border-radius:4px; background:#05060fcc; line-height:1.3}
+.w3-secs span{color:#b9c6e6}

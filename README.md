@@ -63,8 +63,9 @@ decoding, plus voice operation over WebRTC.
   - **3D waterfall** (Settings ▸ FT8, after Yaesu's 3D display): the spectrum
     history in perspective, signals as peaks running into the depth; WebGL at
     the screen's resolution and frame rate, a room grid, even/odd period lines,
-    TX/RX windows in perspective, legend and band figures in the corners;
-    depth, height and colours adjustable; own TX goes in as a gap
+    TX/RX windows as upright slabs, a fixed time scale on the slanted edge,
+    legend and band figures in the corners; depth, height and colours
+    adjustable; while transmitting only the TX window is drawn as measured
   - waterfall with TX (red) and RX (green) markers; **Adopt Frequency** moves TX
     onto the station clicked, a TX frequency set by hand switches it off;
     DIGI RX level and TX drive in one strip with the receive meter
@@ -171,6 +172,9 @@ decoding, plus voice operation over WebRTC.
     mode and UTC day
   - the mail account, its password and the pictures stay on the Pi
     (runtime.json, `backend/qsl_images/` — gitignored)
+- **Panel index** on the right edge: VFO, PTT, AUDIO, DIGI, MODES, HRF, LOG
+  in their accent colours; a click jumps to the top of the panel, the one in
+  view is lit
 - **Settings**:
   - station data, serial port and baud rate, decoder range, HackRF source,
     Shelly

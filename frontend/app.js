@@ -1712,8 +1712,16 @@ function onFrame(f) {
     row.data[i * 4 + 3] = 255;
   }
   wfCtx.putImageData(row, 0, 0);
-  if (boundary) w3boundary = true;                          // the next 3D line gets the even/odd divider
-  else push3d(w3Glitch(vals) ? new Uint8Array(vals.length) : vals);   // TX / transient: an empty line, time goes on
+  if (boundary) w3boundary = { odd: !!(per % 2), t: per * (PERIOD[digiMode] || 15) };   // the next 3D line: the divider of the period that begins
+  else {
+    const g = w3Glitch(vals);                    // "" receive, "tx" transmitting, "switch" / "spike"
+    if (!g) w3noise = vals;                      // the noise reference: from receiving only
+    // the switching moments and broadband spikes: the noise of the last normal
+    // frame instead (no full-scale line); while transmitting: what the
+    // receiver really measures (the TX noise level)
+    push3d(g === "switch" || g === "spike" ? w3NoiseLine(vals.length)
+      : g === "tx" ? w3TxOnly(vals, b0) : vals);             // TX / transient: an empty line, time goes on
+  }
 }
 
 // ---- 3D waterfall (Settings ▸ FT8 ▸ Waterfall), after Yaesu's 3D display:
@@ -1742,18 +1750,39 @@ function lutFrom(stops) {
   return t;
 }
 const lutYaesu = lutFrom(YAESU_STOPS);
-// Not into 3D: our own transmission and 2 s after it (the receiver hears the
-// TX audio and the T/R switching), and any frame that is strong over more
-// than half the band - a switching transient, not a signal. One such frame
-// made a whole 3D line red (each line is the maximum of several frames).
-let w3TxUntil = 0;
+// The T/R switching (0.8 s at each switch) and any frame strong over more
+// than half the band are not drawn as they are - a transient, not a signal:
+// one such frame made a whole 3D line red (each line is the maximum of
+// several frames). While transmitting, the receiver's real level is shown.
+let w3TxUntil = 0, w3TxPrev = false, w3noise = null;
+// While transmitting: only the TX window (+-25 Hz) as measured, left and
+// right of it the receive noise - the own signal one ridge, not spread
+// over the band.
+function w3TxOnly(vals, b0) {
+  const out = w3NoiseLine(vals.length);
+  const tx = seqTxHz ?? boxes.tx, bw = SIGNAL_BW[digiMode] || 50;
+  const i0 = Math.max(0, Math.floor((tx - 25) / hzPerBin) - b0);
+  const i1 = Math.min(vals.length, Math.ceil((tx + bw + 25) / hzPerBin) - b0);
+  for (let i = i0; i < i1; i++) out[i] = vals[i];
+  return out;
+}
+function w3NoiseLine(n) {
+  const out = new Uint8Array(n);
+  if (!w3noise || w3noise.length !== n) return out;
+  const med = [...w3noise].sort((a, b) => a - b)[n >> 1];
+  for (let i = 0; i < n; i++) out[i] = Math.min(w3noise[i], med);
+  return out;
+}
 function w3Glitch(vals) {
   const now = performance.now();
-  if (radio.tx) w3TxUntil = now + 2000;                     // 2 s after the transmission
-  if (now < w3TxUntil) return true;
+  // the radio's TX (CAT, polled) or our own transmitter's state (pushed at once)
+  const txNow = !!(radio.tx || txState?.active);
+  if (txNow !== w3TxPrev) { w3TxPrev = txNow; w3TxUntil = now + 800; }   // a switch, either way
+  if (now < w3TxUntil) return "switch";
   let n = 0;
   for (let i = 0; i < vals.length; i++) if (vals[i] > 170) n++;
-  return n > vals.length / 2;
+  if (n > vals.length / 2) return "spike";
+  return txNow ? "tx" : "";
 }
 function w3per() { return Math.max(1, Math.round(w3.depth * 10 / W3D_LINES)); }   // frames (10/s) per line
 function push3d(vals) {
@@ -1763,8 +1792,8 @@ function push3d(vals) {
   if (++w3n < w3per()) return;
   w3rows.unshift(w3acc);
   if (w3rows.length > W3D_LINES) w3rows.length = W3D_LINES;
-  w3marks = w3marks.map((a) => a + 1).filter((a) => a < W3D_LINES - 1);
-  if (w3boundary) { w3marks.push(0); w3boundary = false; }
+  w3marks = w3marks.map((m) => ({ ...m, a: m.a + 1 })).filter((m) => m.a < W3D_LINES - 1);
+  if (w3boundary) { w3marks.push({ a: 0, odd: w3boundary.odd, t: w3boundary.t }); w3boundary = false; }
   if (gl3) gl3Line(w3acc);
   w3acc = new Uint8Array(vals.length); w3n = 0;
   w3lastLine = performance.now();
@@ -1848,9 +1877,10 @@ function gl3Init() {
 // the waterfall covers them.
 function gl3Grid(gl, sh) {
   const vs = `attribute vec3 a_p;                 // u (frequency 0..1), z (0 front .. 1 back), w (0 floor .. 1 top)
+    uniform float u_dz;                                         // depth offset: + behind the surface, - in front
     void main() {
       float z = a_p.y, sc = 1.0 - 0.4 * z, base = -0.985 + 1.305 * z;
-      gl_Position = vec4((a_p.x * 2.0 - 1.0) * sc, base + a_p.z * (0.995 - base), z * 2.0 - 1.0 + 0.002, 1.0);
+      gl_Position = vec4((a_p.x * 2.0 - 1.0) * sc, base + a_p.z * (0.995 - base), z * 2.0 - 1.0 + u_dz, 1.0);
     }`;
   const fs = `precision mediump float; uniform vec4 u_col; void main() { gl_FragColor = u_col; }`;
   const prog = gl.createProgram();
@@ -1873,6 +1903,11 @@ function gl3Grid(gl, sh) {
   const buf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(p), gl.STATIC_DRAW);
+  // the same lines shifted a little (u and floor height): the soft second pass
+  const p2 = p.map((v, i) => (i % 3 === 0 ? v + 0.0004 : i % 3 === 2 ? v + 0.002 : v));
+  const buf2 = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf2);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(p2), gl.STATIC_DRAW);
   // the even/odd divider: a line along the terrain of the 3D line where a
   // period began, moving into the depth with it
   // a narrow band (about 3 px) with soft edges, not a 1-px line: moving by
@@ -1893,7 +1928,8 @@ function gl3Grid(gl, sh) {
   gl.linkProgram(mprog);
   const mbuf = gl.createBuffer();
   const bbuf = gl.createBuffer();                               // the TX / RX windows (per frame)
-  return { prog, buf, bbuf, n: p.length / 3, aP: gl.getAttribLocation(prog, "a_p"), uCol: gl.getUniformLocation(prog, "u_col"),
+  return { prog, buf, buf2, bbuf, n: p.length / 3, aP: gl.getAttribLocation(prog, "a_p"), uCol: gl.getUniformLocation(prog, "u_col"),
+           uDz: gl.getUniformLocation(prog, "u_dz"),
            mprog, mbuf, aUh: gl.getAttribLocation(mprog, "a_uhs"), mCol: gl.getUniformLocation(mprog, "u_col"),
            mZ: gl.getUniformLocation(mprog, "u_z"), mH: gl.getUniformLocation(mprog, "u_height"),
            mPx: gl.getUniformLocation(mprog, "u_px"), mData: new Float32Array(GL_COLS * 6) };
@@ -1913,7 +1949,8 @@ function gl3Line(row) {
   gl.bufferSubData(gl.ARRAY_BUFFER, 0, h);
 }
 function gl3Draw() {
-  const gl = gl3.gl, r = $("wf-wrap").getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  // the canvas itself (with the callsign strip on it is 56 px shorter than the wrap)
+  const gl = gl3.gl, r = wf3c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   const W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
   if (wf3c.width !== W || wf3c.height !== H) { wf3c.width = W; wf3c.height = H; }
   const L = w3.colors === "palette" ? lut : lutYaesu;
@@ -1934,8 +1971,17 @@ function gl3Draw() {
   gl.bindBuffer(gl.ARRAY_BUFFER, g.buf);
   gl.enableVertexAttribArray(g.aP); gl.vertexAttribPointer(g.aP, 3, gl.FLOAT, false, 0, 0);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.uniform4f(g.uCol, 0.65, 0.78, 1.0, 0.45);            // the room: clearly visible, still behind the signals
+  gl.uniform1f(g.uDz, 0.002);                               // the room: a hair behind the surface
+  gl.uniform4f(g.uCol, 0.7, 0.82, 1.0, 0.75);             // the room: clearly visible, still behind the signals
   gl.drawArrays(gl.LINES, 0, g.n);
+  // a second, softer pass half a pixel aside: the lines look about 2 px wide
+  if (g.buf2) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, g.buf2);
+    gl.vertexAttribPointer(g.aP, 3, gl.FLOAT, false, 0, 0);
+    gl.uniform4f(g.uCol, 0.7, 0.82, 1.0, 0.35);
+    gl.drawArrays(gl.LINES, 0, g.n);
+    gl.bindBuffer(gl.ARRAY_BUFFER, g.buf);
+  }
   gl.disable(gl.BLEND);
   gl.disableVertexAttribArray(g.aP);
   gl.useProgram(gl3.prog);
@@ -1947,21 +1993,25 @@ function gl3Draw() {
   gl.uniform1f(gl3.u.height, w3.height / 100);
   gl.uniform1i(gl3.u.lut, 0);
   gl.drawElements(gl.TRIANGLES, gl3.nIdx, gl.UNSIGNED_INT, 0);
+  w3SecLabels();
   if (w3marks.length) {
-    // the even/odd dividers over the terrain, in the TX marker's amber
+    // the even/odd dividers: flat lines on the floor, drawn over the terrain
+    // (no depth test) so the signals do not hide them; in the period's colour
     gl.disableVertexAttribArray(gl3.aUv); gl.disableVertexAttribArray(gl3.aH);
     gl.useProgram(g.mprog);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.uniform4f(g.mCol, 1.0, 0.72, 0.25, 0.85);
+    gl.disable(gl.DEPTH_TEST);
     gl.uniform1f(g.mH, w3.height / 100);
     gl.uniform1f(g.mPx, 2 / H);                                 // one pixel in clip space
     gl.bindBuffer(gl.ARRAY_BUFFER, g.mbuf);
     gl.enableVertexAttribArray(g.aUh);
     const C = GL_COLS, h = gl3.hData, m = g.mData;
-    for (const age of w3marks) {
+    for (const { a: age, odd } of w3marks) {
+      // the period that begins here: even cyan, odd violet - as the EVEN / ODD chip
+      if (odd) gl.uniform4f(g.mCol, 0.55, 0.47, 0.9, 0.95); else gl.uniform4f(g.mCol, 0.16, 0.65, 0.77, 0.95);
       for (let c = 0; c < C; c++) {                             // two vertices per column: the band's edges
-        const u = c / (C - 1), v = h[age * C + c];
-        m.set([u, v, -1, u, v, 1], c * 6);
+        const u = c / (C - 1);                                  // flat: on the floor, not along the terrain
+        m.set([u, 0, -1, u, 0, 1], c * 6);
       }
       gl.bufferData(gl.ARRAY_BUFFER, m, gl.DYNAMIC_DRAW);
       gl.vertexAttribPointer(g.aUh, 3, gl.FLOAT, false, 0, 0);
@@ -1970,6 +2020,7 @@ function gl3Draw() {
     }
     gl.disableVertexAttribArray(g.aUh);
     gl.disable(gl.BLEND);
+    gl.enable(gl.DEPTH_TEST);
     gl.useProgram(gl3.prog);
   }
   gl3Boxes(g);
@@ -1978,6 +2029,25 @@ function gl3Draw() {
 // the flat page's upright rectangles: a translucent band on the floor from
 // the front edge into the depth and up the back wall, with brighter edges -
 // over the signals, as the rectangles were.
+// A fixed time scale on the slanted outer edge of the floor (right): at each
+// cross line of the grid how many seconds back it is - the even/odd lines
+// move through it. Small HTML labels, placed by the same perspective.
+function w3SecLabels() {
+  // the canvas' own size and place in the wrap (the callsign strip takes 56 px below it)
+  const box = $("w3-secs"), W = wf3c.clientWidth, H = wf3c.clientHeight, top0 = wf3c.offsetTop;
+  const key = `${W}x${H}x${top0}x${w3.depth}`;
+  if (box.dataset.key === key) return;                  // fixed: only when size or depth change
+  box.dataset.key = key;
+  let html = "";
+  for (let k = 1; k <= 6; k++) {                       // no "0": the front edge is now
+    const z = k / 6, sc = 1 - 0.4 * z, base = -0.985 + 1.305 * z;
+    // outside, just right of the slanted edge; at the very front there is no room: inside the corner
+    const x = Math.min((sc + 1) / 2 * W + 4, W - 34), y = top0 + (1 - base) / 2 * H;
+    const sec = Math.round(w3.depth * k / 6);
+    html += `<span style="left:${x}px;top:${y}px">${sec} s</span>`;
+  }
+  box.innerHTML = html;
+}
 function gl3Boxes(g) {
   const gl = gl3.gl, bw = SIGNAL_BW[digiMode] || 50;
   const at = { tx: seqTxHz ?? boxes.tx, rx: boxes.rx };
@@ -1991,21 +2061,28 @@ function gl3Boxes(g) {
     if (which === "rx" && !rxBoxOn) continue;
     if (at[which] == null) continue;
     const u0 = (at[which] - F0) / (F1 - F0), u1 = u0 + bw / (F1 - F0);
+    // an upright slab through the room: its side walls rise vertically at the
+    // window's edges and run into the depth, so a signal in the window (the own
+    // transmission's ridge) stands between them at every height - lying flat on
+    // the floor, the box seemed beside a tall ridge (the projection)
     const fill = new Float32Array([
       u0, 0, 0, u1, 0, 0, u0, 1, 0, u1, 0, 0, u1, 1, 0, u0, 1, 0,       // floor
-      u0, 1, 0, u1, 1, 0, u0, 1, 1, u1, 1, 0, u1, 1, 1, u0, 1, 1]);     // back wall
+      u0, 0, 0, u0, 1, 0, u0, 0, 1, u0, 1, 0, u0, 1, 1, u0, 0, 1,       // left wall
+      u1, 0, 0, u1, 1, 0, u1, 0, 1, u1, 1, 0, u1, 1, 1, u1, 0, 1,       // right wall
+      u0, 0, 0, u1, 0, 0, u0, 0, 1, u1, 0, 0, u1, 0, 1, u0, 0, 1]);     // front face
     gl.bufferData(gl.ARRAY_BUFFER, fill, gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(g.aP, 3, gl.FLOAT, false, 0, 0);
-    gl.uniform4f(g.uCol, col[0], col[1], col[2], 0.3);
-    gl.drawArrays(gl.TRIANGLES, 0, 12);
+    gl.uniform4f(g.uCol, col[0], col[1], col[2], 0.12);
+    gl.drawArrays(gl.TRIANGLES, 0, 24);
     const edge = new Float32Array([
-      u0, 0, 0, u0, 1, 0, u1, 0, 0, u1, 1, 0,                         // into the depth
-      u0, 1, 0, u0, 1, 1, u1, 1, 0, u1, 1, 1,                         // up the back wall
-      u0, 0, 0, u1, 0, 0]);                                           // the front edge
+      u0, 0, 0, u0, 1, 0, u1, 0, 0, u1, 1, 0,                         // floor, into the depth
+      u0, 0, 1, u0, 1, 1, u1, 0, 1, u1, 1, 1,                         // top, into the depth
+      u0, 0, 0, u0, 0, 1, u1, 0, 0, u1, 0, 1,                         // the front verticals
+      u0, 1, 0, u0, 1, 1, u1, 1, 0, u1, 1, 1]);                       // the back verticals
     gl.bufferData(gl.ARRAY_BUFFER, edge, gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(g.aP, 3, gl.FLOAT, false, 0, 0);
     gl.uniform4f(g.uCol, col[0], col[1], col[2], 1.0);
-    gl.drawArrays(gl.LINES, 0, 10);
+    gl.drawArrays(gl.LINES, 0, 16);
     // the edges a little wider: the same lines once more, a pixel to each side
     const du = 1 / (wf3c.width || 1000);
     for (const d of [-du, du]) {
@@ -2013,7 +2090,7 @@ function gl3Boxes(g) {
       gl.bufferData(gl.ARRAY_BUFFER, e2, gl.DYNAMIC_DRAW);
       gl.vertexAttribPointer(g.aP, 3, gl.FLOAT, false, 0, 0);
       gl.uniform4f(g.uCol, col[0], col[1], col[2], 0.55);
-      gl.drawArrays(gl.LINES, 0, 10);
+      gl.drawArrays(gl.LINES, 0, 16);
     }
   }
   gl.disableVertexAttribArray(g.aP);
@@ -2071,8 +2148,8 @@ function w3Info() {
   // narrow: five short lines
   $("w3-legend").innerHTML =
     `<div class="w3-bar"><i style="background:linear-gradient(90deg,${stops.join(",")})"></i><span>+${range} dB</span></div>` +
-    `<div><b class="w3-amb">━</b> period start</div>` +
-    `<div class="w3-sub">even / odd, ${period} s</div>` +
+    `<div><b class="w3-even">━</b> even <b class="w3-odd">━</b> odd</div>` +
+    `<div class="w3-sub">period start, ${period} s</div>` +
     `<div><b class="w3-grd">━</b> 250 Hz · ${Math.round(w3.depth / 6)} s</div>` +
     `<div class="w3-sub">depth ${w3.depth} s</div>`;
   // the last period's decodes
@@ -5608,6 +5685,7 @@ function dmShow(mode) {
     b.setAttribute("aria-selected", String(b.dataset.dm === mode));
   }
   $("digimodes").dataset.mode = mode;
+  if (typeof pidxLit === "function" && $("pidx")?.children.length) pidxLit();   // its accent colour
   if (typeof dmLive === "function" && $("dm-decode")) dmLive();
 }
 // one DECODE in the head (after the title) for the mode shown; the modes'
@@ -5627,6 +5705,50 @@ for (const b of $("dm-tabs").children) b.onclick = () => { store.set("dmMode", b
 dmShow(store.get("dmMode", "cw"));
 setInterval(dmLive, 1000);
 dmLive();
+
+// ---------------------------------------------------------------- panel index
+// On the right edge, one entry per panel (hidden ones left out); a click
+// scrolls to the panel's top, just under the fixed title bar. The panel in
+// view is lit.
+const PIDX = [["#vfo", "VFO", "VFO"], ["#pttp", "PTT", "PTT · Memory"], ["#audiop", "AUDIO", "Audio"],
+  ["#digi", "DIGI", "DIGI · FT8 / FT4"], ["#digimodes", "MODES", "Digimodes · CW · RTTY · JTTY · MFSK32"],
+  ["#hackrf", "HRF", "HackRF waterfall"], ["#log", "LOG", "Log"]];
+function pidxBuild() {
+  $("pidx").innerHTML = PIDX.filter(([sel]) => { const el = document.querySelector(sel); return el && !el.classList.contains("panel-off"); })
+    .map(([sel, short, name]) => `<button type="button" data-sel="${sel}" title="${esc(name)}">${short}</button>`).join("");
+  pidxLit();
+}
+function pidxLit() {
+  // the panel whose top part is in view (below the title bar)
+  const bar = document.querySelector(".topbar")?.getBoundingClientRect().bottom || 0;
+  let cur = null;
+  for (const b of $("pidx").children) {
+    const r = document.querySelector(b.dataset.sel).getBoundingClientRect();
+    if (r.top <= bar + 120) cur = b;
+  }
+  if (!cur) cur = $("pidx").firstElementChild;
+  // at the end of the page the last panels cannot scroll up to the bar: then
+  // the last one in view is lit (LOG, when it was clicked)
+  if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4) {
+    for (const b of $("pidx").children)
+      if (document.querySelector(b.dataset.sel).getBoundingClientRect().top < window.innerHeight - 80) cur = b;
+  }
+  for (const b of $("pidx").children) {
+    b.classList.toggle("on", b === cur);
+    // the panel's accent colour (Settings ▸ Appearance; Digimodes: the mode shown)
+    const acc = getComputedStyle(document.querySelector(b.dataset.sel)).getPropertyValue("--accent").trim();
+    if (acc) b.style.setProperty("--pc", acc);
+  }
+}
+$("pidx").onclick = (e) => {
+  const b = e.target.closest("button[data-sel]");
+  if (!b) return;
+  const el = document.querySelector(b.dataset.sel);
+  const bar = document.querySelector(".topbar")?.getBoundingClientRect().height || 0;
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - bar - 8, behavior: "smooth" });
+};
+window.addEventListener("scroll", () => requestAnimationFrame(pidxLit), { passive: true });
+window.addEventListener("resize", pidxLit);
 
 // ---------------------------------------------------------------- Settings ▸ Appearance
 // Panels on/off and their accent colours, per browser (as TM-V71 Remote's Panels tab).
@@ -5650,6 +5772,7 @@ let accents = store.get("accents", {});
 
 function applyPanels() {
   for (const p of PANELS) panelEl(p)?.classList.toggle("panel-off", panelsOff.has(p.key));
+  pidxBuild();                                          // the index: hidden panels out
 }
 function setPanelHidden(key, hidden) {
   if (hidden) panelsOff.add(key); else panelsOff.delete(key);
@@ -5666,6 +5789,7 @@ function setPanelHidden(key, hidden) {
 let accentDefaults = {};
 api("/api/ui/accents").then((r) => { accentDefaults = r.accents || {}; applyAccents(); }).catch(() => {});
 function applyAccents() {
+  requestAnimationFrame(() => { if ($("pidx").children.length) pidxLit(); });   // the index takes the new colours
   for (const p of PANELS) {
     const el = panelEl(p), c = accents[p.key] || accentDefaults[p.key];
     if (!el) continue;

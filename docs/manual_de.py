@@ -478,6 +478,17 @@ DE = [
         "aus. NTP in der Leiste ist eine LED: grün bei synchroner Uhr, rot ohne "
         "(dann wird nicht dekodiert).",
     ]),
+    ("h2", "Stationsstatistik"),
+    ("p", "Zwischen Globe und den Filtern von Received Messages zeigen zwei kleine Felder, "
+          "wie es der Station geht. PSK: wer dich auf dem Band von VFO A in den letzten "
+          "30 Minuten gehört hat, als Empfänger · DXCC-Gebiete · der Fernste in km (das "
+          "Rufzeichen im Tooltip), von PSK Reporter. Der Pi fragt PSK Reporter so, wie es "
+          "sein Betreiber wünscht: nur nach einer eigenen Aussendung, 5 Minuten danach, "
+          "höchstens alle 5 Minuten, komprimiert und nur das Neue - keine Aussendung, keine "
+          "Abfrage (ein Blick nach einem Neustart). Die Meldungen bleiben 24 h gespeichert, "
+          "ein Bandwechsel zeigt das andere Band also sofort. QRZ: die Aufrufe deiner "
+          "QRZ.com-Seite und, nach +, die seit Beginn des UTC-Tages - alle 30 Minuten über "
+          "den QRZ-Zugang aus Settings ▸ Log (braucht ein QRZ-XML-Abo)."),
     ("h2", "Globus"),
     ("img", "manual/globe.jpg", 174),
     ("p", "Globe neben dem Titel von Received Messages öffnet ein Popup mit den "
@@ -950,7 +961,8 @@ DE = [
         "voice.py: WebRTC-Hub, PTT-Freigabe, Vorlauf (Pre-Roll), AGC, Kompressor, "
         "Höhenanhebung.",
         "cw.py: der CW-Skimmer; rtty.py: RTTY-Skimmer und AFSK; jtty.py mit "
-        "decoder/jttyd: JTTY Empfang und Senden; mfsk.py: MFSK32-Skimmer und Senden "
+        "decoder/jttyd: JTTY Empfang und Senden; stats.py: PSK-Reporter-Empfänge und "
+        "QRZ-Seitenaufrufe für das DIGI-Feld; mfsk.py: MFSK32-Skimmer und Senden "
         "(aus fldigi übernommen); dec_history.py: "
         "die Decoder-Werte; hackrf_proxy.py; shelly.py; recorder.py.",
         "propagation.py: VOACAP-Bandbedingungen — der Ring aus 36 Pfaden, ein Lauf "

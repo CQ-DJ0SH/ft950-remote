@@ -27,6 +27,7 @@ from .recorder import Recorder
 from .cw import CWSkimmer, cw_duration_s
 from .rtty import RTTYSkimmer, duration_s as rtty_duration_s
 from .mfsk import MFSKSkimmer, duration_s as mfsk_duration_s
+from .stats import StationStats
 from .jtty import JttyReceiver
 from .shelly import ShellyError, ShellySwitch
 from .propagation import Propagation
@@ -220,6 +221,7 @@ async def lifespan(app: FastAPI):
     rttyloop = asyncio.create_task(_rtty_broadcast_loop())
     jttyloop = asyncio.create_task(_jtty_broadcast_loop())
     mfskloop = asyncio.create_task(_mfsk_broadcast_loop())
+    statsloop = asyncio.create_task(station_stats.run())
     psk.start()
     opus_mono.install()                     # before the first peer builds an encoder
     if _rt.get("codec_playback") is not None:
@@ -239,6 +241,7 @@ async def lifespan(app: FastAPI):
     rttyloop.cancel()
     jttyloop.cancel()
     mfskloop.cancel()
+    statsloop.cancel()
     jtty_rx.set_enabled(False)              # jttyd ends with the service
     await psk.flush()                       # what was heard since the last upload
     await psk.stop()
@@ -1757,6 +1760,19 @@ async def _mfsk_send(text: str, hz: float, reverse: bool) -> None:
         log.warning("MFSK32 TX failed: %s", exc)
     finally:
         mfsk_skimmer.version += 1
+
+
+# -- station statistics beside Globe: who hears us (PSK Reporter), QRZ page views (stats.py)
+station_stats = StationStats(
+    my_call=lambda: settings.my_call or "", my_grid=lambda: settings.my_grid or "",
+    vfo_hz=lambda: (service.status.get("vfo") or {}).get("freq_hz"),
+    transmitting=lambda: bool(service.status.get("tx") or tx.state.get("active")),
+    qrz_lookup=lambda call: logbook.qrz.lookup(call), qrz_ok=lambda: logbook.qrz.configured())
+
+
+@app.get("/api/stats")
+async def stats_view() -> dict:
+    return station_stats.view()
 
 
 @app.get("/api/mfsk")

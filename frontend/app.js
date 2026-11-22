@@ -4753,7 +4753,7 @@ async function cwLog() {
     const r = await api("/api/log/qso", q);
     toast(r.ok === false ? `${call}: ${r.message}` : `Logged ${call} (CW${cwSer ? `, NR ${q.stx}` : ""})`, r.ok === false);
   } catch { /* toast */ }
-  if (cwSer) { cwNr = Math.min(9999, cwNr + 1); store.set("cwNr", cwNr); $("cw-nr").value = cwNr; }
+  if (cwSer) { cwNr = Math.min(99999, cwNr + 1); store.set("cwNr", cwNr); $("cw-nr").value = cwNr; }
   $("cw-call").value = ""; cwCallTouched = 0;
   cwNewQso();
 }
@@ -4762,7 +4762,7 @@ function cwParse(h) {
   const r = cwA.rx, t = ` ${h} `;
   const m = t.match(/\b(?:RST\s+(?:IS\s+)?)?([1-5][1-9N][9N])\b/);
   if (m) r.rst = m[1].replace(/N/g, "9");
-  const n = t.match(/\b(?:5NN|599)\s+(?:NR\s+)?([0-9TNOA]{1,4})\b/);
+  const n = t.match(/\b(?:5NN|599)\s+(?:NR\s+)?([0-9TNOA]{1,5})\b/);
   if (n) { const v = n[1].replace(/[TO]/g, "0").replace(/N/g, "9").replace(/A/g, "1"); if (/\d/.test(n[1])) r.nr = v; }
   const nm = t.match(/\b(?:NAME|OP)\s+(?:IS\s+|HR\s+)?([A-Z]{2,12})\b/);
   if (nm && !["IS", "HR"].includes(nm[1])) r.name = nm[1];
@@ -4821,7 +4821,7 @@ setInterval(() => {
 }, 250);
 for (const b of $("cw-style").children) b.onclick = () => { cwStyle = b.dataset.v; store.set("cwStyle", cwStyle); cwShow(); };
 $("cw-ser").onclick = () => { cwSer = !cwSer; store.set("cwSerial", cwSer); cwShow(); };
-$("cw-nr").onchange = (e) => { cwNr = Math.max(1, Math.min(9999, Math.round(+e.target.value) || 1)); e.target.value = cwNr; store.set("cwNr", cwNr); cwShow(); };
+$("cw-nr").onchange = (e) => { cwNr = Math.max(1, Math.min(99999, Math.round(+e.target.value) || 1)); e.target.value = cwNr; store.set("cwNr", cwNr); cwShow(); };
 $("cw-acq-s").onchange = (e) => { const v = Math.max(2, Math.min(30, Math.round(+e.target.value) || 6)); e.target.value = v; store.set("cwAcqS", v); };
 $("cw-name").onchange = (e) => { store.set("cwName", e.target.value.trim().toUpperCase()); cwShow(); };
 $("cw-qth").onchange = (e) => { store.set("cwQth", e.target.value.trim().toUpperCase()); cwShow(); };
@@ -5144,6 +5144,35 @@ for (const b of document.querySelectorAll(".mf-mac")) {
     $("mf-msg").focus();
   };
 }
+
+// ---------------------------------------------------------------- station statistics
+// Beside Globe: who heard us on this band (PSK Reporter, fetched by the Pi at
+// most every 5 min and only after a transmission) and the QRZ page views.
+function ago(t) {
+  if (!t) return "never";
+  const m = Math.round((Date.now() / 1000 - t) / 60);
+  return m < 1 ? "just now" : `${m} min ago`;
+}
+async function loadStats() {
+  let s;
+  try { s = await api("/api/stats"); } catch { return; }
+  const p = s.psk || {}, q = s.qrz || {};
+  // receivers · DXCC entities · farthest km (the words in the tooltip: short, the place is reserved)
+  $("st-psk-v").textContent = p.n ? `${p.n} · ${p.countries} · ${p.far_km ? p.far_km.toLocaleString("de-DE") + " km" : "—"}` : (p.error ? "!" : "0");
+  $("st-psk").title = `PSK Reporter: stations that heard you on ${p.band || "this band"} in the last ${p.window_min || 30} min` +
+    `\nshown: receivers · DXCC entities · farthest\n${p.n || 0} receivers, ${p.countries || 0} DXCC entities` + (p.far_call ? `, farthest ${p.far_call} ${p.far_km} km` : "") +
+    `\nupdated ${ago(p.updated)} — fetched at most every 5 min, 5 min after a transmission` + (p.waiting ? " (one is due)" : "") +
+    (p.error ? `\nerror: ${p.error}` : "");
+  $("st-psk").classList.toggle("dim", !p.n);
+  const qv = q.views != null ? q.views.toLocaleString("de-DE") : (q.configured ? "…" : "—");
+  $("st-qrz-v").textContent = qv + (q.today ? ` +${q.today}` : "");
+  $("st-qrz").title = q.configured
+    ? `QRZ.com: views of your QRZ page${q.views != null ? ` — ${q.views}, today +${q.today ?? 0}` : ""}\nupdated ${ago(q.updated)} (every 30 min)` + (q.error ? `\n${q.error}` : "")
+    : "QRZ.com: set up the QRZ login (Settings ▸ Log) - needs a QRZ XML subscription";
+  $("st-qrz").classList.toggle("dim", q.views == null);
+}
+loadStats();
+setInterval(loadStats, 60000);
 
 // ---------------------------------------------------------------- DIGIMODES tabs
 // CW · RTTY · JTTY · MFSK32 in one panel (as TM-V71 Remote): the tab shows a

@@ -436,6 +436,17 @@ EN = [
         "otherwise); it stops at once and switches Auto Hunt off. NTP in the strip "
         "is an LED: green with the clock synchronised, red without (no decoding).",
     ]),
+    ("h2", "Station statistics"),
+    ("p", "Between Globe and the filters of Received Messages two small fields show how "
+          "the station is doing. PSK: who heard you on the band of VFO A in the last "
+          "30 minutes, as receivers · DXCC entities · the farthest in km (the call in the "
+          "tooltip), from PSK Reporter. The Pi asks PSK Reporter as its author wants it: "
+          "only after an own transmission, 5 minutes after it, at most every 5 minutes, "
+          "compressed and only for what is new - no transmission, no query (one look after "
+          "a restart). The reports are kept for 24 h, so a band change shows the other "
+          "band at once. QRZ: the views of your QRZ.com page and, after +, those since the "
+          "start of the UTC day - every 30 minutes through the QRZ login of Settings ▸ Log "
+          "(needs a QRZ XML subscription)."),
     ("h2", "Globe"),
     ("img", "manual/globe.jpg", 174),
     ("p", "Globe, beside the title of Received Messages, opens a popup with the "
@@ -869,7 +880,8 @@ EN = [
         "early and partner passes; sequencer.py: the QSO state machine.",
         "voice.py: WebRTC hub, PTT lease, pre-roll, AGC, compressor, pre-emphasis.",
         "cw.py: the CW skimmer; rtty.py: the RTTY skimmer and AFSK; jtty.py with "
-        "decoder/jttyd: JTTY receive and transmit; mfsk.py: the MFSK32 skimmer and "
+        "decoder/jttyd: JTTY receive and transmit; stats.py: PSK Reporter receptions and "
+        "QRZ page views for the DIGI panel; mfsk.py: the MFSK32 skimmer and "
         "transmit (ported from fldigi); dec_history.py: "
         "the decoder figures; hackrf_proxy.py; shelly.py; recorder.py.",
         "propagation.py: VOACAP band conditions — the ring of 36 paths, one run per "

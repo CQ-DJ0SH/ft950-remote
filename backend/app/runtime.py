@@ -29,6 +29,7 @@ KEYS = {"my_call", "my_grid", "serial_port", "audio_device",
         "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes", "hunt_both", "hunt_cq_after",
         "psk_report", "psk_antenna",
         "qsl",                           # QSL card by e-mail (Settings ▸ QSL; holds the SMTP password)
+        "qrz_views_day",                 # {"date", "views"}: QRZ page views at the day's first look
         "ui_prefs",                      # the browser's view settings, kept for every browser (palette, theme …)
         "accent_defaults"}               # panel accent colours for every browser (Settings ▸ Appearance)            # PSK Reporter spots (Settings ▸ FT8)
 

@@ -97,6 +97,10 @@ decoding, plus voice operation over WebRTC.
   - **PSK Reporter**: spots of the stations heard (every 5 min, each station
     once an hour per band and mode), with an LED in the DIGI strip and map
     links and statistics in Settings ▸ FT8
+  - **station statistics** beside Globe: who heard you on VFO A's band in
+    the last 30 min (PSK Reporter: receivers · DXCC · farthest km, queried
+    as its author asks - only after a transmission, at most every 5 min,
+    incremental) and your QRZ.com page views (+ since the start of the day)
   - **HF band conditions** under the waterfall, as iDigi shows them:
     80-40 · 30-20 · 17-15 · 12-10 · 6m in green / yellow / red, computed by
     real **VOACAP** for your own locator; the sun/moon shows day or night at

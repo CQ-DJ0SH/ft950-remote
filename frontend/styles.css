@@ -2267,3 +2267,18 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 .digim .cw-macros{min-height:44px}   /* the CALL row as tall in every tab as in CW (NEXT ▸ CQ): the panel does not jump */
 /* CONTEST: NAME / QTH invisible but keep their place - the QSO / CONTEST switch behind them stays put */
 .dm-bar .cw-auto.contest .cw-qso-only{display:inline-flex; visibility:hidden}
+.dm-bar .cw-style{margin-right:14px}   /* a little room between QSO / CONTEST and WPM */
+.cw-auto #cw-nr{width:76px}   /* serial up to 5 digits (99999) */
+.cw-auto #cw-qth{width:98px}   /* QTH between NAME (84) and the old 110 px */
+
+/* station statistics beside Globe (PSK Reporter receivers on this band, QRZ page views) */
+/* centred in the room between Globe and the filters; the values keep a fixed
+   width (reserved), so nothing shifts when the figures change */
+.st-chips{display:flex; flex:1 1 auto; justify-content:center; gap:6px; min-width:0}
+.st-chip{font:500 11px var(--font-mono); color:var(--text); border:1px solid var(--edge); border-radius:6px; padding:2px 7px;
+  white-space:nowrap; cursor:default}
+.st-chip b{font:700 10px var(--font-ui); letter-spacing:.1em; color:var(--accent)}
+.st-chip i{font-style:normal; display:inline-block; text-align:center}
+#st-psk-v{min-width:20ch}            /* 330 · 32 · 12.097 km */
+#st-qrz-v{min-width:9ch}             /* 3.882 +12 (more grows it) */
+.st-chip.dim{color:var(--text-dim)}

@@ -415,7 +415,9 @@ class Qrz:
                         "country": cs.get("country", ""), "email": cs.get("email", ""),
                         # QSL preferences: 1/0/"" (unknown) and the operator's free-text note
                         "eqsl": cs.get("eqsl", ""), "mqsl": cs.get("mqsl", ""),
-                        "lotw": cs.get("lotw", ""), "qslmgr": cs.get("qslmgr", "")}
+                        "lotw": cs.get("lotw", ""), "qslmgr": cs.get("qslmgr", ""),
+                        # page views of this call on QRZ.com (older spec: "views")
+                        "views": cs.get("u_views", cs.get("views", ""))}
             if attempt == 1 and "session" in err.lower():
                 self._session = ""          # expired: log in again once
                 continue

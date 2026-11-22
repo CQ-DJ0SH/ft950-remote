@@ -316,13 +316,12 @@ EN = [
         "A double-click within the first ~1.7 s of your own TX period still "
         "transmits in that period (start at once, the partner sees a slightly "
         "positive DT); later it goes out in the next one.",
-        "Palette Hologram (dark blue to cyan, as the globe) adds a callsign strip "
-        "at the foot of the waterfall: every decoded station of the last period "
+        "Settings ▸ FT8 ▸ Callsigns in the waterfall adds a callsign strip "
+        "at the foot of the waterfall, in every palette: every decoded station of the last period "
         "with a tick at its frequency, in up to four rows. The waterfall gets "
         "shorter by that strip, so the labels never cover the signals. Hovering "
         "a callsign shows country, SNR and the message; a double-click calls the "
-        "station, as in Received. Settings ▸ FT8 ▸ Callsigns (all palettes) shows "
-        "the strip with every palette.",
+        "station, as in Received. Switched off, no callsigns are shown.",
         "The filters above Received Messages show all, CQ only, RR73 (with RRR) "
         "only or 73 only. The arrow icon ↓ in each list head (follow) keeps the newest row in view, Session "
         "Messages included.",

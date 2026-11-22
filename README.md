@@ -71,9 +71,9 @@ decoding, plus voice operation over WebRTC.
   - waterfall with TX (red) and RX (green) markers; **Adopt Frequency** moves TX
     onto the station clicked, a TX frequency set by hand switches it off;
     DIGI RX level and TX drive in one strip with the receive meter
-  - palette **Hologram**: a callsign strip at the foot of the waterfall (each
-    decoded station with a tick at its frequency; hover: country, SNR,
-    message; double-click calls it) - for all palettes by a Settings switch
+  - a callsign strip at the foot of the waterfall, switched in Settings ▸ FT8
+    (each decoded station with a tick at its frequency; hover: country, SNR,
+    message; double-click calls it), in every palette
   - a WSJT-X style QSO sequencer (CQ, answer, reports, RR73/73) with
     Auto Answer and **Auto Hunt** (calls new stations' CQs one after the
     other; a station that never answers is not called again; switches itself

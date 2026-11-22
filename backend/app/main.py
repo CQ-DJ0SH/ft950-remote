@@ -1149,6 +1149,11 @@ async def seq_cq(req: SeqCqReq) -> dict:
     return await sequencer.start_cq(req.tx_hz, req.cq_to)
 
 
+@app.post("/api/seq/cq/move")
+async def seq_cq_move(req: SeqCqReq) -> dict:
+    return await sequencer.move_cq(req.tx_hz)
+
+
 @app.post("/api/seq/answer")
 async def seq_answer(req: SeqAnswerReq) -> dict:
     d = dict(req.decode)

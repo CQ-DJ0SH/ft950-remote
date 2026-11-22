@@ -355,6 +355,18 @@ def test_directed_cq():
     assert s._next_message() == "CQ DJ0SH JO62"
 
 
+def test_cq_moves_with_the_tx_box_and_keeps_its_count():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    s._run = lambda: None
+    asyncio.run(s.start_cq(1500))
+    s.cq_count, par = 4, s.parity
+    st = asyncio.run(s.move_cq(807))
+    assert st["tx_hz"] == 807 and s.cq_count == 4 and s.parity == par and s.kind == "cq"
+    s.kind = "answer"                                    # a QSO: its frequency is not moved
+    asyncio.run(s.move_cq(1200))
+    assert s.tx_hz == 807
+
+
 def test_partner_messages_to_others_are_shown_but_change_nothing():
     s = _seq()
     s.session = s._new_session(_d("CQ OH6IH KP13", snr=-10)); s.step = "call"

@@ -200,7 +200,7 @@ for (const p of document.querySelectorAll(".panel")) {
 let meta = null;
 let radio = { connected: false };
 let rxBoxOn = store.get("rxBox", false);       // green RX window in the waterfall (Settings ▸ FT8), default off
-let wfCallsAll = store.get("wfCallsAll", false);  // callsigns in the waterfall in every palette, not only Hologram
+let wfCallsAll = store.get("wfCallsAll", false);  // callsigns in the waterfall (Settings ▸ FT8), in every palette
 let digiMode = "FT8";
 let digiDepthCfg = "2";                 // decode depth setting: "1".."3" or "AUTO"
 let myCall = "";
@@ -1359,7 +1359,9 @@ function renderSeq(s) {
   seqState = s;
   // SKIP: only while a QSO runs
   $("sess-skip").disabled = !(s.session && s.session.state === "running");
-  const follow = s.kind && s.kind !== "cq" && s.tx_hz ? s.tx_hz : null;   // a QSO on its own frequency
+  // a QSO or a CQ on the sequencer's frequency: the box and the 3D TX window
+  // there, even when it was started from another browser or the box was moved since
+  const follow = s.kind && s.tx_hz ? s.tx_hz : null;
   if (follow !== seqTxHz) { seqTxHz = follow; placeBoxes(); }
   $("seq-cq").classList.toggle("on", s.kind === "cq");
   $("cq-to").classList.toggle("on", s.kind === "cq");          // lit with CQ: what is being called
@@ -1621,14 +1623,14 @@ const CMAPS = {
   Purple: [[0, 6, 4, 58], [0.35, 40, 10, 120], [0.6, 150, 40, 190], [0.8, 235, 90, 230], [1, 255, 235, 255]],
   Rainbow: [[0, 0, 0, 80], [0.25, 0, 90, 255], [0.45, 0, 220, 200], [0.62, 90, 240, 40], [0.8, 255, 210, 0], [1, 255, 40, 20]],
   Blue: [[0, 2, 8, 24], [0.4, 10, 60, 140], [0.7, 60, 170, 230], [1, 230, 250, 255]],
-  // the globe's waterfall colours; only this one shows the callsigns over the waterfall
+  // the globe's waterfall colours
   Hologram: [[0, 6, 18, 34], [0.35, 8, 60, 110], [0.6, 30, 170, 230], [0.82, 140, 235, 255], [1, 255, 255, 255]],
 };
 let lut = null, cmapNow = "";
 function buildLut(name) {
   const stops = CMAPS[name] || CMAPS.Purple;
   cmapNow = CMAPS[name] ? name : "Purple";
-  if (cmapNow !== "Hologram" && !wfCallsAll && $("wf-calls")) $("wf-calls").innerHTML = "";   // Hologram (or all)
+  if (!wfCallsAll && $("wf-calls")) $("wf-calls").innerHTML = "";   // only with the switch on
   if ($("wf-wrap")) wfCallsLayout();
   lut = new Uint8ClampedArray(256 * 3);
   for (let i = 0; i < 256; i++) {
@@ -2230,12 +2232,17 @@ function setBox(which, hz) {
     toast(`TX kept at ${boxes.tx} Hz — the radio's TX filter ends at 2900 Hz (menu 064)`);
   store.set(which + "Hz", boxes[which]);
   placeBoxes();
+  if (which === "tx" && seqState?.kind === "cq") {         // a CQ running: it moves with the box
+    seqTxHz = boxes.tx; placeBoxes();                       // shown there at once, not only after the answer
+    clearTimeout(setBox.c);
+    setBox.c = setTimeout(() => api("/api/seq/cq/move", { tx_hz: boxes.tx }).then(renderSeq).catch(() => {}), 300);
+  }
   if (which === "tx" && seqState?.auto_answer) {            // auto answer replies on the TX box
     clearTimeout(setBox.t);
     setBox.t = setTimeout(() => api("/api/seq/auto", { on: true, tx_hz: boxes.tx, adopt: afOn() }).catch(() => {}), 400);
   }
 }
-// While a QSO runs, the TX box shows the frequency the sequencer really uses (AF:
+// While a QSO or a CQ runs, the TX box shows the frequency the sequencer really uses (AF:
 // the partner's, set by Auto Hunt / Auto Answer in the backend); afterwards it goes
 // back to the frequency you set. Your setting itself is not changed.
 let seqTxHz = null;
@@ -2243,8 +2250,7 @@ let seqTxHz = null;
 // audio frequency (the middle of the signal) with a short line, on up to four
 // rows without overlaps;
 // coloured as in the globe: new DXCC, new on this band, worked - mine amber.
-// Shown in the Hologram palette (footer ▸ Palette, Settings ▸ FT8 ▸ default),
-// or in every palette with Settings ▸ FT8 ▸ "Callsigns (all palettes)"
+// Shown in every palette with Settings ▸ FT8 ▸ "Callsigns in the waterfall"; off: never
 // a callsign in the strip: double-click calls it, as a double-click in Received
 // Messages (globeAnswer: RX window, Adopt Frequency, log form, then the call);
 // its clicks do not reach the waterfall, which would move the TX frequency
@@ -2263,12 +2269,12 @@ $("wf-calls").addEventListener("dblclick", (e) => {
   if (d) window.globeAnswer(d);
 });
 // callsigns active: the waterfall gets shorter and the callsigns their own strip below it
-function wfCallsOn() { return cmapNow === "Hologram" || wfCallsAll; }   // a declaration: used while loading
+function wfCallsOn() { return wfCallsAll; }   // a declaration: used while loading
 function wfCallsLayout() { $("wf-wrap").classList.toggle("calls-on", wfCallsOn()); }
 function wfCalls(list) {
   const box = $("wf-calls");
   if (!box) return;
-  if (cmapNow !== "Hologram" && !wfCallsAll) { box.innerHTML = ""; return; }   // Hologram, or switched on for all
+  if (!wfCallsAll) { box.innerHTML = ""; return; }   // switched off: none, in any palette
   const w = $("wf-wrap").clientWidth || 1;
   const bw = SIGNAL_BW[digiMode] || 50;
   const partner = (seqState?.session?.call || "").toUpperCase();
@@ -2326,7 +2332,7 @@ $("set-rx-box").onchange = (e) => { rxBoxOn = e.target.checked; store.set("rxBox
 $("set-wf-calls").checked = wfCallsAll;
 $("set-wf-calls").onchange = (e) => {
   wfCallsAll = e.target.checked; store.set("wfCallsAll", wfCallsAll);
-  if (!wfCallsAll && cmapNow !== "Hologram") $("wf-calls").innerHTML = "";   // off: gone at once; on: from the next period
+  if (!wfCallsAll) $("wf-calls").innerHTML = "";   // off: gone at once; on: from the next period
   wfCallsLayout();
 };
 wfCallsLayout();
@@ -5670,9 +5676,34 @@ async function loadStats() {
     ? `QRZ.com: views of your QRZ page${q.views != null ? ` — ${q.views}, today +${q.today ?? 0}` : ""}\nupdated ${ago(q.updated)} (every 5 min)` + (q.error ? `\n${q.error}` : "")
     : "QRZ.com: set up the QRZ login (Settings ▸ Log) - needs a QRZ XML subscription";
   $("st-qrz").classList.toggle("dim", q.views == null);
+  // the countdowns to the next fetch, in the Pi's clock (now: its time at this answer)
+  stSkew = p.now ? p.now - Date.now() / 1000 : 0;
+  stNext = { psk: p.next || null, qrz: q.next || null };
+  stTick();
+}
+// time to the next fetch beside each figure (dim, its width reserved): m:ss, ticking each second; at 0 "…"
+// until the fetch is in (the Pi looks every 10 s) - then the figures are reloaded.
+// PSK without a transmission: "–" (no query is due).
+let stNext = { psk: null, qrz: null }, stSkew = 0, stReload = 0;
+function stTick() {
+  const now = Date.now() / 1000 + stSkew;
+  for (const k of ["psk", "qrz"]) {
+    const el = $(`st-${k}-cd`), t = stNext[k];
+    if (!el) continue;
+    let txt = "–", tip = k === "psk" ? "next PSK Reporter query: after your next transmission (+5 min)" : "no QRZ lookup scheduled";
+    if (t) {
+      const s = Math.round(t - now);
+      txt = s > 0 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "…";
+      tip = s > 0 ? `next ${k === "psk" ? "PSK Reporter query" : "QRZ lookup"} in ${txt}` : "fetching…";
+      if (s <= -12 && Date.now() - stReload > 30000) { stReload = Date.now(); loadStats(); }   // at most every 30 s
+    }
+    el.textContent = txt;
+    el.title = tip;
+  }
 }
 loadStats();
 setInterval(loadStats, 60000);
+setInterval(stTick, 1000);
 
 // ---------------------------------------------------------------- DIGIMODES tabs
 // CW · RTTY · JTTY · MFSK32 in one panel (as TM-V71 Remote): the tab shows a

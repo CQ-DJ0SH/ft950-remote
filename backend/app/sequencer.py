@@ -170,6 +170,13 @@ class Sequencer:
         self._run()
         return await self.publish()
 
+    async def move_cq(self, tx_hz: float) -> dict:
+        """The TX box moved during a CQ: the next CQ goes out there (count, parity
+        and a running transmission stay as they are)."""
+        if self.kind == "cq":
+            self.tx_hz = clamp_tx_hz(tx_hz)
+        return await self.publish()
+
     async def answer(self, d: dict, tx_hz: float) -> dict:
         """Start (or take over) a QSO with the sender of decode ``d``."""
         self._require()

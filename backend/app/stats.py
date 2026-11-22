@@ -65,6 +65,8 @@ class StationStats:
         self.qrz_views: Optional[int] = None
         self.qrz_updated = 0.0
         self.qrz_error = ""
+        self.qrz_next: Optional[float] = None           # the next lookup (epoch s), for the panel's countdown
+        self._psk_first: Optional[float] = None         # the one look after a start, while it is pending
         self._qrz_day = runtime.load().get("qrz_views_day") or {}
         # Settings ▸ FT8 ▸ Station statistics: off = no queries at all
         self.psk_on = True
@@ -111,6 +113,16 @@ class StationStats:
         self.reports = {k: v for k, v in self.reports.items() if v["t"] >= cut}
         log.info("PSK Reporter: %d new reception reports of %s", n, call)
 
+    def psk_next(self) -> Optional[float]:
+        """When the next PSK Reporter query goes out (epoch s); None: none is due (no transmission yet)."""
+        if not self.psk_on:
+            return None
+        if self._psk_first is not None:
+            return self._psk_first
+        if self._first_tx is None:
+            return None
+        return max(self._last_query + PSK_MIN_GAP_S, self._first_tx + PSK_AFTER_TX_S)
+
     def psk_view(self) -> dict:
         band = _band(self._vfo())
         now = time.time()
@@ -127,7 +139,7 @@ class StationStats:
                 "far_km": round(far) if far else None, "far_call": far_call,
                 "window_min": WINDOW_S // 60, "updated": self.psk_updated or None,
                 "error": self.psk_error, "enabled": self.psk_on,
-                "waiting": self._first_tx is not None}
+                "waiting": self._first_tx is not None, "next": self.psk_next(), "now": now}
 
     # -- QRZ ---------------------------------------------------------------------
     def _qrz(self, call: str) -> None:
@@ -149,7 +161,8 @@ class StationStats:
         return {"views": self.qrz_views, "today": (self.qrz_views - start) if (self.qrz_views is not None
                                                                                and start is not None) else None,
                 "updated": self.qrz_updated or None, "error": self.qrz_error, "enabled": self.qrz_on,
-                "configured": bool(self._qrz_ok())}
+                "configured": bool(self._qrz_ok()),
+                "next": self.qrz_next if (self.qrz_on and self._qrz_ok()) else None}
 
     def view(self) -> dict:
         return {"psk": self.psk_view(), "qrz": self.qrz_view()}
@@ -157,8 +170,8 @@ class StationStats:
     # -- loop --------------------------------------------------------------------
     async def run(self) -> None:
         started = time.time()
-        qrz_next = started + 20
-        first_psk = True                               # one look after a start (a restart forgets)
+        self.qrz_next = started + 20
+        self._psk_first = started + 60                 # one look after a start (a restart forgets)
         while True:
             await asyncio.sleep(10)
             now = time.time()
@@ -170,8 +183,8 @@ class StationStats:
                 continue
             if not self.psk_on:
                 self._first_tx = None                     # off: nothing waits for a query
-            elif (first_psk and now - started >= 60) or self._due(now):
-                first_psk = False
+            elif (self._psk_first is not None and now >= self._psk_first) or self._due(now):
+                self._psk_first = None
                 self._last_query, self._first_tx = now, None
                 try:
                     await asyncio.to_thread(self._query, call)
@@ -179,8 +192,8 @@ class StationStats:
                 except Exception as exc:  # noqa: BLE001
                     self.psk_error = str(exc)[:120]
                     log.warning("PSK Reporter query: %s", exc)
-            if now >= qrz_next:
-                qrz_next = now + QRZ_EVERY_S
+            if now >= self.qrz_next:
+                self.qrz_next = now + QRZ_EVERY_S
                 if self._qrz_ok() and self.qrz_on:
                     try:
                         await asyncio.to_thread(self._qrz, call)

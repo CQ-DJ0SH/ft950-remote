@@ -366,10 +366,10 @@
         <div class="pane rx-pane">
           <div class="pane-head">
             <h3>Received Messages</h3>
-            <button class="btn sm globe-btn" id="rx-globe" type="button" title="Globe: the stations heard, on a turning globe with your own station (popup)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a14 14 0 0 1 0 18"></path><path d="M12 3a14 14 0 0 0 0 18"></path></svg>Globe</button>
+            <button class="btn sm globe-btn" id="rx-globe" type="button" title="Globe: the stations heard, on a turning globe with your own station (popup)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a14 14 0 0 1 0 18"></path><path d="M12 3a14 14 0 0 0 0 18"></path></svg><span class="gb-txt">Globe</span></button>
             <span class="st-chips" id="st-chips">
-              <span class="st-chip" id="st-psk" title="PSK Reporter: stations that heard you on this band"><b>PSK</b> <i id="st-psk-v">—</i></span>
-              <span class="st-chip" id="st-qrz" title="QRZ.com: views of your QRZ page"><b>QRZ</b> <i id="st-qrz-v">—</i></span>
+              <span class="st-chip" id="st-psk" title="PSK Reporter: stations that heard you on this band"><b>PSK</b> <i id="st-psk-v">—</i><i class="st-cd" id="st-psk-cd"></i></span>
+              <span class="st-chip" id="st-qrz" title="QRZ.com: views of your QRZ page"><b>QRZ</b> <i id="st-qrz-v">—</i><i class="st-cd" id="st-qrz-cd"></i></span>
             </span>
             <div class="seg filt" id="rx-filter">
               <button class="sg on" data-f="all">All</button>
@@ -474,7 +474,7 @@
         <button class="btn sm toggle" id="af" title="Adopt Frequency: clicking a station also moves the TX window to its frequency, and Auto Answer / Auto Hunt answer on the partner's frequency">Adopt Frequency</button>
         <span class="spacer"></span>
         <span class="head-sep blk-sep" aria-hidden="true"></span>
-        <label>Palette <select id="wf-cmap"><option>Purple</option><option>Rainbow</option><option>Blue</option><option title="The globe's colours; shows the callsigns over the waterfall">Hologram</option></select></label>
+        <label>Palette <select id="wf-cmap"><option>Purple</option><option>Rainbow</option><option>Blue</option><option title="The globe's colours">Hologram</option></select></label>
         <label>Contrast <input type="range" id="wf-contrast" min="0" max="100" value="55"><b class="wf-val" id="wf-contrast-val">55</b></label>
         <label>Brightness <input type="range" id="wf-bright" min="0" max="100" value="45"><b class="wf-val" id="wf-bright-val">45</b></label>
         <!-- HF band conditions for this locator, as iDigi shows them: sun or
@@ -880,7 +880,7 @@
       <div class="wf-sw-row">
         <label class="switch-label" title="The green frame in the DIGI waterfall marks the station clicked in the lists (Shift+click sets it by hand). It only marks — decoding always covers the whole band. Stored in this browser."><span class="panel-row-txt">RX window (green frame)</span><input type="checkbox" class="switch" id="set-rx-box"></label>
         <span class="wf-sw-sep" aria-hidden="true"></span>
-        <label class="switch-label" title="The callsigns of the last period at the foot of the DIGI waterfall, at their audio frequency. Off: only in the Hologram palette; on: in every palette. Stored in this browser."><span class="panel-row-txt">Callsigns (all palettes)</span><input type="checkbox" class="switch" id="set-wf-calls"></label>
+        <label class="switch-label" title="The callsigns of the last period at the foot of the DIGI waterfall, at their audio frequency, in every palette. Off: no callsigns. Stored on the Pi."><span class="panel-row-txt">Callsigns in the waterfall</span><input type="checkbox" class="switch" id="set-wf-calls"></label>
         <span class="wf-sw-break" aria-hidden="true"></span>
         <span class="wf-sw-lbl panel-row-txt" title="The palette the waterfall starts with. The Palette choice under the waterfall changes it only until the page is reloaded. Stored in this browser.">Default palette</span>
         <span class="wf-cmap-sw" id="set-cmap-sw" role="radiogroup" aria-label="Default palette"></span>

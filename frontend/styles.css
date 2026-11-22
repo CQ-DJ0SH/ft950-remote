@@ -2280,8 +2280,18 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 .st-chip b{font:700 10px var(--font-ui); letter-spacing:.1em; color:var(--accent)}
 .st-chip i{font-style:normal; display:inline-block; text-align:center}
 #st-psk-v{min-width:20ch}            /* 330 · 32 · 12.097 km */
-#st-qrz-v{min-width:9ch}             /* 3.882 +12 (more grows it) */
+#st-qrz-v{min-width:12ch}            /* 123.456 +123 (six digits and the day reserved) */
 .st-chip.dim{color:var(--text-dim)}
+.st-chip i.st-cd{min-width:4ch; margin-left:4px; color:var(--text-dim); font-size:10px; text-align:right}   /* 4:59 */
+/* Received Messages head: one line - the buttons keep their place, the chips give way */
+.rx-pane > .pane-head{flex-wrap:nowrap; gap:6px; container-type:inline-size}
+@container (max-width: 760px) { .st-chip i.st-cd{display:none} #st-psk-v{min-width:0} .rx-pane > .pane-head .st-chip{padding:2px 3px} .gb-txt{display:none} }
+.rx-pane > .pane-head > .st-chips{margin:0 -2px}   /* narrow: the figures only */
+.rx-pane > .pane-head .st-chips{gap:4px}
+.rx-pane > .pane-head .st-chip{padding:2px 5px}
+.rx-pane > .pane-head > *{flex-shrink:0}
+.rx-pane > .pane-head > .st-chips{flex:1 1 0; min-width:0; overflow:hidden; justify-content:safe center}
+.st-chip{flex-shrink:0}
 
 /* 3D waterfall: its canvas over the flat one (which keeps running underneath) */
 .wf-wrap #wf3d{position:absolute; inset:0; display:none; image-rendering:auto}

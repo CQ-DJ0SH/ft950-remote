@@ -345,13 +345,13 @@ DE = [
         "Sendeperiode sendet noch in dieser Periode (sofortiger Start, die "
         "Gegenstation sieht ein leicht positives DT); später geht es in der "
         "nächsten hinaus.",
-        "Das Farbschema Hologram (dunkelblau bis cyan, wie der Globus) zeigt am Fuß "
+        "Settings ▸ FT8 ▸ Callsigns in the waterfall zeigt bei jedem Farbschema am Fuß "
         "des Wasserfalls einen Rufzeichenstreifen: jede dekodierte Station der "
         "letzten Periode mit einem Strich an ihrer Frequenz, in bis zu vier Zeilen. "
         "Der Wasserfall wird um diesen Streifen kürzer, die Beschriftung verdeckt "
         "also keine Signale. Der Hover über einem Rufzeichen zeigt Land, SNR und die "
-        "Meldung; ein Doppelklick ruft die Station, wie in Received. Settings ▸ FT8 "
-        "▸ Callsigns (all palettes) zeigt den Streifen bei jedem Farbschema.",
+        "Meldung; ein Doppelklick ruft die Station, wie in Received. Ausgeschaltet "
+        "erscheinen keine Rufzeichen.",
         "Die Filter über Received Messages zeigen alles, nur CQ, nur RR73 (samt RRR) "
         "oder nur 73. Das Pfeilsymbol ↓ im Kopf jeder Liste (follow) hält die neueste Zeile im Blick, auch in "
         "Session Messages.",

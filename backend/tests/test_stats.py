@@ -71,3 +71,20 @@ def test_switched_off_shows_it(monkeypatch):
     s.psk_on, s.qrz_on = False, False
     v = s.view()
     assert v["psk"]["enabled"] is False and v["qrz"]["enabled"] is False
+
+
+def test_next_fetch_times_for_the_countdown():
+    s = _stats()
+    assert s.psk_next() is None                     # no transmission: nothing due
+    s._first_tx, s._last_query = 1000.0, 900.0
+    assert s.psk_next() == 1300.0                   # 5 min after the transmission
+    s._last_query = 1100.0
+    assert s.psk_next() == 1400.0                   # or 5 min after the last query
+    s._psk_first = 50.0
+    assert s.psk_next() == 50.0                     # the look after a start comes first
+    s.psk_on = False
+    assert s.psk_next() is None
+    s.qrz_next = 2000.0
+    assert s.qrz_view()["next"] == 2000.0
+    s.qrz_on = False
+    assert s.qrz_view()["next"] is None

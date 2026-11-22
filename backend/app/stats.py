@@ -9,7 +9,7 @@ transmission, no query. The reports are kept for 24 h; the panel shows those
 of the band VFO A is on, from the last WINDOW_S.
 
 QRZ.com: the XML lookup of the own call carries u_views, the page views of
-that call - every 30 minutes, through the logbook's QRZ login (it needs a
+that call - every 5 minutes, through the logbook's QRZ login (it needs a
 QRZ XML subscription). The count at the first look of a UTC day is kept, so
 the panel shows the views since then.
 """
@@ -37,7 +37,7 @@ PSK_MIN_GAP_S = 300          # the author's rule: not more often than every 5 mi
 PSK_AFTER_TX_S = 300         # and 5 minutes after the transmission
 WINDOW_S = 1800              # the panel: receivers of the last 30 minutes
 KEEP_S = 24 * 3600
-QRZ_EVERY_S = 1800
+QRZ_EVERY_S = 300           # QRZ page views: every 5 minutes (288 lookups a day)
 AGENT = f"ft950-remote {APP_VERSION}"
 
 
@@ -66,6 +66,9 @@ class StationStats:
         self.qrz_updated = 0.0
         self.qrz_error = ""
         self._qrz_day = runtime.load().get("qrz_views_day") or {}
+        # Settings ▸ FT8 ▸ Station statistics: off = no queries at all
+        self.psk_on = True
+        self.qrz_on = True
 
     # -- PSK Reporter ------------------------------------------------------------
     def _due(self, now: float) -> bool:
@@ -123,7 +126,7 @@ class StationStats:
         return {"band": band, "n": len(rows), "countries": len({r["dxcc"] for r in rows if r["dxcc"]}),
                 "far_km": round(far) if far else None, "far_call": far_call,
                 "window_min": WINDOW_S // 60, "updated": self.psk_updated or None,
-                "error": self.psk_error,
+                "error": self.psk_error, "enabled": self.psk_on,
                 "waiting": self._first_tx is not None}
 
     # -- QRZ ---------------------------------------------------------------------
@@ -145,7 +148,7 @@ class StationStats:
         start = self._qrz_day.get("views") if self._qrz_day.get("date") == today else None
         return {"views": self.qrz_views, "today": (self.qrz_views - start) if (self.qrz_views is not None
                                                                                and start is not None) else None,
-                "updated": self.qrz_updated or None, "error": self.qrz_error,
+                "updated": self.qrz_updated or None, "error": self.qrz_error, "enabled": self.qrz_on,
                 "configured": bool(self._qrz_ok())}
 
     def view(self) -> dict:
@@ -165,7 +168,9 @@ class StationStats:
             call = (self._call() or "").upper()
             if not call:
                 continue
-            if (first_psk and now - started >= 60) or self._due(now):
+            if not self.psk_on:
+                self._first_tx = None                     # off: nothing waits for a query
+            elif (first_psk and now - started >= 60) or self._due(now):
                 first_psk = False
                 self._last_query, self._first_tx = now, None
                 try:
@@ -176,7 +181,7 @@ class StationStats:
                     log.warning("PSK Reporter query: %s", exc)
             if now >= qrz_next:
                 qrz_next = now + QRZ_EVERY_S
-                if self._qrz_ok():
+                if self._qrz_ok() and self.qrz_on:
                     try:
                         await asyncio.to_thread(self._qrz, call)
                     except Exception as exc:  # noqa: BLE001

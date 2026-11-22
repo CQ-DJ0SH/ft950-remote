@@ -60,6 +60,11 @@ decoding, plus voice operation over WebRTC.
     offset (country, locator or call district, summer time), a signal-level
     column (fixed column widths: the header does not jump) and the
     distance in km (locator to locator, ~ = to the DXCC entity's centre)
+  - **3D waterfall** (Settings ▸ FT8, after Yaesu's 3D display): the spectrum
+    history in perspective, signals as peaks running into the depth; WebGL at
+    the screen's resolution and frame rate, a room grid, even/odd period lines,
+    TX/RX windows in perspective, legend and band figures in the corners;
+    depth, height and colours adjustable; own TX goes in as a gap
   - waterfall with TX (red) and RX (green) markers; **Adopt Frequency** moves TX
     onto the station clicked, a TX frequency set by hand switches it off;
     DIGI RX level and TX drive in one strip with the receive meter

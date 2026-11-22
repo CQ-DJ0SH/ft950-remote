@@ -15,7 +15,7 @@ markPwa(); pwaMq.addEventListener?.("change", markPwa);
 const PI_PREFS = new Set(["theme", "panelsOff", "accents", "cmapDefault", "wfCallsAll", "rxBox",
   "wf-contrast", "wf-bright", "peakHold", "spec.peak", "afuPlan", "afuOn", "af", "cqTo", "cwStyle",
   "cwName", "cwQth", "cwSerial", "cwMon", "cwNr", "hrf.level", "hrf.peak", "rttyTxHz", "jttyTxHz",
-  "mfskTxHz", "dmMode"]);
+  "mfskTxHz", "dmMode", "wf3d", "wf3dDepth", "wf3dHeight", "wf3dColors"]);
 let prefsOut = {}, prefsTimer = null;
 const store = {
   get(k, d) { try { const v = localStorage.getItem("ft950." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -1702,15 +1702,430 @@ function onFrame(f) {
   const per = Math.floor(f.t / (PERIOD[digiMode] || 15));
   const boundary = lastFramePeriod !== null && per !== lastFramePeriod;
   lastFramePeriod = per;
+  const vals = new Uint8Array(w);
   for (let i = 0; i < w; i++) {
     const v = boundary ? 0 : Math.max(0, Math.min(255, Math.round(((db[i] - wfFloor + 4 + off) / range) * 255)));
+    vals[i] = v;
     row.data[i * 4] = lut[v * 3];
     row.data[i * 4 + 1] = lut[v * 3 + 1];
     row.data[i * 4 + 2] = lut[v * 3 + 2];
     row.data[i * 4 + 3] = 255;
   }
   wfCtx.putImageData(row, 0, 0);
+  if (boundary) w3boundary = true;                          // the next 3D line gets the even/odd divider
+  else push3d(w3Glitch(vals) ? new Uint8Array(vals.length) : vals);   // TX / transient: an empty line, time goes on
 }
+
+// ---- 3D waterfall (Settings ▸ FT8 ▸ Waterfall), after Yaesu's 3D display:
+// the newest spectrum at the front edge over the full width, older lines
+// further back - higher up and narrower towards a vanishing point - every
+// value rising as a peak; drawn back to front, so nearer peaks cover the
+// ones behind. Frequencies (markers, scale, clicks) are those of the front
+// edge. The flat waterfall keeps running underneath: switching is instant.
+const W3D_LINES = 128;                                        // lines in the depth (GPU); the CPU fallback draws 64
+const w3 = { on: store.get("wf3d", false), depth: +store.get("wf3dDepth", 30), height: +store.get("wf3dHeight", 60),
+             colors: store.get("wf3dColors", "yaesu") };
+const wf3c = $("wf3d");
+let w3rows = [], w3acc = null, w3n = 0, w3img = null, w3buf = null, w3pending = false, wf3ctx = null;
+let w3lastLine = 0, w3raf = 0;
+let w3boundary = false, w3marks = [];                        // period boundaries: their age in 3D lines
+const YAESU_STOPS = [[0, 10, 14, 60], [0.25, 30, 50, 200], [0.5, 90, 70, 235], [0.72, 200, 50, 150], [0.88, 245, 40, 60], [1, 255, 150, 140]];
+function lutFrom(stops) {
+  const t = new Uint8Array(256 * 3);
+  for (let i = 0; i < 256; i++) {
+    const x = i / 255;
+    let k = 0;
+    while (k < stops.length - 2 && x > stops[k + 1][0]) k++;
+    const [x0, ...a] = stops[k], [x1, ...b] = stops[k + 1], f = (x - x0) / (x1 - x0 || 1);
+    for (let c = 0; c < 3; c++) t[i * 3 + c] = a[c] + (b[c] - a[c]) * f;
+  }
+  return t;
+}
+const lutYaesu = lutFrom(YAESU_STOPS);
+// Not into 3D: our own transmission and 2 s after it (the receiver hears the
+// TX audio and the T/R switching), and any frame that is strong over more
+// than half the band - a switching transient, not a signal. One such frame
+// made a whole 3D line red (each line is the maximum of several frames).
+let w3TxUntil = 0;
+function w3Glitch(vals) {
+  const now = performance.now();
+  if (radio.tx) w3TxUntil = now + 2000;                     // 2 s after the transmission
+  if (now < w3TxUntil) return true;
+  let n = 0;
+  for (let i = 0; i < vals.length; i++) if (vals[i] > 170) n++;
+  return n > vals.length / 2;
+}
+function w3per() { return Math.max(1, Math.round(w3.depth * 10 / W3D_LINES)); }   // frames (10/s) per line
+function push3d(vals) {
+  // one 3D line = the maximum over several frames: the depth setting
+  if (!w3acc || w3acc.length !== vals.length) { w3acc = new Uint8Array(vals.length); w3n = 0; w3rows = []; }
+  for (let i = 0; i < vals.length; i++) if (vals[i] > w3acc[i]) w3acc[i] = vals[i];
+  if (++w3n < w3per()) return;
+  w3rows.unshift(w3acc);
+  if (w3rows.length > W3D_LINES) w3rows.length = W3D_LINES;
+  w3marks = w3marks.map((a) => a + 1).filter((a) => a < W3D_LINES - 1);
+  if (w3boundary) { w3marks.push(0); w3boundary = false; }
+  if (gl3) gl3Line(w3acc);
+  w3acc = new Uint8Array(vals.length); w3n = 0;
+  w3lastLine = performance.now();
+  if (w3.on && !gl3 && !w3pending) { w3pending = true; requestAnimationFrame(() => { w3pending = false; draw3dCpu(); }); }
+}
+
+// -- WebGL: the history as a surface (columns x lines), heights uploaded per
+// new line; the depth glides by the fraction of the next line (smooth), drawn
+// at the screen's own resolution (sharp). Nearer parts cover farther ones by
+// the depth test - the same perspective as the CPU drawing below.
+const GL_COLS = 1024;                                         // at least one per bin (~990): narrow peaks stay sharp
+let gl3 = null;
+function gl3Init() {
+  let gl = wf3c.getContext("webgl2", { antialias: true, alpha: false });
+  let idx32 = true;
+  if (!gl) {
+    gl = wf3c.getContext("webgl", { antialias: true, alpha: false });
+    idx32 = !!(gl && gl.getExtension("OES_element_index_uint"));
+  }
+  if (!gl || !idx32) return null;
+  const vs = `attribute vec2 a_uv; attribute float a_h;
+    uniform float u_frac, u_n, u_height;
+    varying float v_val, v_depth;
+    void main() {
+      float z = (a_uv.y + u_frac) / (u_n - 1.0);              // 0 front .. 1 back
+      float sc = 1.0 - 0.4 * z;
+      float base = -0.985 + 1.305 * z;                         // front edge at the foot, back edge 34 % from the top
+      float hs = min(u_height * 1.24 * (1.0 - 0.45 * z), 0.995 - base);
+      gl_Position = vec4((a_uv.x * 2.0 - 1.0) * sc, base + a_h * hs, z * 2.0 - 1.0, 1.0);
+      v_val = a_h; v_depth = z;
+    }`;
+  const fs = `precision mediump float;
+    uniform sampler2D u_lut; varying float v_val, v_depth;
+    void main() {
+      if (v_depth > 1.0) discard;
+      vec3 c = texture2D(u_lut, vec2(v_val, 0.5)).rgb * (1.0 - 0.55 * v_depth);
+      gl_FragColor = vec4(c, 1.0);
+    }`;
+  const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o);
+    if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  const prog = gl.createProgram();
+  try {
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  } catch (e) { console.warn("3D waterfall: WebGL shader", e); return null; }
+  gl.useProgram(prog);
+  const C = GL_COLS, N = W3D_LINES;
+  const uv = new Float32Array(C * N * 2);
+  for (let j = 0; j < N; j++) for (let c = 0; c < C; c++) { uv[(j * C + c) * 2] = c / (C - 1); uv[(j * C + c) * 2 + 1] = j; }
+  const idx = new Uint32Array((N - 1) * (C - 1) * 6);
+  let k = 0;
+  for (let j = 0; j < N - 1; j++) for (let c = 0; c < C - 1; c++) {
+    const a = j * C + c, b = a + 1, d = a + C, e = d + 1;
+    idx[k++] = a; idx[k++] = d; idx[k++] = b; idx[k++] = b; idx[k++] = d; idx[k++] = e;
+  }
+  const buf = (data, target = gl.ARRAY_BUFFER, usage = gl.STATIC_DRAW) => {
+    const b = gl.createBuffer(); gl.bindBuffer(target, b); gl.bufferData(target, data, usage); return b; };
+  const uvBuf = buf(uv), hData = new Float32Array(C * N), hBuf = buf(hData, gl.ARRAY_BUFFER, gl.DYNAMIC_DRAW);
+  buf(idx, gl.ELEMENT_ARRAY_BUFFER);
+  const aUv = gl.getAttribLocation(prog, "a_uv"), aH = gl.getAttribLocation(prog, "a_h");
+  gl.bindBuffer(gl.ARRAY_BUFFER, uvBuf); gl.enableVertexAttribArray(aUv); gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 0, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, hBuf); gl.enableVertexAttribArray(aH); gl.vertexAttribPointer(aH, 1, gl.FLOAT, false, 0, 0);
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
+  const grid = gl3Grid(gl, sh);
+  gl.useProgram(prog);
+  return { gl, prog, hData, hBuf, uvBuf, aUv, aH, grid, nIdx: idx.length, tex, lutFor: null,
+           u: { frac: gl.getUniformLocation(prog, "u_frac"), n: gl.getUniformLocation(prog, "u_n"),
+                height: gl.getUniformLocation(prog, "u_height"), lut: gl.getUniformLocation(prog, "u_lut") } };
+}
+// The room: thin lines behind and under the waterfall - the floor (every
+// 250 Hz into the depth, cross lines dividing the time), the back wall
+// (verticals at the same frequencies, three heights) and the side edges.
+// Same perspective as the surface; drawn first and a hair farther back, so
+// the waterfall covers them.
+function gl3Grid(gl, sh) {
+  const vs = `attribute vec3 a_p;                 // u (frequency 0..1), z (0 front .. 1 back), w (0 floor .. 1 top)
+    void main() {
+      float z = a_p.y, sc = 1.0 - 0.4 * z, base = -0.985 + 1.305 * z;
+      gl_Position = vec4((a_p.x * 2.0 - 1.0) * sc, base + a_p.z * (0.995 - base), z * 2.0 - 1.0 + 0.002, 1.0);
+    }`;
+  const fs = `precision mediump float; uniform vec4 u_col; void main() { gl_FragColor = u_col; }`;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  const p = [];
+  const seg = (u0, z0, w0, u1, z1, w1) => p.push(u0, z0, w0, u1, z1, w1);
+  for (let f = Math.ceil(F0 / 250) * 250; f <= F1; f += 250) {
+    const u = (f - F0) / (F1 - F0);
+    seg(u, 0, 0, u, 1, 0);                                  // floor: into the depth
+    seg(u, 1, 0, u, 1, 1);                                  // back wall: up
+  }
+  for (let k = 0; k <= 6; k++) seg(0, k / 6, 0, 1, k / 6, 0);          // floor: time steps
+  for (let k = 1; k <= 3; k++) seg(0, 1, k / 3, 1, 1, k / 3);          // back wall: heights
+  for (const u of [0, 1]) {
+    seg(u, 0, 0, u, 1, 0);                                  // the side edges of the floor
+    seg(u, 1, 0, u, 1, 1);                                  // the back corners up
+    seg(u, 0, 0, u, 1, 1);                                  // the side walls' diagonal edge
+  }
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(p), gl.STATIC_DRAW);
+  // the even/odd divider: a line along the terrain of the 3D line where a
+  // period began, moving into the depth with it
+  // a narrow band (about 3 px) with soft edges, not a 1-px line: moving by
+  // fractions of a pixel, a thin line jumps between pixel rows and flickers
+  // (most where it runs flat, at the sides)
+  const mvs = `attribute vec3 a_uhs; uniform float u_z, u_height, u_px; varying float v_s;
+    void main() {
+      float z = u_z, sc = 1.0 - 0.4 * z, base = -0.985 + 1.305 * z;
+      float hs = min(u_height * 1.24 * (1.0 - 0.45 * z), 0.995 - base);
+      gl_Position = vec4((a_uhs.x * 2.0 - 1.0) * sc, base + a_uhs.y * hs + 0.004 + a_uhs.z * 1.5 * u_px,
+                         z * 2.0 - 1.0 - 0.004, 1.0);
+      v_s = a_uhs.z;
+    }`;
+  const mfs = `precision mediump float; uniform vec4 u_col; varying float v_s;
+    void main() { gl_FragColor = vec4(u_col.rgb, u_col.a * clamp(1.0 - abs(v_s), 0.0, 1.0) * 1.6); }`;
+  const mprog = gl.createProgram();
+  gl.attachShader(mprog, sh(gl.VERTEX_SHADER, mvs)); gl.attachShader(mprog, sh(gl.FRAGMENT_SHADER, mfs));
+  gl.linkProgram(mprog);
+  const mbuf = gl.createBuffer();
+  const bbuf = gl.createBuffer();                               // the TX / RX windows (per frame)
+  return { prog, buf, bbuf, n: p.length / 3, aP: gl.getAttribLocation(prog, "a_p"), uCol: gl.getUniformLocation(prog, "u_col"),
+           mprog, mbuf, aUh: gl.getAttribLocation(mprog, "a_uhs"), mCol: gl.getUniformLocation(mprog, "u_col"),
+           mZ: gl.getUniformLocation(mprog, "u_z"), mH: gl.getUniformLocation(mprog, "u_height"),
+           mPx: gl.getUniformLocation(mprog, "u_px"), mData: new Float32Array(GL_COLS * 6) };
+}
+function gl3Line(row) {
+  // shift the lines one back, the new one in front (max over the bins of each column)
+  const C = GL_COLS, h = gl3.hData, nb = row.length;
+  h.copyWithin(C, 0, C * (W3D_LINES - 1));
+  for (let c = 0; c < C; c++) {
+    let b0 = (c * nb / C) | 0, b1 = ((c + 1) * nb / C) | 0, v = 0;
+    if (b1 <= b0) b1 = b0 + 1;
+    for (let b = b0; b < b1 && b < nb; b++) if (row[b] > v) v = row[b];
+    h[c] = v / 255;
+  }
+  const gl = gl3.gl;
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl3.hBuf);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, h);
+}
+function gl3Draw() {
+  const gl = gl3.gl, r = $("wf-wrap").getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
+  if (wf3c.width !== W || wf3c.height !== H) { wf3c.width = W; wf3c.height = H; }
+  const L = w3.colors === "palette" ? lut : lutYaesu;
+  if (gl3.lutFor !== L || gl3.lutSum !== L[300] + L[600]) {         // the palette (or its colours) changed
+    const px = new Uint8Array(256 * 4);
+    for (let i = 0; i < 256; i++) { px[i * 4] = L[i * 3]; px[i * 4 + 1] = L[i * 3 + 1]; px[i * 4 + 2] = L[i * 3 + 2]; px[i * 4 + 3] = 255; }
+    gl.bindTexture(gl.TEXTURE_2D, gl3.tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl3.lutFor = L; gl3.lutSum = L[300] + L[600];
+  }
+  gl.viewport(0, 0, W, H);
+  gl.clearColor(L[0] * 0.6 / 255, L[1] * 0.6 / 255, L[2] * 0.6 / 255, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  // the room first (thin, faint), then the waterfall over it
+  const g = gl3.grid;
+  gl.useProgram(g.prog);
+  gl.disableVertexAttribArray(gl3.aUv); gl.disableVertexAttribArray(gl3.aH);
+  gl.bindBuffer(gl.ARRAY_BUFFER, g.buf);
+  gl.enableVertexAttribArray(g.aP); gl.vertexAttribPointer(g.aP, 3, gl.FLOAT, false, 0, 0);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.uniform4f(g.uCol, 0.65, 0.78, 1.0, 0.45);            // the room: clearly visible, still behind the signals
+  gl.drawArrays(gl.LINES, 0, g.n);
+  gl.disable(gl.BLEND);
+  gl.disableVertexAttribArray(g.aP);
+  gl.useProgram(gl3.prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl3.uvBuf); gl.enableVertexAttribArray(gl3.aUv); gl.vertexAttribPointer(gl3.aUv, 2, gl.FLOAT, false, 0, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl3.hBuf); gl.enableVertexAttribArray(gl3.aH); gl.vertexAttribPointer(gl3.aH, 1, gl.FLOAT, false, 0, 0);
+  const frac = Math.min(1, (performance.now() - w3lastLine) / (w3per() * 100));
+  gl.uniform1f(gl3.u.frac, frac);
+  gl.uniform1f(gl3.u.n, W3D_LINES);
+  gl.uniform1f(gl3.u.height, w3.height / 100);
+  gl.uniform1i(gl3.u.lut, 0);
+  gl.drawElements(gl.TRIANGLES, gl3.nIdx, gl.UNSIGNED_INT, 0);
+  if (w3marks.length) {
+    // the even/odd dividers over the terrain, in the TX marker's amber
+    gl.disableVertexAttribArray(gl3.aUv); gl.disableVertexAttribArray(gl3.aH);
+    gl.useProgram(g.mprog);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.uniform4f(g.mCol, 1.0, 0.72, 0.25, 0.85);
+    gl.uniform1f(g.mH, w3.height / 100);
+    gl.uniform1f(g.mPx, 2 / H);                                 // one pixel in clip space
+    gl.bindBuffer(gl.ARRAY_BUFFER, g.mbuf);
+    gl.enableVertexAttribArray(g.aUh);
+    const C = GL_COLS, h = gl3.hData, m = g.mData;
+    for (const age of w3marks) {
+      for (let c = 0; c < C; c++) {                             // two vertices per column: the band's edges
+        const u = c / (C - 1), v = h[age * C + c];
+        m.set([u, v, -1, u, v, 1], c * 6);
+      }
+      gl.bufferData(gl.ARRAY_BUFFER, m, gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(g.aUh, 3, gl.FLOAT, false, 0, 0);
+      gl.uniform1f(g.mZ, (age + frac) / (W3D_LINES - 1));
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, C * 2);
+    }
+    gl.disableVertexAttribArray(g.aUh);
+    gl.disable(gl.BLEND);
+    gl.useProgram(gl3.prog);
+  }
+  gl3Boxes(g);
+}
+// The TX (red) and RX (green) windows in the room's perspective, instead of
+// the flat page's upright rectangles: a translucent band on the floor from
+// the front edge into the depth and up the back wall, with brighter edges -
+// over the signals, as the rectangles were.
+function gl3Boxes(g) {
+  const gl = gl3.gl, bw = SIGNAL_BW[digiMode] || 50;
+  const at = { tx: seqTxHz ?? boxes.tx, rx: boxes.rx };
+  gl.disableVertexAttribArray(gl3.aUv); gl.disableVertexAttribArray(gl3.aH);
+  gl.useProgram(g.prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, g.bbuf);
+  gl.enableVertexAttribArray(g.aP);
+  gl.disable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  for (const [which, col] of [["rx", [0.25, 0.95, 0.45]], ["tx", [1.0, 0.3, 0.25]]]) {
+    if (which === "rx" && !rxBoxOn) continue;
+    if (at[which] == null) continue;
+    const u0 = (at[which] - F0) / (F1 - F0), u1 = u0 + bw / (F1 - F0);
+    const fill = new Float32Array([
+      u0, 0, 0, u1, 0, 0, u0, 1, 0, u1, 0, 0, u1, 1, 0, u0, 1, 0,       // floor
+      u0, 1, 0, u1, 1, 0, u0, 1, 1, u1, 1, 0, u1, 1, 1, u0, 1, 1]);     // back wall
+    gl.bufferData(gl.ARRAY_BUFFER, fill, gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(g.aP, 3, gl.FLOAT, false, 0, 0);
+    gl.uniform4f(g.uCol, col[0], col[1], col[2], 0.3);
+    gl.drawArrays(gl.TRIANGLES, 0, 12);
+    const edge = new Float32Array([
+      u0, 0, 0, u0, 1, 0, u1, 0, 0, u1, 1, 0,                         // into the depth
+      u0, 1, 0, u0, 1, 1, u1, 1, 0, u1, 1, 1,                         // up the back wall
+      u0, 0, 0, u1, 0, 0]);                                           // the front edge
+    gl.bufferData(gl.ARRAY_BUFFER, edge, gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(g.aP, 3, gl.FLOAT, false, 0, 0);
+    gl.uniform4f(g.uCol, col[0], col[1], col[2], 1.0);
+    gl.drawArrays(gl.LINES, 0, 10);
+    // the edges a little wider: the same lines once more, a pixel to each side
+    const du = 1 / (wf3c.width || 1000);
+    for (const d of [-du, du]) {
+      const e2 = edge.map((v, i) => (i % 3 === 0 ? v + d : v));
+      gl.bufferData(gl.ARRAY_BUFFER, e2, gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(g.aP, 3, gl.FLOAT, false, 0, 0);
+      gl.uniform4f(g.uCol, col[0], col[1], col[2], 0.55);
+      gl.drawArrays(gl.LINES, 0, 10);
+    }
+  }
+  gl.disableVertexAttribArray(g.aP);
+  gl.disable(gl.BLEND);
+  gl.enable(gl.DEPTH_TEST);
+  gl.useProgram(gl3.prog);
+}
+function w3loop() {
+  w3raf = 0;
+  if (!w3.on || !gl3) return;
+  if (!$("digi").classList.contains("collapsed") && !document.hidden) gl3Draw();
+  w3raf = requestAnimationFrame(w3loop);
+}
+function draw3dCpu() {
+  const wrap = $("wf-wrap"), W = wrap.clientWidth | 0, H = wrap.clientHeight | 0;
+  if (!W || !H) return;
+  if (wf3c.width !== W || wf3c.height !== H) { wf3c.width = W; wf3c.height = H; w3img = null; }
+  if (!w3img) { w3img = wf3ctx.createImageData(W, H); w3buf = new Uint32Array(w3img.data.buffer); }
+  const L = w3.colors === "palette" ? lut : lutYaesu;
+  const bg = (255 << 24) | (L[2] * 0.6 << 16) | (L[1] * 0.6 << 8) | (L[0] * 0.6);   // ABGR (little endian)
+  w3buf.fill(bg);
+  const yFront = H - 2, yBack = H * 0.34, shrink = 0.6;       // room above the back edge for its peaks
+  const hMax = H * 0.62 * w3.height / 100;
+  for (let j = w3rows.length - 1; j >= 0; j--) {                 // back to front
+    const row = w3rows[j], nb = row.length, t = j / (W3D_LINES - 1);
+    const sc = 1 - (1 - shrink) * t, base = yFront - (yFront - yBack) * t;
+    const hs = Math.min(hMax * (1 - 0.45 * t), base - 1), fade = 1 - 0.55 * t;   // never out at the top
+    const x0 = Math.round(W / 2 * (1 - sc)), x1 = Math.round(W / 2 * (1 + sc)), span = x1 - x0;
+    const yb = Math.round(base);
+    for (let x = x0; x < x1; x++) {
+      // the strongest bin under this pixel (the back lines are narrower than the bins)
+      let b0 = ((x - x0) * nb / span) | 0, b1 = (((x + 1 - x0) * nb / span) | 0) || b0 + 1, v = 0;
+      if (b1 <= b0) b1 = b0 + 1;
+      for (let b = b0; b < b1 && b < nb; b++) if (row[b] > v) v = row[b];
+      const top = Math.max(0, Math.round(base - v / 255 * hs)), hgt = yb - top || 1;
+      for (let y = top; y <= yb; y++) {
+        // the peak in its own colour, darker towards its foot and with depth
+        const k = (y - top) / hgt, i = (v * (1 - 0.65 * k)) | 0, f = fade * (1 - 0.35 * k);
+        w3buf[y * W + x] = (255 << 24) | ((L[i * 3 + 2] * f) << 16) | ((L[i * 3 + 1] * f) << 8) | (L[i * 3] * f);
+      }
+    }
+  }
+  wf3ctx.putImageData(w3img, 0, 0);
+}
+// The corners above the 3D view: on the left the legend (colours with their
+// dB range, what the lines mean), on the right the band's figures of the
+// last period. Only in 3D; clicks pass through to the waterfall.
+function w3Info() {
+  if (!w3.on) return;
+  const L = w3.colors === "palette" ? lut : lutYaesu;
+  const stops = [];
+  for (let i = 0; i <= 255; i += 51) stops.push(`rgb(${L[i * 3]},${L[i * 3 + 1]},${L[i * 3 + 2]})`);
+  const range = Math.round(70 - (+$("wf-contrast").value / 100) * 55);
+  const period = PERIOD[digiMode] || 15;
+  // narrow: five short lines
+  $("w3-legend").innerHTML =
+    `<div class="w3-bar"><i style="background:linear-gradient(90deg,${stops.join(",")})"></i><span>+${range} dB</span></div>` +
+    `<div><b class="w3-amb">━</b> period start</div>` +
+    `<div class="w3-sub">even / odd, ${period} s</div>` +
+    `<div><b class="w3-grd">━</b> 250 Hz · ${Math.round(w3.depth / 6)} s</div>` +
+    `<div class="w3-sub">depth ${w3.depth} s</div>`;
+  // the last period's decodes
+  const last = decodes.length ? decodes[decodes.length - 1].period_utc : null;
+  const cur = last ? decodes.filter((d) => d.period_utc === last) : [];
+  const best = cur.reduce((m, d) => Math.max(m, d.snr), -99);
+  const cqs = cur.filter((d) => d.kind === "CQ").length;
+  // how busy the band is: the share of the latest line above the noise (+6 dB)
+  const row = w3rows[0];
+  let busy = null;
+  if (row) {
+    const off = (+$("wf-bright").value - 50) / 50 * 15, thr = (10 + off) / range * 255;
+    let n = 0;
+    for (let i = 0; i < row.length; i++) if (row[i] > thr) n++;
+    busy = Math.round(n / row.length * 100);
+  }
+  // narrow: five lines, label · value in two fixed columns (the place stays)
+  $("w3-stats").innerHTML =
+    `<span>decodes</span><b>${cur.length}</b>` +
+    `<span>best</span><b>${cur.length ? `${best > 0 ? "+" : ""}${best} dB` : "—"}</b>` +
+    `<span>CQ</span><b>${cur.length ? cqs : "—"}</b>` +
+    `<span>busy</span><b>${busy == null ? "—" : busy + " %"}</b>` +
+    `<span>noise</span><b>${wfFloor == null ? "—" : Math.round(wfFloor) + " dB"}</b>`;
+}
+setInterval(w3Info, 1000);
+function apply3d() {
+  $("wf-wrap").classList.toggle("v3d", w3.on);
+  if (!w3.on) $("wf-wrap").classList.remove("v3d-gl");
+  if (!w3.on) { if (w3raf) cancelAnimationFrame(w3raf); w3raf = 0; return; }
+  w3Info();
+  if (gl3 === null && !wf3ctx) {
+    try { gl3 = gl3Init(); } catch (e) { console.warn("3D waterfall: WebGL", e); gl3 = null; }
+    if (!gl3) { gl3 = false; wf3ctx = wf3c.getContext("2d"); }     // no WebGL: the CPU drawing
+    else for (const row of [...w3rows].reverse()) gl3Line(row);   // what was gathered so far
+  }
+  $("wf-wrap").classList.toggle("v3d-gl", !!gl3);              // the windows drawn in perspective (else the rectangles stay)
+  if (gl3) { if (!w3raf) w3raf = requestAnimationFrame(w3loop); }
+  else draw3dCpu();
+}
+$("set-wf3d").checked = w3.on;
+$("set-wf3d-depth").value = String(w3.depth);
+$("set-wf3d-height").value = w3.height;
+$("set-wf3d-colors").value = w3.colors;
+$("set-wf3d").onchange = (e) => { w3.on = e.target.checked; store.set("wf3d", w3.on); apply3d(); };
+$("set-wf3d-depth").onchange = (e) => {
+  w3.depth = +e.target.value; store.set("wf3dDepth", w3.depth); w3rows = []; w3acc = null;
+  if (gl3) { gl3.hData.fill(0); gl3Line(new Uint8Array(1)); }      // the old lines had another time scale
+  apply3d();
+};
+$("set-wf3d-height").oninput = (e) => { w3.height = +e.target.value; store.set("wf3dHeight", w3.height); apply3d(); };
+$("set-wf3d-colors").onchange = (e) => { w3.colors = e.target.value; store.set("wf3dColors", w3.colors); apply3d(); };
+window.addEventListener("resize", () => { if (w3.on && !gl3) draw3dCpu(); });
+apply3d();
 function buildAxis() {
   const ax = $("wf-axis");
   const w = ax.clientWidth || 1000;
@@ -2077,6 +2492,8 @@ async function loadFt8() {
   $("set-hunt-cq").value = s.hunt_cq_after ?? 4;
   $("set-hunt-both").checked = !!s.hunt_both;
   $("set-psk").checked = !!s.psk_report;
+  $("set-stats-psk").checked = s.stats_psk !== false;
+  $("set-stats-qrz").checked = s.stats_qrz !== false;
   $("set-psk-ant").value = s.psk_antenna || "";
   $("psk-dest").textContent = s.psk_dest || "—";
   renderHuntBlocked(s.hunt_blocked || []);
@@ -2106,6 +2523,8 @@ $("ft8-save").onclick = async () => {
       hunt_cq_after: Math.max(0, Math.min(40, Math.round(+$("set-hunt-cq").value) || 0)),     // 0 = never
       hunt_both: $("set-hunt-both").checked,
       psk_report: $("set-psk").checked,
+      stats_psk: $("set-stats-psk").checked,
+      stats_qrz: $("set-stats-qrz").checked,
       psk_antenna: $("set-psk-ant").value.trim(),
       digi_colors: cols,
     });
@@ -5157,6 +5576,8 @@ async function loadStats() {
   let s;
   try { s = await api("/api/stats"); } catch { return; }
   const p = s.psk || {}, q = s.qrz || {};
+  $("st-psk").hidden = p.enabled === false;               // Settings ▸ FT8: switched off
+  $("st-qrz").hidden = q.enabled === false;
   // receivers · DXCC entities · farthest km (the words in the tooltip: short, the place is reserved)
   $("st-psk-v").textContent = p.n ? `${p.n} · ${p.countries} · ${p.far_km ? p.far_km.toLocaleString("de-DE") + " km" : "—"}` : (p.error ? "!" : "0");
   $("st-psk").title = `PSK Reporter: stations that heard you on ${p.band || "this band"} in the last ${p.window_min || 30} min` +
@@ -5167,7 +5588,7 @@ async function loadStats() {
   const qv = q.views != null ? q.views.toLocaleString("de-DE") : (q.configured ? "…" : "—");
   $("st-qrz-v").textContent = qv + (q.today ? ` +${q.today}` : "");
   $("st-qrz").title = q.configured
-    ? `QRZ.com: views of your QRZ page${q.views != null ? ` — ${q.views}, today +${q.today ?? 0}` : ""}\nupdated ${ago(q.updated)} (every 30 min)` + (q.error ? `\n${q.error}` : "")
+    ? `QRZ.com: views of your QRZ page${q.views != null ? ` — ${q.views}, today +${q.today ?? 0}` : ""}\nupdated ${ago(q.updated)} (every 5 min)` + (q.error ? `\n${q.error}` : "")
     : "QRZ.com: set up the QRZ login (Settings ▸ Log) - needs a QRZ XML subscription";
   $("st-qrz").classList.toggle("dim", q.views == null);
 }

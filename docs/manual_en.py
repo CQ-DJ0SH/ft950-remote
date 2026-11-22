@@ -436,6 +436,30 @@ EN = [
         "otherwise); it stops at once and switches Auto Hunt off. NTP in the strip "
         "is an LED: green with the clock synchronised, red without (no decoding).",
     ]),
+    ("h2", "3D waterfall"),
+    ("img", "manual/wf3d.png", 174),
+    ("p", "Settings ▸ FT8 ▸ Waterfall ▸ 3D waterfall shows the DIGI waterfall in perspective, "
+          "after Yaesu's 3D display: the newest spectrum at the front edge over the full "
+          "width, older ones going back into the depth - higher up and narrower - and every "
+          "signal rising as a peak, so FT8 stations become ridges running into the room. "
+          "Drawn with WebGL at the screen's own resolution and frame rate (sharp, gliding), "
+          "1024 columns (one per frequency bin); without WebGL a simpler drawing takes over."),
+    ("ul", [
+        "The room: thin lines on the floor every 250 Hz and at time steps, on the back "
+        "wall and at the sides. An amber line along the terrain marks each period start "
+        "(even / odd) and moves back with it. The TX (red) and RX (green) windows lie on "
+        "the floor and up the back wall in the same perspective.",
+        "Top left the legend (colours with their dB range, the lines, the depth), top "
+        "right the last period: decodes, best SNR, CQs, how busy the band is (share above "
+        "the noise) and the noise level.",
+        "Own transmissions and 2 s after them go in as empty lines (the receiver hears "
+        "the TX audio and the switching), as does any frame strong over half the band - "
+        "the view keeps moving, a transmission is a flat gap.",
+        "Settings: Depth (15 s to 2 min), Height of the peaks, Colours (Yaesu blue to red, "
+        "or the waterfall's palette). Markers, scale, the callsign strip and clicks refer "
+        "to the front edge; the flat waterfall keeps running underneath, switching is "
+        "instant.",
+    ]),
     ("h2", "Station statistics"),
     ("p", "Between Globe and the filters of Received Messages two small fields show how "
           "the station is doing. PSK: who heard you on the band of VFO A in the last "
@@ -445,7 +469,7 @@ EN = [
           "compressed and only for what is new - no transmission, no query (one look after "
           "a restart). The reports are kept for 24 h, so a band change shows the other "
           "band at once. QRZ: the views of your QRZ.com page and, after +, those since the "
-          "start of the UTC day - every 30 minutes through the QRZ login of Settings ▸ Log "
+          "start of the UTC day - every 5 minutes through the QRZ login of Settings ▸ Log "
           "(needs a QRZ XML subscription)."),
     ("h2", "Globe"),
     ("img", "manual/globe.jpg", 174),
@@ -806,7 +830,10 @@ EN = [
         "the callsign strip for all palettes "
         "and the default palette, picked by clicking its colour sample; the Palette "
         "choice under the waterfall then lasts only until the page is reloaded), and "
-        "the colours of the message lists with preview and reset.",
+        "the colours of the message lists with preview and reset; the 3D waterfall with "
+        "depth, height and colours; and the station statistics beside Globe - PSK "
+        "(PSK Reporter queries) and QRZ page views, each switched off with no queries "
+        "at all.",
         "Audio: capture device, codec level, FT8 TX drive, the FT-950 audio menus, "
         "voice TX processing, WebRTC buffers.",
         "Log: Wavelog and QRZ.com; automation: QRZ lookup before every log, "

@@ -64,3 +64,10 @@ def test_qrz_views_since_the_day_began(monkeypatch, tmp_path):
     s._qrz("DJ0SH")
     v = s.qrz_view()
     assert v["views"] == 1240 and v["today"] == 6
+
+
+def test_switched_off_shows_it(monkeypatch):
+    s = _stats()
+    s.psk_on, s.qrz_on = False, False
+    v = s.view()
+    assert v["psk"]["enabled"] is False and v["qrz"]["enabled"] is False

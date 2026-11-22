@@ -451,6 +451,9 @@
       <div class="wf-axis" id="wf-axis"></div>
       <div class="wf-wrap" id="wf-wrap">
         <canvas id="wf"></canvas>
+        <canvas id="wf3d" aria-hidden="true"></canvas>
+        <div class="w3-info w3-left" id="w3-legend" aria-hidden="true"></div>
+        <div class="w3-info w3-right" id="w3-stats" aria-hidden="true"></div>
         <div class="wf-box tx" id="box-tx" title="TX window (click)"></div>
         <div class="wf-box rx" id="box-rx" title="RX window (Shift+click)"></div>
         <div class="wf-tip" id="wf-tip" hidden></div>
@@ -878,6 +881,11 @@
         <span class="wf-sw-break" aria-hidden="true"></span>
         <span class="wf-sw-lbl panel-row-txt" title="The palette the waterfall starts with. The Palette choice under the waterfall changes it only until the page is reloaded. Stored in this browser.">Default palette</span>
         <span class="wf-cmap-sw" id="set-cmap-sw" role="radiogroup" aria-label="Default palette"></span>
+        <span class="wf-sw-break" aria-hidden="true"></span>
+        <label class="switch-label" title="The DIGI waterfall in perspective, as Yaesu's 3D display: the newest spectrum at the front, older ones going back into the depth, every signal rising as a peak. Markers, scale and clicks refer to the front edge."><span class="panel-row-txt">3D waterfall</span><input type="checkbox" class="switch" id="set-wf3d"></label>
+        <label class="wf3d-opt" title="How far back in time the 3D view reaches">Depth <select id="set-wf3d-depth"><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option><option value="120">2 min</option></select></label>
+        <label class="wf3d-opt" title="How high the peaks rise">Height <input type="range" id="set-wf3d-height" min="20" max="100" step="5"></label>
+        <label class="wf3d-opt" title="Yaesu: blue (weak) to red (strong), as the FTDX101's 3D display · Palette: the waterfall's palette">Colours <select id="set-wf3d-colors"><option value="yaesu">Yaesu (blue → red)</option><option value="palette">Palette</option></select></label>
       </div>
       <span class="logo-label sec">SEQUENCER</span>
       <div class="form-grid">
@@ -912,6 +920,11 @@
           <dt>Bands</dt><dd id="pss-bands">—</dd>
         </dl>
       </div>
+      </div>
+      <span class="logo-label sec">STATION STATISTICS (BESIDE GLOBE)</span>
+      <div class="form-grid">
+        <label class="check-label span-2" title="Who heard you on VFO A's band in the last 30 minutes (receivers · DXCC · farthest km). The Pi asks PSK Reporter only after an own transmission, 5 minutes after it, at most every 5 minutes. Off: no queries, the field is hidden."><input type="checkbox" id="set-stats-psk"> PSK: who hears me (PSK Reporter queries)</label>
+        <label class="check-label span-2" title="The views of your QRZ.com page and those since the start of the day, every 5 minutes through the QRZ login of Settings ▸ Log. Off: no queries, the field is hidden."><input type="checkbox" id="set-stats-qrz"> QRZ: views of my QRZ.com page</label>
       </div>
       <span class="logo-label sec">HUNT (AUTO-CALL NEW STATIONS)</span>
       <div class="form-grid">

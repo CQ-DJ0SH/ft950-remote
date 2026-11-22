@@ -694,6 +694,7 @@ async def get_settings() -> dict:
                               for d in DIGI_DECODERS],
             "ft_closing": sequencer.closing,
             "psk_report": psk.enabled, "psk_antenna": psk.antenna, "psk_dest": psk.dest,
+            "stats_psk": station_stats.psk_on, "stats_qrz": station_stats.qrz_on,
             "hunt_target": sequencer.hunt_target, "hunt_min_snr": sequencer.hunt_min_snr,
             "hunt_minutes": sequencer.hunt_minutes, "hunt_both": sequencer.hunt_both,
             "hunt_cq_after": sequencer.hunt_cq_after,
@@ -737,6 +738,10 @@ async def save_settings(req: SettingsReq) -> dict:
         if k in upd:
             _rt[k] = upd[k]
             setattr(sequencer, k, upd[k])
+    if "stats_psk" in upd:
+        station_stats.psk_on = bool(upd["stats_psk"])
+    if "stats_qrz" in upd:
+        station_stats.qrz_on = bool(upd["stats_qrz"])
     if "psk_report" in upd:
         psk.enabled = upd["psk_report"]
         if not psk.enabled:
@@ -1768,6 +1773,8 @@ station_stats = StationStats(
     vfo_hz=lambda: (service.status.get("vfo") or {}).get("freq_hz"),
     transmitting=lambda: bool(service.status.get("tx") or tx.state.get("active")),
     qrz_lookup=lambda call: logbook.qrz.lookup(call), qrz_ok=lambda: logbook.qrz.configured())
+station_stats.psk_on = _rt.get("stats_psk") is not False     # Settings ▸ FT8, default on
+station_stats.qrz_on = _rt.get("stats_qrz") is not False
 
 
 @app.get("/api/stats")

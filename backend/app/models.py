@@ -99,6 +99,8 @@ class SettingsReq(BaseModel):
     hunt_both: bool | None = None                  # Hunt picks after hearing both periods
     hunt_cq_after: int | None = Field(default=None, ge=0, le=40)    # Hunt calls CQ after N quiet periods; 0 = never
     psk_report: bool | None = None                                     # spots to PSK Reporter
+    stats_psk: bool | None = None          # beside Globe: who hears me (PSK Reporter queries)
+    stats_qrz: bool | None = None          # beside Globe: QRZ.com page views
     psk_antenna: str | None = Field(default=None, max_length=60)
     digi_colors: DigiColors | None = None
     hackrf_url: str | None = Field(default=None, pattern=r"^$|^https?://[A-Za-z0-9.\-]+(:\d+)?/?$")

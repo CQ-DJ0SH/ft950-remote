@@ -478,6 +478,32 @@ DE = [
         "aus. NTP in der Leiste ist eine LED: grün bei synchroner Uhr, rot ohne "
         "(dann wird nicht dekodiert).",
     ]),
+    ("h2", "3D-Wasserfall"),
+    ("img", "manual/wf3d.png", 174),
+    ("p", "Settings ▸ FT8 ▸ Waterfall ▸ 3D waterfall zeigt den DIGI-Wasserfall in der "
+          "Perspektive, nach Yaesus 3D-Anzeige: das neueste Spektrum vorn über die ganze "
+          "Breite, ältere weiter hinten in der Tiefe - höher und schmaler - und jedes Signal "
+          "als Spitze, so werden FT8-Stationen zu Graten, die in den Raum laufen. Gezeichnet "
+          "mit WebGL in der eigenen Auflösung und Bildrate des Bildschirms (scharf, "
+          "gleitend), 1024 Spalten (eine je Frequenzstufe); ohne WebGL übernimmt eine "
+          "einfachere Zeichnung."),
+    ("ul", [
+        "Der Raum: dünne Linien auf dem Boden alle 250 Hz und in Zeitschritten, an der "
+        "Rückwand und an den Seiten. Eine bernsteinfarbene Linie entlang des Geländes "
+        "markiert jeden Periodenbeginn (gerade / ungerade) und wandert mit nach hinten. "
+        "TX-Fenster (rot) und RX-Fenster (grün) liegen in derselben Perspektive auf dem "
+        "Boden und an der Rückwand.",
+        "Oben links die Legende (Farben mit ihrem dB-Bereich, die Linien, die Tiefe), oben "
+        "rechts die letzte Periode: Dekodierungen, bestes SNR, CQs, wie belegt das Band ist "
+        "(Anteil über dem Rauschen) und der Rauschpegel.",
+        "Eigene Aussendungen und 2 s danach gehen als leere Zeilen ein (der Empfänger hört "
+        "das Sendesignal und das Umschalten), ebenso jedes Bild, das über das halbe Band "
+        "stark ist - die Ansicht läuft weiter, eine Aussendung ist eine flache Lücke.",
+        "Einstellungen: Depth (15 s bis 2 min), Height der Spitzen, Colours (Yaesu Blau "
+        "bis Rot oder das Farbschema des Wasserfalls). Markierungen, Skala, "
+        "Rufzeichenstreifen und Klicks beziehen sich auf die Vorderkante; der flache "
+        "Wasserfall läuft darunter weiter, das Umschalten geht sofort.",
+    ]),
     ("h2", "Stationsstatistik"),
     ("p", "Zwischen Globe und den Filtern von Received Messages zeigen zwei kleine Felder, "
           "wie es der Station geht. PSK: wer dich auf dem Band von VFO A in den letzten "
@@ -487,7 +513,7 @@ DE = [
           "höchstens alle 5 Minuten, komprimiert und nur das Neue - keine Aussendung, keine "
           "Abfrage (ein Blick nach einem Neustart). Die Meldungen bleiben 24 h gespeichert, "
           "ein Bandwechsel zeigt das andere Band also sofort. QRZ: die Aufrufe deiner "
-          "QRZ.com-Seite und, nach +, die seit Beginn des UTC-Tages - alle 30 Minuten über "
+          "QRZ.com-Seite und, nach +, die seit Beginn des UTC-Tages - alle 5 Minuten über "
           "den QRZ-Zugang aus Settings ▸ Log (braucht ein QRZ-XML-Abo)."),
     ("h2", "Globus"),
     ("img", "manual/globe.jpg", 174),
@@ -877,7 +903,10 @@ DE = [
         "den Rufzeichenstreifen für alle Farbschemas "
         "und das Standard-Farbschema, gewählt per Klick auf sein Farbbeispiel; die "
         "Palette-Auswahl unter dem Wasserfall gilt dann nur bis zum Neuladen der "
-        "Seite) und die Farben der Meldungslisten mit Vorschau und Zurücksetzen.",
+        "Seite) und die Farben der Meldungslisten mit Vorschau und Zurücksetzen; den "
+        "3D-Wasserfall mit Tiefe, Höhe und Farben; und die Stationsstatistik neben Globe "
+        "- PSK (Abfragen bei PSK Reporter) und QRZ-Seitenaufrufe, jede abschaltbar, dann "
+        "ganz ohne Abfragen.",
         "Audio: Aufnahmegerät, Codec-Pegel, FT8-Sendeansteuerung, die Audiomenüs des "
         "FT-950, Sprachaufbereitung beim Senden, WebRTC-Puffer.",
         "Log: Wavelog und QRZ.com; Automatik: QRZ-Abfrage vor jedem Log, Auto-log "

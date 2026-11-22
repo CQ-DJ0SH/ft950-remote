@@ -2282,3 +2282,31 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 #st-psk-v{min-width:20ch}            /* 330 · 32 · 12.097 km */
 #st-qrz-v{min-width:9ch}             /* 3.882 +12 (more grows it) */
 .st-chip.dim{color:var(--text-dim)}
+
+/* 3D waterfall: its canvas over the flat one (which keeps running underneath) */
+.wf-wrap #wf3d{position:absolute; inset:0; display:none; image-rendering:auto}
+.wf-wrap.v3d #wf3d{display:block}
+.wf-wrap.v3d #wf{visibility:hidden}
+.wf3d-opt{display:inline-flex; align-items:center; gap:6px; font:600 11px var(--font-ui); letter-spacing:.08em; color:var(--text-dim)}
+.wf3d-opt select{font:600 12px var(--font-mono); color:var(--text); background:var(--field-bg); border:1px solid var(--edge); border-radius:6px; padding:3px 6px}
+.wf3d-opt input[type=range]{width:110px}
+
+/* the corners above the 3D view: legend (left) and band figures (right) */
+.wf-wrap .w3-info{position:absolute; top:6px; display:none; pointer-events:none; z-index:2;
+  font:500 11px/1.5 var(--font-mono); color:#b9c6e6; text-shadow:0 1px 2px #000a}
+.wf-wrap.v3d .w3-info{display:block}
+.w3-left{left:10px}
+.w3-right{right:10px; text-align:right}
+.w3-info b{color:#fff; font-weight:700}
+.w3-info em{font-style:normal; color:#8d9bc0}
+.w3-info span{color:#8d9bc0; margin-right:6px; font:600 10px var(--font-ui); letter-spacing:.1em; text-transform:uppercase}
+.w3-bar{display:flex; align-items:center; gap:6px; margin-bottom:2px}
+.w3-bar span{margin:0}
+.w3-bar i{display:inline-block; width:80px; height:8px; border-radius:2px; box-shadow:0 0 0 1px #ffffff22}
+.w3-amb{color:#ffb840 !important}
+.w3-grd{color:#a6c7ff !important; opacity:.7}
+.wf-wrap.v3d .w3-right{display:grid; grid-template-columns:auto 8ch; white-space:nowrap; column-gap:8px; align-items:baseline; line-height:1.35}
+.w3-right span{margin:0; text-align:right}
+.w3-right b{text-align:right}
+.w3-left{line-height:1.35; white-space:nowrap} .w3-sub{padding-left:2.2ch; color:#8d9bc0}
+.wf-wrap.v3d.v3d-gl .wf-box{visibility:hidden}   /* 3D: the windows are drawn in the room's perspective (WebGL) */

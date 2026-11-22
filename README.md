@@ -9,6 +9,8 @@ decoding, plus voice operation over WebRTC.
 
 ![DIGI panel: FT8 decodes, sessions and waterfall](docs/screenshots/digi.png)
 
+![3D waterfall: the FT8 band in perspective, a receive period behind and the own transmission in the upright TX window in front](docs/screenshots/wf3d.png)
+
 ![Globe popup: the stations heard on a turning hologram globe, with the table beside it](docs/screenshots/globe.jpg)
 
 ![QSL card by e-mail: a picture with the QSO data drawn on it (sample picture)](docs/screenshots/qsl-card.jpg)

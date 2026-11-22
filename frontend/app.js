@@ -1775,8 +1775,10 @@ function w3NoiseLine(n) {
 }
 function w3Glitch(vals) {
   const now = performance.now();
-  // the radio's TX (CAT, polled) or our own transmitter's state (pushed at once)
-  const txNow = !!(radio.tx || txState?.active);
+  // the radio's TX state (CAT, it comes with every status update). Not
+  // txState: for FT8 that is read only once at page load (then only for TUNE /
+  // Halt) - loaded during a transmission it stayed "transmitting" for good.
+  const txNow = !!radio.tx;
   if (txNow !== w3TxPrev) { w3TxPrev = txNow; w3TxUntil = now + 800; }   // a switch, either way
   if (now < w3TxUntil) return "switch";
   let n = 0;

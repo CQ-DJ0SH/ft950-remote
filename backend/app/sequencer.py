@@ -45,6 +45,7 @@ PARTNER_SPAN_MAX = 1000    # wider than this, the fast partner pass looks at the
 # (±150 Hz found 1 of 24, ±250 all 24) - its decoder wants margin above the tones.
 PARTNER_MARGIN = {"FT8": 200, "FT4": 300}
 HUNT_MAX_S = 180 * 60       # default; Settings ▸ FT8 ▸ Hunt, 0 = no switch-off
+HUNT_REST_S = 180            # Settings ▸ FT8 ▸ Hunt: the rest after each Hunt QSO
 HUNT_BLOCK_MAX = 1000       # calls kept on the no-reply list
 # CQ: callers that were not taken (two at once, or calling during a QSO) wait
 # here and are answered after the QSO instead of the next CQ - for this long
@@ -134,6 +135,11 @@ class Sequencer:
         self.hunt_cq_after = 4
         self._hunt_quiet: set[float] = set()     # periods Hunt found nobody in
         self._hunt_cq = False                    # the CQ running was started by Hunt
+        # Settings ▸ FT8 ▸ Hunt: a 3-minute rest after each Hunt QSO (unattended
+        # night operation, spares the radio) - no call and no Hunt CQ meanwhile;
+        # Auto Answer is not held back
+        self.hunt_pause = False
+        self._hunt_rest_until = 0.0
         self._seen: dict[float, bool] = {}       # period t0 → decodes processed
         # CQ caller queue: call -> {"d": latest decode to me, "t": last heard, "first": first heard}
         self.queue: dict[str, dict] = {}
@@ -272,8 +278,11 @@ class Sequencer:
                 "dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",
                 "df": s.get("df"), "mode": s.get("mode"), "tries": self.tries,
                 "band": band_for_hz(s.get("freq_hz") or vfo)})
+        rest = self._hunt_rest(s, kind == "cq" and self._hunt_cq)
         self.session = None
-        if kind == "cq":
+        if kind == "cq" and self._hunt_cq and rest:
+            self.kind, self.step, self._hunt_cq = None, None, False
+        elif kind == "cq":
             self.kind, self.step, self.tries = "cq", "cq", 0
             self._take_queued()
             self._run()
@@ -337,6 +346,7 @@ class Sequencer:
             self.hunt_until = 0.0
         self.hunt = on
         self._hunt_quiet.clear()
+        self._hunt_rest_until = 0.0                  # switched (again): no rest left over
         self._set_common(tx_hz, adopt)
         if not on:
             await self._hunt_cq_end()
@@ -429,6 +439,8 @@ class Sequencer:
                 log.info("hunt: %d min over, off", self.hunt_minutes)
                 await self._hunt_cq_end()
                 await self.publish()
+            elif time.time() < self._hunt_rest_until:
+                self._hunt_pool = []                      # resting after a QSO: nothing picked, no CQ
             elif getattr(self.manager, "count", 1) and mode == self.digi.current_mode():
                 if self.hunt_both:
                     # the last two periods' CQs; pick once both parities were heard
@@ -775,14 +787,25 @@ class Sequencer:
                     self._complete(s)
                     break
 
+    def _hunt_rest(self, s: Optional[dict], hunt_cq: bool = False) -> bool:
+        """A Hunt QSO (called by Hunt, or a caller of Hunt's CQ) ended: the rest
+        starts, if it is switched on. True when it did."""
+        if not (self.hunt and self.hunt_pause and ((s and s.get("hunt")) or hunt_cq)):
+            return False
+        self._hunt_rest_until = time.time() + HUNT_REST_S
+        self._hunt_quiet.clear()
+        log.info("hunt: %d min rest after the QSO", HUNT_REST_S // 60)
+        return True
+
     async def _finish_round(self) -> None:
         """Session over: CQ goes on calling, Answer stops."""
+        rest = self._hunt_rest(self.session, self.kind == "cq" and self._hunt_cq)
         if self.session:
             if self.session["state"] == "running":
                 self.session["state"] = "done" if self.session.get("logged") is not None else "ended"
             self.session = None
-        if self.kind == "cq" and self._hunt_cq and not self.hunt:
-            self.kind, self._hunt_cq = None, False      # Hunt went off during the QSO: no more CQ
+        if self.kind == "cq" and self._hunt_cq and (not self.hunt or rest):
+            self.kind, self._hunt_cq = None, False      # Hunt off (or resting) after the QSO: no more CQ
         elif self.kind == "cq":
             self.step, self.tries = "cq", 0
             self._take_queued()               # a waiting caller instead of the next CQ
@@ -942,6 +965,7 @@ class Sequencer:
                 "hunt_cq": self._hunt_cq and self.kind == "cq",      # the CQ is Hunt's own
                 "hunt_left_s": (None if math.isinf(self.hunt_until) else max(0, round(self.hunt_until - time.time())))
                 if self.hunt else 0,                       # None: no switch-off
+                "hunt_rest_s": max(0, round(self._hunt_rest_until - time.time())) if self.hunt else 0,
                 "hunt_blocked": sorted(self.hunt_blocked),
                 "queue": self._queue_view() if self.kind == "cq" else []}
 

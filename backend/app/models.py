@@ -97,6 +97,7 @@ class SettingsReq(BaseModel):
     hunt_min_snr: int | None = Field(default=None, ge=-30, le=20)
     hunt_minutes: int | None = Field(default=None, ge=0, le=1440)      # Hunt switches itself off; 0 = never
     hunt_both: bool | None = None                  # Hunt picks after hearing both periods
+    hunt_pause: bool | None = None                 # Hunt rests 3 min after each QSO (night operation)
     hunt_cq_after: int | None = Field(default=None, ge=0, le=40)    # Hunt calls CQ after N quiet periods; 0 = never
     psk_report: bool | None = None                                     # spots to PSK Reporter
     stats_psk: bool | None = None          # beside Globe: who hears me (PSK Reporter queries)

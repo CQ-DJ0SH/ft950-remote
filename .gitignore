@@ -29,6 +29,8 @@ backend/app/dec_history.csv
 # Neuropol (nameplate font, as in TM-V71 Remote) has unclear redistribution
 # terms: local copy only, the UI falls back to Saira Condensed without it
 frontend/fonts/Neuropol.woff
+# the DJ0SH variant (slashed zero), from dj0sh.com/fonts: local copy only as well
+frontend/fonts/Neuropol-DJ0SH.woff2
 
 # Manufacturer logo (trademark): fetched/uploaded at runtime, never committed
 backend/branding/

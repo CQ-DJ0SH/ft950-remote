@@ -926,3 +926,43 @@ def test_station_utc_offset():
     assert off("Japan", None, jul) == (9, False)
     assert off("Australia", 151.2, nov) == (11, False)                   # Sydney, summer there
     assert tzguess.district_lon("Canada", "VE7ABC") == -123 and tzguess.district_lon("United States", "W6A") is None
+
+
+def test_hunt_rests_3_min_after_a_qso_when_switched_on_auto_answer_not():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    started = []
+    async def fake_answer(d, hz):
+        started.append(d["from"])
+        s.kind, s.session = "answer", s._new_session(d)
+    s.answer = fake_answer
+    asyncio.run(s.set_hunt(True, 1600))
+    s.hunt_pause = True
+    asyncio.run(s.on_decodes([_d("CQ SP2DDD JO93", snr=0, worked=_w())], 15.0, "FT8", False))
+    assert started == ["SP2DDD"]
+    s.session["hunt"] = True
+    asyncio.run(s._finish_round())                                         # the QSO is over
+    assert s.kind is None and 170 < s.status()["hunt_rest_s"] <= 180
+    asyncio.run(s.on_decodes([_d("CQ OK1CCC JO70", snr=0, worked=_w())], 45.0, "FT8", False))
+    assert started == ["SP2DDD"]                                           # resting: nobody called
+    s.auto_answer = True                                                   # a station calling me: answered
+    asyncio.run(s.on_decodes([_d("DJ0SH G4EEE IO91", snr=0)], 75.0, "FT8", False))
+    assert started == ["SP2DDD", "G4EEE"]
+    s.session["hunt"] = False
+    s._hunt_rest_until = 0.0
+    asyncio.run(s._finish_round())                                         # an Auto Answer QSO: no rest
+    assert s.status()["hunt_rest_s"] == 0
+    asyncio.run(s.on_decodes([_d("CQ OK1CCC JO70", snr=0, worked=_w())], 105.0, "FT8", False))
+    assert started[-1] == "OK1CCC"
+
+
+def test_hunt_rest_off_by_default_and_ends_a_hunt_cq():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    asyncio.run(s.set_hunt(True, 1600))
+    s.kind, s._hunt_cq = "cq", True
+    s.session = s._new_session(_d("DJ0SH G4EEE IO91"))
+    asyncio.run(s._finish_round())
+    assert s.kind == "cq" and s.status()["hunt_rest_s"] == 0              # off: Hunt's CQ goes on
+    s.hunt_pause = True
+    s.session = s._new_session(_d("DJ0SH G4EEE IO91"))
+    asyncio.run(s._finish_round())
+    assert s.kind is None and not s._hunt_cq and s.status()["hunt_rest_s"] > 170

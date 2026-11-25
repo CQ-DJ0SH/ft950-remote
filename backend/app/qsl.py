@@ -45,7 +45,10 @@ FONT_REG = "DejaVuSansMono.ttf"
 FONT_LABEL = "DejaVuSans.ttf"
 # the own callsign as on the page's nameplate; local copy only (gitignored),
 # DejaVu Sans Mono Bold when it is missing
-FONT_CALL = Path(__file__).resolve().parents[2] / "frontend" / "fonts" / "Neuropol.woff"
+_FONTS = Path(__file__).resolve().parents[2] / "frontend" / "fonts"
+# the DJ0SH variant (dj0sh.com/fonts) has a slashed zero of its own; the plain Neuropol needs Ø
+FONT_CALL_SLASHED = _FONTS / "Neuropol-DJ0SH.woff2"
+FONT_CALL = FONT_CALL_SLASHED if FONT_CALL_SLASHED.exists() else _FONTS / "Neuropol.woff"
 
 DEFAULTS = {
     # mail account: entered in Settings ▸ QSL, stored only in runtime.json
@@ -299,6 +302,8 @@ def _call_label(call: str, font) -> str:
     """Neuropol draws 0 like O: a slashed zero as on the page's nameplate
     (DJ0SH -> DJØSH), if the font has the glyph."""
     call = (call or "").upper()
+    if str(getattr(font, "path", "")) == str(FONT_CALL_SLASHED):
+        return call                                  # its own 0 is slashed already
     try:
         has = font.getmask("Ø").getbbox() is not None and font.getlength("Ø") != font.getlength("\uffff")
     except Exception:  # noqa: BLE001

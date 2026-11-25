@@ -185,7 +185,8 @@ EN = [
           "digits (SWR as 1.5:1), so nothing jumps. "
           "The needle moves like a moving-coil meter: damped, rising in about "
           "0.35 s and falling back a little slower. "
-          "AFU above MHz lights up — green field, dark letters, like BUSY — while "
+          "The frequency reads in kHz as 7.152,800 (MHz . kHz , Hz), VFO B and the "
+          "frequency entry alike. AFU above kHz lights up — green field, dark letters, like BUSY — while "
           "VFO A is inside an amateur band of the "
           "frequency plan chosen in Settings ▸ Appearance (Germany, IARU Region 1, 2 / "
           "USA or 3); its tooltip names the band and its limits."),
@@ -355,6 +356,12 @@ EN = [
         "runs. Settings ▸ FT8 ▸ \u201cPick only after hearing both periods\u201d "
         "(default off) makes it listen one period more (about 15 s per QSO) and "
         "pick the best station of both, even and odd.",
+        "Night operation: Settings ▸ FT8 ▸ \u201cRest 3 min after each QSO\u201d "
+        "(default off) spares the radio when Hunt runs unattended. After each Hunt "
+        "QSO, or a call that got no reply, Hunt rests 3 minutes: it calls nobody and "
+        "calls no CQ of its own, and a Hunt CQ that was running stops. The Hunt button "
+        "shows the rest counting down in place of its run time (\u201cHunt ⏸ 2:12\u201d). Auto Answer is not "
+        "held back: a station calling you is still answered.",
         "Hunt's own CQ: when Hunt hears no new station for 4 periods (full passes, "
         "about a minute in FT8), it calls CQ itself — on a free spot it measured over "
         "those periods: every decoded signal and any energy more than 6 dB over the "
@@ -449,7 +456,7 @@ EN = [
     ("ul", [
         "The room: lines on the floor every 250 Hz and at time steps, on the back wall "
         "and at the sides; on the slanted right edge a fixed time scale (seconds back). "
-        "Each period start is a flat line across the floor, even cyan and odd violet as "
+        "Each period start is a flat dashed line across the floor, even cyan and odd violet as "
         "the EVEN / ODD chip, moving back with the data. The TX (red) and RX (green) "
         "windows stand upright in the room as translucent slabs, so a signal in the "
         "window - the own transmission's ridge too - stands between their walls.",
@@ -475,7 +482,9 @@ EN = [
           "a restart). The reports are kept for 24 h, so a band change shows the other "
           "band at once. QRZ: the views of your QRZ.com page and, after +, those since the "
           "start of the UTC day - every 5 minutes through the QRZ login of Settings ▸ Log "
-          "(needs a QRZ XML subscription)."),
+          "(needs a QRZ XML subscription). Beside each figure a small time counts down to "
+          "the next fetch (PSK: \u2013 while none is due, i.e. before a transmission); the "
+          "fields keep their width, six-digit QRZ counts included, so the row never wraps."),
     ("h2", "Globe"),
     ("img", "manual/globe.jpg", 174),
     ("p", "Globe, beside the title of Received Messages, opens a popup with the "
@@ -755,7 +764,7 @@ EN = [
     ("h1", "15  QSL card by e-mail"),
     ("img", "manual/qsl-card.jpg", 150),
     ("p", "A QSL card is your own picture with the QSO data drawn on it on the Pi: "
-          "your callsign as a label (in the nameplate font, 0 as Ø), the data block "
+          "your callsign as a label (in the nameplate font, its 0 slashed), the data block "
           "(to radio, date, UTC, band, mode, RST, QSL and below it OP, QTH, RIG, PWR, "
           "ANT side by side) and a note of its own. The mail is HTML with the card in "
           "it, the page's title plate in the header (steel title bar, both calls in "

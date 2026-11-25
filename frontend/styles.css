@@ -3,7 +3,7 @@
 /* Nameplate face, as in TM-V71 Remote. Not in the repo (unclear licence):
    without the local file the title falls back to Saira Condensed. */
 @font-face{font-family:'Neuropol';font-style:normal;font-weight:400;font-display:swap;
-  src:url('fonts/Neuropol.woff') format('woff')}
+  src:url('fonts/Neuropol-DJ0SH.woff2') format('woff2'), url('fonts/Neuropol.woff') format('woff')}   /* DJ0SH: 0 slashed, not like O */
 
 :root{
   --ink:#07090b; --ink-2:#0b0f12; --panel:#11171c; --panel-2:#161e25;
@@ -908,6 +908,8 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
   text-shadow:0 0 10px var(--lb-glow), 0 0 26px #1e8fe066; white-space:nowrap}
 .lcd .freq .dg.lead{opacity:.08}
 .lcd .freq .sep, .lcd .freq-b .sep{margin:0 .1em}   /* a little air around the dots (VFO A and B) */
+/* DSEG7 has no comma: the one between kHz and Hz from the mono font, slanted like the LCD */
+.lcd .freq .sep.cm, .lcd .freq-b .sep.cm{font-family:var(--font-mono); font-weight:600; font-style:italic; font-size:.6em; margin:0 .12em}
 @media (hover:hover){.lcd .freq .dg:hover{background:#8fd6ff1f}}
 .lf-bottom{display:flex; align-items:center; gap:12px; justify-content:flex-end}
 .tune-scale{position:relative; flex:1 1 160px; max-width:240px; height:30px; border:1.5px solid var(--lb); border-radius:6px;

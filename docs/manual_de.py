@@ -201,7 +201,8 @@ DE = [
           "damit nichts springt. Die Nadel bewegt sich wie bei einem "
           "Drehspulinstrument: gedämpft, sie steigt in etwa 0,35 s an und fällt "
           "etwas langsamer zurück. "
-          "AFU über MHz leuchtet auf — grünes Feld, dunkle Schrift, wie BUSY —, "
+          "Die Frequenz steht in kHz als 7.152,800 (MHz . kHz , Hz), ebenso VFO B und "
+          "die Frequenzeingabe. AFU über kHz leuchtet auf — grünes Feld, dunkle Schrift, wie BUSY —, "
           "solange VFO A in einem Amateurfunkband des "
           "Frequenzplans liegt, der unter Settings ▸ Appearance gewählt ist "
           "(Deutschland, IARU Region 1, 2 / USA oder 3); der Tooltip nennt Band und "
@@ -387,6 +388,12 @@ DE = [
         "lange bei einer Parität. Settings ▸ FT8 ▸ \u201ePick only after hearing both "
         "periods\u201c (Standard aus) lässt es eine Periode länger hören (etwa 15 s je "
         "QSO) und die beste Station aus beiden wählen, gerade und ungerade.",
+        "Nachtbetrieb: Settings ▸ FT8 ▸ \u201eRest 3 min after each QSO\u201c "
+        "(Standard aus) schont das Funkgerät, wenn Hunt unbeaufsichtigt läuft. Nach "
+        "jedem Hunt-QSO, auch nach einem Ruf ohne Antwort, pausiert Hunt 3 Minuten: "
+        "es ruft niemanden und ruft keinen eigenen CQ, ein laufender Hunt-CQ endet. "
+        "Der Hunt-Knopf zeigt die Pause als Countdown anstelle der Laufzeit (\u201eHunt ⏸ 2:12\u201c). "
+        "Auto Answer wird nicht aufgehalten: Wer dich ruft, bekommt weiter Antwort.",
         "Hunts eigener CQ: Hört Hunt 4 Perioden lang (volle Durchläufe, in FT8 etwa "
         "eine Minute) keine neue Station, ruft es selbst CQ — auf einer freien Stelle, "
         "die es über diese Perioden gemessen hat: jedes dekodierte Signal und jede "
@@ -492,7 +499,7 @@ DE = [
     ("ul", [
         "Der Raum: Linien auf dem Boden alle 250 Hz und in Zeitschritten, an der Rückwand "
         "und an den Seiten; an der schrägen rechten Kante eine feste Zeitskala (Sekunden "
-        "zurück). Jeder Periodenbeginn ist eine flache Linie über den Boden, gerade Türkis "
+        "zurück). Jeder Periodenbeginn ist eine flache gestrichelte Linie über den Boden, gerade Türkis "
         "und ungerade Violett wie der EVEN/ODD-Chip, die mit den Daten nach hinten wandert. "
         "TX-Fenster (rot) und RX-Fenster (grün) stehen als durchscheinende Scheiben "
         "aufrecht im Raum, so steht ein Signal im Fenster - auch der Grat der eigenen "
@@ -520,7 +527,10 @@ DE = [
           "Abfrage (ein Blick nach einem Neustart). Die Meldungen bleiben 24 h gespeichert, "
           "ein Bandwechsel zeigt das andere Band also sofort. QRZ: die Aufrufe deiner "
           "QRZ.com-Seite und, nach +, die seit Beginn des UTC-Tages - alle 5 Minuten über "
-          "den QRZ-Zugang aus Settings ▸ Log (braucht ein QRZ-XML-Abo)."),
+          "den QRZ-Zugang aus Settings ▸ Log (braucht ein QRZ-XML-Abo). Neben jedem Wert "
+          "zählt eine kleine Zeit bis zum nächsten Abruf herunter (PSK: \u2013, solange keiner "
+          "fällig ist, also vor einer Aussendung); die Felder behalten ihre Breite, auch für "
+          "sechsstellige QRZ-Zahlen, die Zeile bricht nie um."),
     ("h2", "Globus"),
     ("img", "manual/globe.jpg", 174),
     ("p", "Globe neben dem Titel von Received Messages öffnet ein Popup mit den "
@@ -821,8 +831,8 @@ DE = [
     ("h1", "15  QSL-Karte per E-Mail"),
     ("img", "manual/qsl-card.jpg", 150),
     ("p", "Eine QSL-Karte ist das eigene Bild, auf das der Pi die QSO-Daten zeichnet: "
-          "das eigene Rufzeichen als Schild (in der Schrift des Namensschilds, 0 als "
-          "Ø), der Datenblock (an Station, Datum, UTC, Band, Betriebsart, RST, QSL und "
+          "das eigene Rufzeichen als Schild (in der Schrift des Namensschilds, die 0 "
+          "durchgestrichen), der Datenblock (an Station, Datum, UTC, Band, Betriebsart, RST, QSL und "
           "darunter OP, QTH, RIG, PWR, ANT nebeneinander) und eine eigene Notiz. Die "
           "Mail ist HTML mit der Karte darin, dem Titelschild der Seite im Kopf "
           "(Titelleiste in Stahl, beide Rufzeichen in Bernstein), einem Link zu diesem "

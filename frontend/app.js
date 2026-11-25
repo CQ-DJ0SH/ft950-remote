@@ -534,7 +534,8 @@ function renderFreq(hz) {
   const s = String(Math.max(0, hz)).padStart(8, "0");
   let html = "";
   for (let i = 0; i < 8; i++) {
-    if (i === 2 || i === 5) html += '<span class="sep">.</span>';
+    if (i === 2) html += '<span class="sep">.</span>';
+    if (i === 5) html += '<span class="sep cm">,</span>';   // 14.074,000: MHz.kHz,Hz
     const lead = i === 0 && hz < 10e6;
     html += `<span class="dg s8${lead ? " lead" : ""}" data-w="${10 ** (7 - i)}">${lead ? "!" : s[i]}</span>`;
   }
@@ -663,7 +664,7 @@ async function applySpinner() {
     if (idx === 2 || idx === 5) {
       const dot = document.createElement("span");
       dot.className = "fdot";
-      dot.textContent = ".";
+      dot.textContent = idx === 5 ? "," : ".";              // 14.074,000: MHz.kHz,Hz
       spin.appendChild(dot);
     }
     const cell = document.createElement("div");
@@ -705,7 +706,7 @@ async function applySpinner() {
   });
   const unit = document.createElement("span");
   unit.className = "spin-unit";
-  unit.textContent = "MHz";
+  unit.textContent = "kHz";
   const apply = document.createElement("button");
   apply.type = "button";
   apply.className = "spin-apply";
@@ -936,7 +937,7 @@ function renderRadio(s) {
 
   if (s.other) {                                   // slow tier present
     const [m, k, h] = fmtHzGroups(s.other.freq_hz);
-    $("freq-b").innerHTML = `${seg8(m.replace(/^0/, "!"))}<span class="sep">.</span>${seg8(k)}<span class="sep">.</span>${seg8(h)}`;
+    $("freq-b").innerHTML = `${seg8(m.replace(/^0/, "!"))}<span class="sep">.</span>${seg8(k)}<span class="sep cm">,</span>${seg8(h)}`;
     $("mode-b").textContent = s.other.mode;
     $("rxtx").textContent = `RX ${s.rx_vfo} · TX ${s.tx_vfo}`;
     $("split").classList.toggle("on", s.rx_vfo !== s.tx_vfo);
@@ -1300,6 +1301,7 @@ $("seq-answer").onclick = async () => {
   } catch { /* toast */ }
 };
 let huntEnd = null;                             // when Hunt switches itself off (ms), null: never / off
+let huntRestEnd = null;                         // the rest after a QSO ends (ms), null: none
 function huntLabel(on = seqState?.hunt) {
   let t = "∞";
   if (huntEnd != null) {
@@ -1308,7 +1310,12 @@ function huntLabel(on = seqState?.hunt) {
   }
   const ico = '<svg class="hunt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">'
     + '<circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>';
-  const html = on ? `Hunt${seqState?.hunt_cq ? " · CQ" : ""}<small class="hunt-left">${t}</small>${ico}` : "Auto Hunt" + ico;   // · CQ: nothing new heard, Hunt calls CQ itself
+  // · CQ: nothing new heard, Hunt calls CQ itself; ⏸ m:ss: resting after a QSO (Settings ▸ FT8 ▸ Hunt)
+  const rest = huntRestEnd != null ? Math.max(0, Math.round((huntRestEnd - Date.now()) / 1000)) : 0;
+  // resting: the rest's time in the place of the run time (one time only, not both)
+  if (rest) t = `⏸ ${Math.floor(rest / 60)}:${String(rest % 60).padStart(2, "0")}`;
+  const tag = !rest && seqState?.hunt_cq ? " · CQ" : "";
+  const html = on ? `Hunt${tag}<small class="hunt-left${rest ? " rest" : ""}">${t}</small>${ico}` : "Auto Hunt" + ico;
   if ($("seq-hunt").innerHTML !== html) $("seq-hunt").innerHTML = html;
 }
 setInterval(() => { if (seqState?.hunt) huntLabel(true); }, 1000);
@@ -1370,6 +1377,7 @@ function renderSeq(s) {
   // off: "Auto Hunt"; on: "Hunt" and the time left as m:ss, counted down here
   // every second (∞: no switch-off)
   huntEnd = s.hunt && s.hunt_left_s != null ? Date.now() + s.hunt_left_s * 1000 : null;
+  huntRestEnd = s.hunt && s.hunt_rest_s ? Date.now() + s.hunt_rest_s * 1000 : null;
   huntLabel(s.hunt);
   const hb = new Set(s.hunt_blocked || []);
   if (hb.size !== huntBlocked.size || [...hb].some((c) => !huntBlocked.has(c))) {
@@ -1925,8 +1933,14 @@ function gl3Grid(gl, sh) {
                          z * 2.0 - 1.0 - 0.004, 1.0);
       v_s = a_uhs.z;
     }`;
-  const mfs = `precision mediump float; uniform vec4 u_col; varying float v_s;
-    void main() { gl_FragColor = vec4(u_col.rgb, u_col.a * clamp(1.0 - abs(v_s), 0.0, 1.0) * 1.6); }`;
+  // dashed: along the screen's x (the line only moves up and down, so the dashes
+  // stand still), u_dash = the period in device pixels, two thirds drawn, soft ends
+  const mfs = `precision mediump float; uniform vec4 u_col; uniform float u_dash; varying float v_s;
+    void main() {
+      float p = mod(gl_FragCoord.x, u_dash) / u_dash;
+      float d = smoothstep(0.0, 0.08, p) * (1.0 - smoothstep(0.6, 0.68, p));
+      gl_FragColor = vec4(u_col.rgb, u_col.a * clamp(1.0 - abs(v_s), 0.0, 1.0) * 1.6 * d);
+    }`;
   const mprog = gl.createProgram();
   gl.attachShader(mprog, sh(gl.VERTEX_SHADER, mvs)); gl.attachShader(mprog, sh(gl.FRAGMENT_SHADER, mfs));
   gl.linkProgram(mprog);
@@ -1936,7 +1950,7 @@ function gl3Grid(gl, sh) {
            uDz: gl.getUniformLocation(prog, "u_dz"),
            mprog, mbuf, aUh: gl.getAttribLocation(mprog, "a_uhs"), mCol: gl.getUniformLocation(mprog, "u_col"),
            mZ: gl.getUniformLocation(mprog, "u_z"), mH: gl.getUniformLocation(mprog, "u_height"),
-           mPx: gl.getUniformLocation(mprog, "u_px"), mData: new Float32Array(GL_COLS * 6) };
+           mPx: gl.getUniformLocation(mprog, "u_px"), mDash: gl.getUniformLocation(mprog, "u_dash"), mData: new Float32Array(GL_COLS * 6) };
 }
 function gl3Line(row) {
   // shift the lines one back, the new one in front (max over the bins of each column)
@@ -2007,6 +2021,7 @@ function gl3Draw() {
     gl.disable(gl.DEPTH_TEST);
     gl.uniform1f(g.mH, w3.height / 100);
     gl.uniform1f(g.mPx, 2 / H);                                 // one pixel in clip space
+    gl.uniform1f(g.mDash, 9 * (window.devicePixelRatio || 1));  // dashes of 6 px, gaps of 3 px (CSS px)
     gl.bindBuffer(gl.ARRAY_BUFFER, g.mbuf);
     gl.enableVertexAttribArray(g.aUh);
     const C = GL_COLS, h = gl3.hData, m = g.mData;
@@ -2430,7 +2445,7 @@ async function loadPorts(port, baud, bauds) {
     .map((b) => `<option value="${b}">${b} Bd${b === 38400 ? " (menu 026 = 3)" : ""}</option>`).join("");
   $("set-baud").value = String(baud);
 }
-function applyCallsign(call) { $("callsign").textContent = (call || "").toUpperCase().replace(/0/g, "Ø"); }   // display only: slashed zero
+function applyCallsign(call) { $("callsign").textContent = (call || "").toUpperCase().replace(/0/g, "Ø"); }   // display only: slashed zero (the title's font draws 0 like O)
 $("set-save").onclick = async () => {
   const body = {
     my_call: $("set-call").value.trim(),
@@ -2576,6 +2591,7 @@ async function loadFt8() {
   $("set-hunt-min").value = s.hunt_minutes ?? 180;
   $("set-hunt-cq").value = s.hunt_cq_after ?? 4;
   $("set-hunt-both").checked = !!s.hunt_both;
+  $("set-hunt-pause").checked = !!s.hunt_pause;
   $("set-psk").checked = !!s.psk_report;
   $("set-stats-psk").checked = s.stats_psk !== false;
   $("set-stats-qrz").checked = s.stats_qrz !== false;
@@ -2607,6 +2623,7 @@ $("ft8-save").onclick = async () => {
       hunt_minutes: Math.max(0, Math.min(1440, Math.round(+$("set-hunt-min").value) || 0)),   // 0 = never
       hunt_cq_after: Math.max(0, Math.min(40, Math.round(+$("set-hunt-cq").value) || 0)),     // 0 = never
       hunt_both: $("set-hunt-both").checked,
+      hunt_pause: $("set-hunt-pause").checked,
       psk_report: $("set-psk").checked,
       stats_psk: $("set-stats-psk").checked,
       stats_qrz: $("set-stats-qrz").checked,

@@ -22,9 +22,9 @@ decoding, plus voice operation over WebRTC.
   - signal path (ANT · ATT · FLT · IPO · R.FLT · AGC) as fixed cells, only the
     active values lit; DSP bars drawn as on the FT-950 (bracket, red pointer,
     green dashes, CONTOUR/NOTCH in two rows); mode lamps (LSB USB CW AM FM RTTY PKT REV)
-  - seven-segment frequency to 1 Hz, tunable by mouse wheel or drag on a digit;
+  - seven-segment frequency to 1 Hz in kHz (7.152,800), tunable by mouse wheel or drag on a digit;
     VFO-B under it, a digital S meter, clarifier scale; unlit segments shown
-    dimmed as on the real LCD; **AFU** above MHz lit (green, like BUSY) inside an amateur
+    dimmed as on the real LCD; **AFU** above kHz lit (green, like BUSY) inside an amateur
     band (frequency plan: Germany, IARU Region 1, 2 / USA or 3)
   - PO / SWR / ALC / ID (amps) / **VDD** (supply voltage, also during TX) bars with
     red zones, **peak hold** until the next transmission (VDD keeps the lowest
@@ -80,7 +80,9 @@ decoding, plus voice operation over WebRTC.
     off, default 180 min; optionally picks only after hearing both periods,
     so it does not keep to one parity; when no new station turns up for 4
     periods it **calls CQ itself** on a free spot it measured between 600 and
-    2400 Hz, until the next new station's CQ); **directed CQ** (CQ DX, EU, … POTA, SOTA) and
+    2400 Hz, until the next new station's CQ; for night operation optionally
+    a **3-minute rest after each QSO** to spare the radio, Auto Answer not held
+    back); **directed CQ** (CQ DX, EU, … POTA, SOTA) and
     **DX Call** for a station typed in; **SKIP** ends the QSO in progress
     and lets CQ / Hunt / Auto Answer go on; RR73 at the report step is
     answered with 73, "R <locator>" counts as an R-report, a bare 73 before the
@@ -331,8 +333,10 @@ and place it at `docs/FT-950_CAT_Manual_ENG.pdf`.
 ## Notes
 
 - The manufacturer logo and the Neuropol nameplate font are not included
-  (trademark / unclear licence). The UI falls back to Saira Condensed, and
-  a logo can be uploaded under Settings.
+  (trademark / unclear licence). The UI uses a local copy of the DJ0SH
+  variant (`frontend/fonts/Neuropol-DJ0SH.woff2`, 0 slashed) or the plain
+  `Neuropol.woff` if present, else Saira Condensed; a logo can be uploaded
+  under Settings.
 - PO/SWR conversion uses approximate calibration points and has not been
   checked against a reference meter.
 

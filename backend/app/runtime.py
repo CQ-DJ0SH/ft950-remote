@@ -26,7 +26,7 @@ KEYS = {"my_call", "my_grid", "serial_port", "audio_device",
         "mem_labels",                    # {"4": "FT8 20m"}: memory key names (radio has no CAT tag)
         "mem_extra",                     # {"7": {"split": true, "vfo_b_hz": 29540000}}: not in a radio memory
         # Hunt: {"K1ABC": {"t": 1761480000.0, "dxcc": …, "snr": …, "band": …}}: the no-reply list
-        "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes", "hunt_both", "hunt_cq_after",
+        "hunt_blocked", "hunt_target", "hunt_min_snr", "hunt_minutes", "hunt_both", "hunt_cq_after", "hunt_pause",
         "psk_report", "psk_antenna", "stats_psk", "stats_qrz",
         "qsl",                           # QSL card by e-mail (Settings ▸ QSL; holds the SMTP password)
         "qrz_views_day",                 # {"date", "views"}: QRZ page views at the day's first look

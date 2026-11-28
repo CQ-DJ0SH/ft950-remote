@@ -54,7 +54,15 @@ const store = {
 
 // ---------------------------------------------------------------- helpers
 let toastTimer = null;
+// every message is kept (the last 20, this page only): the speech bubble in the
+// title bar lists them again, newest first - a toast gone too soon is not lost
+const toastLog = [];
 function toast(text, err = false) {
+  toastLog.unshift({ text, err, t: new Date() });
+  if (toastLog.length > 20) toastLog.length = 20;
+  const hb = $("toast-hist");
+  if (hb) { hb.disabled = false; hb.title = `Last message: ${text}\nClick: the last ${Math.min(toastLog.length, 20)} again`; }
+  if (!$("toast-hist-list")?.hidden) toastHistRender();
   const t = $("toast");
   t.textContent = text;
   t.classList.toggle("err", err);
@@ -62,6 +70,34 @@ function toast(text, err = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.hidden = true; }, err ? 6000 : 4000);
 }
+
+function toastHistRender() {
+  const box = $("toast-hist-list");
+  box.replaceChildren(...toastLog.map((m, i) => {
+    const row = document.createElement("div");
+    row.className = "th-row" + (m.err ? " err" : "") + (i === 0 ? " last" : "");
+    const tm = document.createElement("span");
+    tm.className = "th-time";
+    tm.textContent = m.t.toTimeString().slice(0, 8);
+    const tx = document.createElement("span");
+    tx.className = "th-text";
+    tx.textContent = m.text;
+    row.append(tm, tx);
+    return row;
+  }));
+}
+function toastHistShow(on) {
+  const box = $("toast-hist-list"), btn = $("toast-hist");
+  if (on) toastHistRender();
+  box.hidden = !on;
+  btn.setAttribute("aria-expanded", String(on));
+  btn.classList.toggle("on", on);
+}
+$("toast-hist").onclick = (e) => { e.stopPropagation(); toastHistShow($("toast-hist-list").hidden); };
+document.addEventListener("click", (e) => {             // a click elsewhere closes it
+  if (!$("toast-hist-list").hidden && !e.target.closest("#toast-hist-list")) toastHistShow(false);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("toast-hist-list").hidden) toastHistShow(false); });
 
 async function request(method, path, body, raw = false) {
   const opt = { method };
@@ -1361,7 +1397,7 @@ $("seq-cq").onclick = async () => {
       : await api("/api/seq/cq", { tx_hz: boxes.tx, cq_to: $("cq-to").value }));
   } catch { /* toast */ }
 };
-const STATE_CLS = { "done": "sess-ok", "running": "sess-run", "skipped": "sess-skipped" };
+const STATE_CLS = { "done": "sess-ok", "running": "sess-run", "skipped": "sess-skipped", "lost": "sess-lost" };
 function renderSeq(s) {
   seqState = s;
   // SKIP: only while a QSO runs
@@ -1426,7 +1462,7 @@ function renderSeq(s) {
     return `<tr data-i="${i}"${selSession === x.started ? ' class="sel"' : ""}><td class="msg">${esc(x.call)}</td>` +
       `<td>${new Date(x.started * 1000).toISOString().slice(11, 19)}</td><td>${fmtDur(x.duration_s)}</td>` +
       `<td class="n">${x.df ?? ""}</td><td>${esc(x.band || "")}</td><td class="n">${x.tries}</td>` +
-      `<td class="${cls}"${err ? ` title="${esc(err)}"` : ""}>${esc(st)}</td><td class="dx">${esc(x.dxcc || "")}</td></tr>`;
+      `<td class="${cls}"${err ? ` title="${esc(err)}"` : x.state === "lost" ? ` title="${esc(`Another station was quicker${x.lost_to ? ` (${x.lost_to})` : ""} - Hunt calls it again on a later CQ`)}"` : ""}>${esc(st)}</td><td class="dx">${esc(x.dxcc || "")}</td></tr>`;
   }).join("") +
   // CQ callers waiting for their turn (answered after the running QSO, front first);
   // a click puts one at the front

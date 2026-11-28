@@ -76,7 +76,8 @@ decoding, plus voice operation over WebRTC.
     message; double-click calls it), in every palette
   - a WSJT-X style QSO sequencer (CQ, answer, reports, RR73/73) with
     Auto Answer and **Auto Hunt** (calls new stations' CQs one after the
-    other; a station that never answers is not called again; switches itself
+    other; a station that never answers is not called again, one that
+    answered someone else first is **lost** and called again on its next CQ; switches itself
     off, default 180 min; optionally picks only after hearing both periods,
     so it does not keep to one parity; when no new station turns up for 4
     periods it **calls CQ itself** on a free spot it measured between 600 and
@@ -176,6 +177,8 @@ decoding, plus voice operation over WebRTC.
     mode and UTC day
   - the mail account, its password and the pictures stay on the Pi
     (runtime.json, `backend/qsl_images/` — gitignored)
+- **Messages** (speech bubble in the title bar): the last 20 short messages
+  again, with time and errors in red - a toast gone too soon is not lost
 - **Panel index** on the right edge: VFO, PTT, AUDIO, DIGI, MODES, HRF, LOG
   in their accent colours; a click jumps to the top of the panel, the one in
   view is lit

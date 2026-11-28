@@ -28,6 +28,7 @@
     <div class="stat" id="stat-cat" title="CAT link to the FT-950"><span class="led"></span><span class="stat-label">CAT</span></div>
     <div class="stat" id="stat-audio" title="Capture from the SCU-17 codec"><span class="led"></span><span class="stat-label">USB AUDIO</span></div>
     <div class="clock" id="clock">--:--:--</div>
+    <button class="gear toast-hist-btn" id="toast-hist" type="button" title="Messages: none yet" aria-label="Last messages" aria-haspopup="true" aria-expanded="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path><path d="M8 9h8M8 12h5"></path></svg></button>
     <button class="gear" id="theme" title="Light/Dark" aria-label="Theme">☾</button>
     <button class="gear" id="open-settings" title="Settings" aria-label="Settings">⚙</button>
     <button class="power-switch unavailable" id="power-switch" type="button" title="Radio on/off (Shelly)" aria-label="Radio on/off">
@@ -1245,6 +1246,8 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
+<!-- the last messages again (title bar ▸ speech bubble), newest first -->
+<div class="toast-hist" id="toast-hist-list" role="dialog" aria-label="Last messages" hidden></div>
 <script src="app.js"></script>
 </body>
 </html>

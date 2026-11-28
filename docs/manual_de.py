@@ -134,9 +134,14 @@ DE = [
     ("img", "manual/titlebar.png", 174),
     ("p", "Die Titelleiste zeigt das Logo (wird unter Settings hochgeladen und ist "
           "nie Teil des Repositorys), Ihr Rufzeichen (mit durchgestrichener Null), das "
-          "Typenschild, die Lampen CAT und USB AUDIO, die UTC-Uhr, den "
-          "Design-Umschalter, Settings und — sobald ein Shelly eingerichtet ist — den "
+          "Typenschild, die Lampen CAT und USB AUDIO, die UTC-Uhr, den Meldungen-Knopf, "
+          "den Design-Umschalter, Settings und — sobald ein Shelly eingerichtet ist — den "
           "Netzschalter."),
+    ("p", "Meldungen (die Sprechblase): Jede kurze Meldung am Fuß der Seite wird "
+          "aufbewahrt, die letzten 20 dieses Tabs. Der Hover zeigt die letzte, ein Klick "
+          "listet sie mit Uhrzeit erneut auf, die neueste oben, Fehler rot markiert - eine "
+          "zu schnell verschwundene Meldung geht nicht verloren. Ein Klick daneben oder Esc "
+          "schließt die Liste."),
     ("p", "Darunter folgen die Felder VFO, PTT · MEMORY und AUDIO, DIGI, DIGIMODES, HackRF "
           "und LOG. Die meisten lassen sich mit ▲ einklappen; PTT und AUDIO bleiben "
           "immer offen. Die Felder werden mit 90 % Zoom dargestellt, damit die ganze "
@@ -383,6 +388,13 @@ DE = [
         "Restzeit als m:ss (∞: keine Abschaltung). Er ruft nur an, solange ein Browser das DIGI-Feld "
         "zeigt. Wen er anruft, das Mindest-SNR, die Abschaltzeit (Standard 180 min, "
         "0 = nie) und die Liste stehen unter Settings ▸ FT8.",
+        "Lost (verloren): Antwortet die gerufene Station zuerst jemand anderem (Rapport, "
+        "RR73 oder 73 an ein anderes Rufzeichen, bevor sie uns antwortet), hört Hunt "
+        "sofort auf zu rufen, die Sitzung endet als \u201elost\u201c (bernsteinfarben, die "
+        "schnellere Station im Tooltip). Die Station kommt nicht auf die Keine-Antwort-"
+        "Liste: Hunt ruft sie bei ihrem nächsten CQ wieder, wenn jenes QSO vorbei ist. "
+        "Das gilt auch, wenn du eine Station überspringst oder ihre Versuche ausgehen, "
+        "während sie andere gearbeitet hat.",
         "Hunt und die zwei Perioden: Nach einem QSO ruft Hunt aus der ersten "
         "Periode, die es hört — der Gegenperiode zu unserem TX — und bleibt so oft "
         "lange bei einer Parität. Settings ▸ FT8 ▸ \u201ePick only after hearing both "

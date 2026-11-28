@@ -966,3 +966,47 @@ def test_hunt_rest_off_by_default_and_ends_a_hunt_cq():
     s.session = s._new_session(_d("DJ0SH G4EEE IO91"))
     asyncio.run(s._finish_round())
     assert s.kind is None and not s._hunt_cq and s.status()["hunt_rest_s"] > 170
+
+
+def _hunt_lost_seq():
+    s = Sequencer(_Digi(), _Tx(), _Log(), _Mgr(), _Set())
+    stopped = []
+    async def stop(): stopped.append(1)
+    s.tx.stop = stop
+    asyncio.run(s.set_hunt(True, 1600))
+    async def fake_answer(d, hz):
+        s.kind, s.step, s.session = "answer", "call", s._new_session(d)
+        s.sessions.appendleft(s.session) if hasattr(s.sessions, "appendleft") else None
+    s.answer = fake_answer
+    return s, stopped
+
+
+def test_hunt_lost_when_the_station_answers_someone_else_and_retries_on_a_later_cq():
+    s, stopped = _hunt_lost_seq()
+    cq = _d("CQ PI4X JO32", snr=-5, t0=15.0, worked=_w())
+    asyncio.run(s.on_decodes([cq], 15.0, "FT8", False))
+    assert s.session["call"] == "PI4X"
+    s.session["hunt"] = True
+    sess = s.session
+    asyncio.run(s.on_decodes([_d("IK5DET PI4X -15", t0=45.0)], 45.0, "FT8", False))
+    assert sess["state"] == "lost" and sess["lost_to"] == "IK5DET" and stopped
+    assert s.session is None and s.kind is None
+    assert "PI4X" not in s.hunt_blocked                                    # not "never again"
+    assert s.hunt_pick([cq]) is None                                       # the old CQ: not again
+    later = _d("CQ PI4X JO32", snr=-5, t0=135.0, worked=_w())
+    assert s.hunt_pick([later])["from"] == "PI4X"                          # its next CQ: yes
+
+
+def test_hunt_not_lost_once_it_answered_us_and_skip_of_a_busy_station_does_not_block():
+    s, _ = _hunt_lost_seq()
+    asyncio.run(s.on_decodes([_d("CQ PI4X JO32", snr=-5, t0=15.0, worked=_w())], 15.0, "FT8", False))
+    s.session["hunt"] = True
+    s.session["answered"] = True                                           # it answered us: a QSO, not lost
+    assert not s._lost_to(_d("IK5DET PI4X -15", t0=45.0))
+    s.session["answered"] = False
+    s.session["msgs"].append({"dir": "rx", "t0": s.session["started"] - 25, "msg": "OK1AB PI4X RR73", "other": True})
+    assert not s._was_busy(s.session)                                      # before its CQ: not counted
+    s.session["msgs"].append({"dir": "rx", "t0": s.session["started"] + 15, "msg": "IK5DET PI4X RR73", "other": True})
+    s.session["state"] = "running"
+    asyncio.run(s.skip())
+    assert "PI4X" not in s.hunt_blocked and "PI4X" in s.hunt_lost          # busy: lost, not blocked

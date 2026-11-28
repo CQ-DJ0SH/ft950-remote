@@ -532,6 +532,19 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
   background:var(--panel-2); border:1px solid var(--amber); border-radius:8px; padding:10px 14px;
   max-width:min(92vw,560px); font:13px var(--font-mono); white-space:pre-wrap; z-index:60; box-shadow:0 8px 30px rgba(0,0,0,.5)}
 .toast.err{border-color:var(--tx)}
+/* the last messages (title bar ▸ speech bubble) */
+.toast-hist-btn svg{width:17px; height:17px; vertical-align:middle}
+.toast-hist-btn:disabled{opacity:.35; cursor:default}
+.toast-hist-btn.on{color:var(--amber); border-color:var(--amber)}
+.toast-hist{position:fixed; top:58px; right:16px; z-index:61; width:min(560px, calc(100vw - 32px)); max-height:60vh; overflow:auto;
+  background:var(--panel-2); border:1px solid var(--amber); border-radius:8px; padding:6px 0; box-shadow:0 8px 30px rgba(0,0,0,.5);
+  font:12px/1.45 var(--font-mono)}
+.toast-hist .th-row{display:flex; gap:10px; padding:4px 12px; border-left:3px solid transparent}
+.toast-hist .th-row + .th-row{border-top:1px solid var(--edge)}
+.toast-hist .th-row.last{background:rgba(255,178,62,.07)}
+.toast-hist .th-row.err{border-left-color:var(--tx)}
+.toast-hist .th-time{color:var(--text-dim); flex:none}
+.toast-hist .th-text{color:var(--text); white-space:pre-wrap; overflow-wrap:anywhere}
 
 /* ---------------- responsive ---------------- */
 /* the five groups stay one row (as they always looked) and stack only on a
@@ -2196,6 +2209,7 @@ input[type=range]:not(#pwr-big)::-moz-range-thumb{width:10px; height:18px; borde
 
 /* Sessions ▸ SKIP: amber while a QSO runs; a skipped session dim */
 .sess-skipped{color:var(--text-dim)}
+.sess-lost{color:var(--amber); opacity:.75}       /* Hunt: another station was quicker - tried again later */
 #sess-skip:not(:disabled){border-color:var(--amber); color:var(--amber)}
 #sess-skip:disabled{opacity:.45}
 .qsl-color{width:56px; height:36px; padding:2px; border:1px solid var(--edge); border-radius:7px; background:var(--field-bg); cursor:pointer; flex:none}

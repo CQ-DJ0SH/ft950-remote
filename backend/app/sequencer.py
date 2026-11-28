@@ -140,6 +140,9 @@ class Sequencer:
         # Auto Answer is not held back
         self.hunt_pause = False
         self._hunt_rest_until = 0.0
+        # Hunt "lost": the station answered someone else before us - call -> the
+        # period it happened in. Not blocked: called again on a CQ heard after it
+        self.hunt_lost: dict[str, float] = {}
         self._seen: dict[float, bool] = {}       # period t0 → decodes processed
         # CQ caller queue: call -> {"d": latest decode to me, "t": last heard, "first": first heard}
         self.queue: dict[str, dict] = {}
@@ -272,7 +275,11 @@ class Sequencer:
         await self.tx.stop()                    # the message to this station must not go on
         s["state"], s["ended"] = "skipped", time.time()
         log.info("%s: skipped by the operator", s["call"])
-        if s.get("hunt"):
+        if s.get("hunt") and not s.get("answered") and self._was_busy(s):
+            s["state"] = "lost"                  # it was working someone else: try again later
+            self.hunt_lost[s["call"]] = time.time()
+            log.info("hunt: %s was busy with another station - lost, called again on a later CQ", s["call"])
+        elif s.get("hunt"):
             vfo = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
             self._hunt_block(s["call"], {
                 "dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",
@@ -403,6 +410,8 @@ class Sequencer:
                 continue
             if call in self.hunt_blocked or call in busy or not w:
                 continue
+            if (d.get("t0") or 0) <= self.hunt_lost.get(call, -1):
+                continue                     # lost to another station: only a CQ after that
             new = {"band": not w.get("call_band"), "call": not w.get("call"),
                    "dxcc": not w.get("dxcc"), "dxcc_band": not w.get("dxcc_band")}.get(self.hunt_target, False)
             if not new or d.get("snr", -99) < self.hunt_min_snr:
@@ -497,10 +506,16 @@ class Sequencer:
             # the partner's other messages (their CQ, their QSO with someone
             # else): into Session Messages too, for the picture - they do not
             # count as an answer and change nothing in the sequence
+            lost = None
             for d in decodes:
                 if ((d.get("from") or "").upper() == them and (d.get("to") or "").upper() != self.me
                         and not self._known(d)):
                     self._log_rx(d, other=True)
+                    if self._lost_to(d):
+                        lost = d
+            if lost is not None:
+                await self._lose(lost, t0)
+                return
         if self.kind == "cq":
             self._queue_update(decodes)
             if not self.session and self.step == "cq" and self._take_queued():
@@ -527,6 +542,42 @@ class Sequencer:
             del self._seen[old]
         self._event.set()
         await self.publish()
+
+    def _lost_to(self, d: dict) -> bool:
+        """Hunt's station answers someone else while we still call it (no
+        answer to us yet): another station was quicker."""
+        s = self.session
+        return bool(s and s.get("hunt") and s["state"] == "running" and self.step == "call"
+                    and not s.get("answered") and d.get("kind") in ("report", "rreport", "RR73", "RRR", "73")
+                    and (d.get("to") or "") and not (d.get("to") or "").startswith("<"))
+
+    async def _lose(self, d: dict, t0: float) -> None:
+        """Lost: stop calling at once, end the session as "lost" - not on the
+        no-reply list; Hunt calls the station again on a CQ heard after this."""
+        s, call = self.session, self.session["call"]
+        if self._task and self._task is not asyncio.current_task():
+            self._task.cancel()
+            await asyncio.gather(self._task, return_exceptions=True)
+        self._task = None
+        await self.tx.stop()                     # our call to it must not go on
+        s["state"], s["ended"], s["lost_to"] = "lost", time.time(), (d.get("to") or "").upper()
+        self.hunt_lost[call] = max(t0, d.get("t0") or t0)
+        for c in [c for c, t in self.hunt_lost.items() if t < t0 - 3600]:
+            del self.hunt_lost[c]                # an hour on: forgotten
+        log.info("hunt: %s answered %s - lost, called again on a later CQ", call, s["lost_to"])
+        self._hunt_rest(s)
+        self.session, self.kind, self.step = None, None, None
+        self._hunt_cq = False
+        await self.publish()
+
+    @staticmethod
+    def _was_busy(s: dict) -> bool:
+        """The partner worked another station during this session (a message of
+        theirs to someone else that is not a CQ)."""
+        # only what came after the CQ Hunt called (its period began ~15 s before the session)
+        since = (s.get("started") or 0) - 10
+        return any(m.get("other") and m.get("dir") == "rx" and not (m.get("msg") or "").startswith("CQ ")
+                   and (m.get("t0") or 0) > since for m in s.get("msgs", []))
 
     def _advance(self, d: dict) -> None:
         k, s = d.get("kind"), self.session
@@ -759,7 +810,11 @@ class Sequencer:
         s = self.session
         log.info("%s: no reply after %d tries", s["call"], self.tries)
         s["state"], s["ended"] = "no reply", time.time()
-        if s.get("hunt") and not s.get("answered"):
+        if s.get("hunt") and not s.get("answered") and self._was_busy(s):
+            s["state"] = "lost"                  # it worked others meanwhile: try again later
+            self.hunt_lost[s["call"]] = time.time()
+            log.info("hunt: %s worked other stations - lost, called again on a later CQ", s["call"])
+        elif s.get("hunt") and not s.get("answered"):
             vfo = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
             self._hunt_block(s["call"], {
                 "dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",

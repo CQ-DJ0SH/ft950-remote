@@ -77,7 +77,8 @@ decoding, plus voice operation over WebRTC.
   - a WSJT-X style QSO sequencer (CQ, answer, reports, RR73/73) with
     Auto Answer and **Auto Hunt** (calls new stations' CQs one after the
     other; a station that never answers is not called again, one that
-    answered someone else first is **lost** and called again on its next CQ; switches itself
+    answered someone else first is **lost** and called again on its next CQ, three
+    times at most within the hour; switches itself
     off, default 180 min; optionally picks only after hearing both periods,
     so it does not keep to one parity; when no new station turns up for 4
     periods it **calls CQ itself** on a free spot it measured between 600 and

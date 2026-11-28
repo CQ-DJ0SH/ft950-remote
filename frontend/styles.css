@@ -536,7 +536,7 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
 .toast-hist-btn svg{width:17px; height:17px; vertical-align:middle}
 .toast-hist-btn:disabled{opacity:.35; cursor:default}
 .toast-hist-btn.on{color:var(--amber); border-color:var(--amber)}
-.toast-hist{position:fixed; top:58px; right:16px; z-index:61; width:min(560px, calc(100vw - 32px)); max-height:60vh; overflow:auto;
+.toast-hist{position:fixed; top:calc(58px + env(safe-area-inset-top,0px)); right:calc(16px + env(safe-area-inset-right,0px)); z-index:61; width:min(560px, calc(100vw - 32px)); max-height:60vh; overflow:auto;
   background:var(--panel-2); border:1px solid var(--amber); border-radius:8px; padding:6px 0; box-shadow:0 8px 30px rgba(0,0,0,.5);
   font:12px/1.45 var(--font-mono)}
 .toast-hist .th-row{display:flex; gap:10px; padding:4px 12px; border-left:3px solid transparent}
@@ -564,6 +564,7 @@ input[type=range]{accent-color:var(--accent,var(--amber))}
   .title-center{padding:7px 30px}
   .app-title{font-size:14px; letter-spacing:.08em}
   .status-cluster{gap:6px}
+  .toast-hist-btn{display:none}        /* no room beside the title plate; the message itself still shows */
   .stat,.clock{display:none}
   .panel{padding:22px 16px 22px 18px}
   .form-grid{grid-template-columns:1fr}

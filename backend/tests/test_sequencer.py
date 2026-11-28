@@ -976,7 +976,6 @@ def _hunt_lost_seq():
     asyncio.run(s.set_hunt(True, 1600))
     async def fake_answer(d, hz):
         s.kind, s.step, s.session = "answer", "call", s._new_session(d)
-        s.sessions.appendleft(s.session) if hasattr(s.sessions, "appendleft") else None
     s.answer = fake_answer
     return s, stopped
 
@@ -1010,3 +1009,73 @@ def test_hunt_not_lost_once_it_answered_us_and_skip_of_a_busy_station_does_not_b
     s.session["state"] = "running"
     asyncio.run(s.skip())
     assert "PI4X" not in s.hunt_blocked and "PI4X" in s.hunt_lost          # busy: lost, not blocked
+
+
+def _hunt_call(s, t0):
+    asyncio.run(s.on_decodes([_d("CQ PI4X JO32", snr=-5, t0=t0, worked=_w())], t0, "FT8", False))
+    assert s.session and s.session["call"] == "PI4X"
+    s.session["hunt"] = True
+    return s.session
+
+
+def test_hunt_closing_message_to_another_call_is_not_lost():
+    s, stopped = _hunt_lost_seq()
+    sess = _hunt_call(s, 15.0)
+    for i, msg in enumerate(("OK1AB PI4X RR73", "OK1AB PI4X RRR", "OK1AB PI4X 73")):
+        asyncio.run(s.on_decodes([_d(msg, t0=45.0 + 30 * i)], 45.0 + 30 * i, "FT8", False))
+    assert s.session is sess and sess["state"] == "running" and not stopped   # it becomes free: go on
+
+
+def test_hunt_lost_station_that_turns_to_us_is_answered():
+    s, _ = _hunt_lost_seq()
+    _hunt_call(s, 15.0)
+    asyncio.run(s.on_decodes([_d("IK5DET PI4X -15", t0=45.0)], 45.0, "FT8", False))
+    assert s.session is None and s._hunt_losses == {"PI4X": 1}
+    asyncio.run(s.on_decodes([_d("DJ0SH G4EEE -03", t0=75.0)], 75.0, "FT8", False))
+    assert s.session is None                                               # not lost before: Auto Answer's job
+    asyncio.run(s.on_decodes([_d("DJ0SH PI4X -12", t0=105.0)], 105.0, "FT8", False))
+    assert s.session["call"] == "PI4X" and s.session["hunt"] and s.session["answered"]
+    assert "PI4X" not in s._hunt_losses
+
+
+def test_hunt_lost_three_times_goes_on_the_no_reply_list():
+    s, _ = _hunt_lost_seq()
+    for i in range(3):
+        t = 15.0 + 120 * i
+        assert "PI4X" not in s.hunt_blocked
+        sess = _hunt_call(s, t)
+        asyncio.run(s.on_decodes([_d("IK5DET PI4X -15", t0=t + 30)], t + 30, "FT8", False))
+        assert sess["state"] == "lost"
+    assert "PI4X" in s.hunt_blocked and "PI4X" not in s._hunt_losses
+    assert s.hunt_pick([_d("CQ PI4X JO32", snr=-5, t0=600.0, worked=_w())]) is None
+
+
+def test_hunt_lost_starts_no_rest():
+    s, _ = _hunt_lost_seq()
+    s.hunt_pause = True
+    _hunt_call(s, 15.0)
+    asyncio.run(s.on_decodes([_d("IK5DET PI4X -15", t0=45.0)], 45.0, "FT8", False))
+    assert s.status()["hunt_rest_s"] == 0
+    sess = _hunt_call(s, 135.0)                                            # its next CQ is called
+    sess["msgs"].append({"dir": "rx", "t0": sess["started"] + 15, "msg": "IK5DET PI4X -15", "other": True})
+    asyncio.run(s.skip())                                                  # busy and skipped: lost, no rest either
+    assert sess["state"] == "lost" and s.status()["hunt_rest_s"] == 0
+
+
+def test_lost_and_skip_leave_a_qso_started_meanwhile_alone():
+    for how in ("lose", "skip"):
+        s, _ = _hunt_lost_seq()
+        old = _hunt_call(s, 15.0)
+        new = {}
+        async def stop():                                                  # the operator answers during tx.stop()
+            if not new:
+                new["s"] = s.session = s._new_session(_d("CQ G4EEE IO91"))
+                s.kind, s.step, s._task = "answer", "call", "the new loop"
+        s.tx.stop = stop
+        if how == "lose":
+            asyncio.run(s.on_decodes([_d("IK5DET PI4X -15", t0=45.0)], 45.0, "FT8", False))
+            assert old["state"] == "lost"
+        else:
+            asyncio.run(s.skip())
+            assert old["state"] == "skipped"
+        assert s.session is new["s"] and s.kind == "answer" and s.step == "call" and s._task == "the new loop"

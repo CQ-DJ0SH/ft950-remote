@@ -88,7 +88,12 @@ function toastHistRender() {
 }
 function toastHistShow(on) {
   const box = $("toast-hist-list"), btn = $("toast-hist");
-  if (on) toastHistRender();
+  if (on) {
+    toastHistRender();
+    // below the title bar, whatever its height (safe area on a notched phone)
+    const bar = btn.closest(".topbar")?.getBoundingClientRect();
+    if (bar && bar.bottom > 0) box.style.top = `${Math.round(bar.bottom + 4)}px`;
+  }
   box.hidden = !on;
   btn.setAttribute("aria-expanded", String(on));
   btn.classList.toggle("on", on);

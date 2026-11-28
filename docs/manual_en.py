@@ -126,7 +126,8 @@ EN = [
     ("p", "Messages (the speech bubble): every short message at the foot of the page "
           "is kept, the last 20 of this tab. Hovering shows the last one, a click lists "
           "them again with their time, newest first and errors marked red - a message "
-          "gone too soon is not lost. A click elsewhere or Esc closes the list."),
+          "gone too soon is not lost. A click elsewhere or Esc closes the list. "
+          "At phone width the button is hidden, there is no room for it."),
     ("p", "Below follow the panels VFO, PTT · MEMORY and AUDIO, DIGI, DIGIMODES, HackRF "
           "and LOG. Most can be collapsed with ▲; PTT and AUDIO always stay open. "
           "The panels are shown at 90 % zoom so the whole station fits on one screen. An "
@@ -355,12 +356,16 @@ EN = [
         "Hunt and the time left as m:ss (∞: no switch-off). It calls only while a browser shows "
         "the DIGI panel. Whom it calls, the minimum SNR, the switch-off time "
         "(default 180 min, 0 = never) and the no-reply list are in Settings ▸ FT8.",
-        "Lost: when the station Hunt calls answers someone else first (a report, "
-        "RR73 or 73 to another call before any answer to us), Hunt stops calling at "
-        "once and the session ends as \u201clost\u201d (amber, the quicker station in the "
-        "tooltip). The station does not go on the no-reply list: Hunt calls it again on "
-        "its next CQ, once that QSO is over. The same holds when you skip a station, or "
-        "it runs out of tries, while it was working others.",
+        "Lost: when the station Hunt calls answers someone else first (a report to "
+        "another call before any answer to us), Hunt stops calling at once and the "
+        "session ends as \u201clost\u201d (amber, the quicker station in the tooltip). An "
+        "RR73 or 73 to another call does not count: it closes the station's previous "
+        "QSO, Hunt goes on calling. A lost station does not go on the no-reply list: "
+        "Hunt calls it again on its next CQ, once that QSO is over — and answers at "
+        "once when it turns to us without a new CQ. The same holds when you skip a "
+        "station, or it runs out of tries, while it was working others. Lost three "
+        "times within an hour, the station goes on the no-reply list after all (a "
+        "pile-up, or it does not hear us). A lost session starts no night rest.",
         "Hunt and the two periods: after a QSO, Hunt calls from the first period it "
         "hears — the one opposite to our TX — and so keeps to one parity for long "
         "runs. Settings ▸ FT8 ▸ \u201cPick only after hearing both periods\u201d "

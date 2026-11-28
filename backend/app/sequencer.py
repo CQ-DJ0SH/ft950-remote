@@ -46,6 +46,7 @@ PARTNER_SPAN_MAX = 1000    # wider than this, the fast partner pass looks at the
 PARTNER_MARGIN = {"FT8": 200, "FT4": 300}
 HUNT_MAX_S = 180 * 60       # default; Settings ▸ FT8 ▸ Hunt, 0 = no switch-off
 HUNT_REST_S = 180            # Settings ▸ FT8 ▸ Hunt: the rest after each Hunt QSO
+HUNT_LOST_MAX = 3            # lost this often within the hour: on the no-reply list
 HUNT_BLOCK_MAX = 1000       # calls kept on the no-reply list
 # CQ: callers that were not taken (two at once, or calling during a QSO) wait
 # here and are answered after the QSO instead of the next CQ - for this long
@@ -143,6 +144,7 @@ class Sequencer:
         # Hunt "lost": the station answered someone else before us - call -> the
         # period it happened in. Not blocked: called again on a CQ heard after it
         self.hunt_lost: dict[str, float] = {}
+        self._hunt_losses: dict[str, int] = {}       # how often in a row (HUNT_LOST_MAX)
         self._seen: dict[float, bool] = {}       # period t0 → decodes processed
         # CQ caller queue: call -> {"d": latest decode to me, "t": last heard, "first": first heard}
         self.queue: dict[str, dict] = {}
@@ -267,24 +269,18 @@ class Sequencer:
         s = self.session
         if not s or s["state"] != "running":
             return await self.publish()
-        kind = self.kind
-        if self._task and self._task is not asyncio.current_task():
-            self._task.cancel()
-            await asyncio.gather(self._task, return_exceptions=True)
-        self._task = None
-        await self.tx.stop()                    # the message to this station must not go on
+        kind, tries = self.kind, self.tries
+        mine = await self._cut(s)               # the message to this station must not go on
         s["state"], s["ended"] = "skipped", time.time()
         log.info("%s: skipped by the operator", s["call"])
         if s.get("hunt") and not s.get("answered") and self._was_busy(s):
             s["state"] = "lost"                  # it was working someone else: try again later
-            self.hunt_lost[s["call"]] = time.time()
-            log.info("hunt: %s was busy with another station - lost, called again on a later CQ", s["call"])
+            log.info("hunt: %s was busy with another station - lost", s["call"])
+            self._note_lost(s, time.time(), tries)
         elif s.get("hunt"):
-            vfo = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
-            self._hunt_block(s["call"], {
-                "dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",
-                "df": s.get("df"), "mode": s.get("mode"), "tries": self.tries,
-                "band": band_for_hz(s.get("freq_hz") or vfo)})
+            self._hunt_block(s["call"], self._block_info(s, tries))
+        if not mine:                             # something else was started meanwhile: that stays
+            return await self.publish()
         rest = self._hunt_rest(s, kind == "cq" and self._hunt_cq)
         self.session = None
         if kind == "cq" and self._hunt_cq and rest:
@@ -385,6 +381,45 @@ class Sequencer:
             self.on_hunt_block(self.hunt_blocked)
         return await self.publish()
 
+    def _block_info(self, s: dict, tries: int) -> dict:
+        vfo = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
+        return {"dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",
+                "df": s.get("df"), "mode": s.get("mode"), "tries": tries,
+                "band": band_for_hz(s.get("freq_hz") or vfo)}
+
+    def _note_lost(self, s: dict, t: float, tries: int) -> None:
+        """A Hunt session ended as lost: only a CQ of that station after ``t``
+        is called again. HUNT_LOST_MAX times within the hour and it goes on
+        the no-reply list - it keeps taking others (a pile-up, or it does not
+        hear us), calling on every one of its CQs would go on all night."""
+        call = s["call"]
+        for c in [c for c, x in self.hunt_lost.items() if x < t - 3600]:
+            del self.hunt_lost[c]                # an hour on: forgotten
+            self._hunt_losses.pop(c, None)
+        self.hunt_lost[call] = t
+        n = self._hunt_losses[call] = self._hunt_losses.get(call, 0) + 1
+        if n >= HUNT_LOST_MAX:
+            log.info("hunt: %s lost %d times", call, n)
+            del self._hunt_losses[call]
+            self._hunt_block(call, self._block_info(s, tries))
+        else:
+            log.info("hunt: %s is called again on a later CQ (lost %d of %d)", call, n, HUNT_LOST_MAX)
+
+    async def _cut(self, s: dict) -> bool:
+        """Stop the loop and the transmission of session ``s``. False when
+        something else was started during the awaits (the operator answered
+        a station, called CQ): that must stay untouched."""
+        task = self._task
+        if task and task is not asyncio.current_task():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        if self._task is task:
+            self._task = None
+        if self.session is not s:
+            return False
+        await self.tx.stop()
+        return self.session is s
+
     def _hunt_block(self, call: str, info: Optional[dict] = None) -> None:
         self.hunt_blocked[call] = {"t": time.time(), **(info or {})}
         while len(self.hunt_blocked) > HUNT_BLOCK_MAX:              # oldest out
@@ -439,6 +474,25 @@ class Sequencer:
                     await self.answer(d, self._auto_hz(d))
                 except RuntimeError as exc:
                     log.warning("auto answer %s: %s", d["from"], exc)
+                return
+        if (not self.kind and self.hunt and time.time() <= self.hunt_until and not partner
+                and t0 not in self.digi.tx_periods):
+            # a station lost to someone else finishes that QSO and turns to us
+            # without a new CQ: the QSO goes on (Hunt itself only picks CQs)
+            back = [d for d in decodes if (d.get("to") or "").upper() == self.me
+                    and d.get("kind") in ("grid", "report", "rreport")
+                    and (d.get("from") or "").upper() in self.hunt_lost]
+            if back:
+                d = max(back, key=lambda x: x.get("snr", -99))
+                log.info("hunt: %s answers after all (%s)%s", d["from"], d["msg"], " - early pass" if early else "")
+                try:
+                    await self.answer(d, self._auto_hz(d))
+                    self.session["hunt"] = self.session["answered"] = True
+                    self._hunt_losses.pop(d["from"].upper(), None)
+                    await self.publish()
+                except RuntimeError as exc:
+                    log.warning("hunt %s: %s", d["from"], exc)
+                self._hunt_quiet.clear()
                 return
         if self.kind and not self._hunt_cq_idle():
             self._hunt_quiet.clear()                 # a QSO / own CQ: the quiet count starts again after it
@@ -545,29 +599,25 @@ class Sequencer:
 
     def _lost_to(self, d: dict) -> bool:
         """Hunt's station answers someone else while we still call it (no
-        answer to us yet): another station was quicker."""
+        answer to us yet): another station was quicker. Only a report counts:
+        RR73 / RRR / 73 to another call closes its previous QSO - it is just
+        becoming free, we go on calling."""
         s = self.session
         return bool(s and s.get("hunt") and s["state"] == "running" and self.step == "call"
-                    and not s.get("answered") and d.get("kind") in ("report", "rreport", "RR73", "RRR", "73")
-                    and (d.get("to") or "") and not (d.get("to") or "").startswith("<"))
+                    and not s.get("answered") and d.get("kind") in ("report", "rreport")
+                    and (d.get("to") or ""))
 
     async def _lose(self, d: dict, t0: float) -> None:
         """Lost: stop calling at once, end the session as "lost" - not on the
         no-reply list; Hunt calls the station again on a CQ heard after this."""
-        s, call = self.session, self.session["call"]
-        if self._task and self._task is not asyncio.current_task():
-            self._task.cancel()
-            await asyncio.gather(self._task, return_exceptions=True)
-        self._task = None
-        await self.tx.stop()                     # our call to it must not go on
+        s, call, tries = self.session, self.session["call"], self.tries
+        mine = await self._cut(s)                # our call to it must not go on
         s["state"], s["ended"], s["lost_to"] = "lost", time.time(), (d.get("to") or "").upper()
-        self.hunt_lost[call] = max(t0, d.get("t0") or t0)
-        for c in [c for c, t in self.hunt_lost.items() if t < t0 - 3600]:
-            del self.hunt_lost[c]                # an hour on: forgotten
-        log.info("hunt: %s answered %s - lost, called again on a later CQ", call, s["lost_to"])
-        self._hunt_rest(s)
-        self.session, self.kind, self.step = None, None, None
-        self._hunt_cq = False
+        log.info("hunt: %s answered %s - lost", call, s["lost_to"])
+        self._note_lost(s, max(t0, d.get("t0") or t0), tries)
+        if mine:                                 # else: something was started meanwhile, it stays
+            self.session, self.kind, self.step = None, None, None
+            self._hunt_cq = False
         await self.publish()
 
     @staticmethod
@@ -812,14 +862,10 @@ class Sequencer:
         s["state"], s["ended"] = "no reply", time.time()
         if s.get("hunt") and not s.get("answered") and self._was_busy(s):
             s["state"] = "lost"                  # it worked others meanwhile: try again later
-            self.hunt_lost[s["call"]] = time.time()
-            log.info("hunt: %s worked other stations - lost, called again on a later CQ", s["call"])
+            log.info("hunt: %s worked other stations - lost", s["call"])
+            self._note_lost(s, time.time(), self.tries)
         elif s.get("hunt") and not s.get("answered"):
-            vfo = (self.tx.service.status.get("vfo") or {}).get("freq_hz")
-            self._hunt_block(s["call"], {
-                "dxcc": s.get("dxcc"), "snr": s.get("snr"), "grid": s.get("grid") or "",
-                "df": s.get("df"), "mode": s.get("mode"), "tries": self.tries,
-                "band": band_for_hz(s.get("freq_hz") or vfo)})
+            self._hunt_block(s["call"], self._block_info(s, self.tries))
         await self._finish_round()
 
     def _late_close(self, decodes: list[dict]) -> None:
@@ -844,8 +890,11 @@ class Sequencer:
 
     def _hunt_rest(self, s: Optional[dict], hunt_cq: bool = False) -> bool:
         """A Hunt QSO (called by Hunt, or a caller of Hunt's CQ) ended: the rest
-        starts, if it is switched on. True when it did."""
+        starts, if it is switched on. True when it did. Not after a lost
+        one: no QSO took place, and the station's next CQ is to be called."""
         if not (self.hunt and self.hunt_pause and ((s and s.get("hunt")) or hunt_cq)):
+            return False
+        if s and s.get("state") == "lost":
             return False
         self._hunt_rest_until = time.time() + HUNT_REST_S
         self._hunt_quiet.clear()

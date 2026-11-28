@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-APP_VERSION = "2.1"
+APP_VERSION = "3.1"
 
 
 class Settings(BaseSettings):
